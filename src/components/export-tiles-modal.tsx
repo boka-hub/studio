@@ -64,7 +64,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
     } catch (error) {
       console.error("Failed to load tile images for export", error);
-      toast({ variant: 'destructive', title: 'Export Error', description: 'Could not load tile images for spritesheet.' });
+      toast({ variant: 'destructive', title: 'ExportError', description: 'Could not load tile images for spritesheet.' });
     }
   }, [tiles, columns, gap, toast]);
 
@@ -184,23 +184,21 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
             </div>
           </div>
         </div>
-        <DialogFooter className="flex-col-reverse items-center gap-2 sm:flex-row sm:justify-between sm:space-x-2">
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0} className="w-full sm:w-auto">
-                <FileImage className="mr-2 h-4 w-4" />
-                Individual PNGs
-            </Button>
-             <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tiles.length === 0} className="w-full sm:w-auto">
-                <FileText className="mr-2 h-4 w-4" />
-                Metadata Only
-            </Button>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto justify-end">
-            <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
-            <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0} className="w-full sm:w-auto">
-                <Download className="mr-2 h-4 w-4" />
-                Spritesheet
-            </Button>
+        <DialogFooter>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+              <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0} className="col-span-1">
+                  <FileImage className="mr-2 h-4 w-4" />
+                  PNGs
+              </Button>
+               <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tiles.length === 0} className="col-span-1">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Metadata
+              </Button>
+              <Button type="button" variant="secondary" onClick={onClose} className="col-span-1">Cancel</Button>
+              <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0} className="col-span-1">
+                  <Download className="mr-2 h-4 w-4" />
+                  Sheet
+              </Button>
           </div>
         </DialogFooter>
       </DialogContent>
