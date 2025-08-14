@@ -96,6 +96,7 @@ export default function Home() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
   const [isSlicerOpen, setSlicerOpen] = useState(false);
+  const [slicerInitialFiles, setSlicerInitialFiles] = useState<File[]>([]);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isTerrainGeneratorOpen, setTerrainGeneratorOpen] = useState(false);
@@ -235,6 +236,11 @@ export default function Home() {
     });
     event.target.value = ''; // Reset file input
   };
+  
+  const openSlicer = (files: File[] = []) => {
+    setSlicerInitialFiles(files);
+    setSlicerOpen(true);
+  }
 
   const handleExportMap = () => {
     const mapData = grid.map(row => row.join(',')).join('\n');
@@ -776,7 +782,7 @@ export default function Home() {
 
   const headerActions = [
     { icon: Upload, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
-    { icon: Scissors, label: 'Slice Sheet', onClick: () => setSlicerOpen(true) },
+    { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Mountain, label: 'Generate Terrain', onClick: () => setTerrainGeneratorOpen(true) },
@@ -927,6 +933,7 @@ export default function Home() {
           isOpen={isSlicerOpen}
           onClose={() => setSlicerOpen(false)}
           onSlice={addTiles}
+          initialFiles={slicerInitialFiles}
         />
         <ExportTilesModal
           isOpen={isExportOpen}
