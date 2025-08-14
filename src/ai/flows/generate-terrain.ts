@@ -69,6 +69,34 @@ Instructions for 'alien':
 2. Place clusters of 'alien_plant' tiles. These clusters should be in strange, unnatural shapes.
 3. Scatter individual 'crystal' tiles across the map, but not within the plant clusters. Crystals should be rare.
 
+Instructions for 'grassland':
+1. Fill the entire map with the 'grass' tile.
+2. Sparsely place 'flower' tiles throughout the grassland.
+3. Create small, scattered patches of 'rock' tiles to break up the monotony.
+4. The overall feel should be open and rolling, not cluttered.
+
+Instructions for 'jungle':
+1. Fill the entire map with the 'ground' tile.
+2. Create a very dense forest of 'jungle_tree' tiles. The trees should be tightly packed.
+3. Weave 'vine' tiles throughout the tree areas, often hanging from where trees would be. They can also connect adjacent trees.
+4. Leave very few, small clearings.
+
+Instructions for 'mountains':
+1. Fill the map with the 'rock' tile.
+2. Create large, contiguous mountain ranges using the 'mountain_rock' tile. These should be massive, solid shapes.
+3. Add 'snow' tiles to the tops (higher row numbers) of the mountain ranges to simulate snow caps. The transition from rock to snow should be somewhat irregular.
+4. Create paths or valleys of the base 'rock' tile through the mountains.
+
+Instructions for 'swamp':
+1. Fill most of the map with 'mud' tiles.
+2. Create large, amorphous pools of 'swamp_water'. These should not be simple circles; they should have irregular edges.
+3. Scatter 'dead_tree' tiles sparsely within both the mud and shallow swamp water areas.
+
+Instructions for 'crystal_caves':
+1. Create a cavern system. The majority of the map should be the 'cave_wall' tile, representing solid earth.
+2. Carve out open pathways and rooms using the 'cave_floor' tile. These paths should be winding and interconnected.
+3. Place 'glowing_crystal' tiles in clusters along the 'cave_wall' edges bordering the 'cave_floor'. Crystals should not be in the middle of paths.
+
 Generate a complete new grid according to these instructions. The output grid MUST have the same dimensions as the input grid.
 `,
 });

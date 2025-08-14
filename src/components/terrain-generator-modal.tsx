@@ -31,7 +31,7 @@ interface TerrainGeneratorModalProps {
   onProcessingChange: (isProcessing: boolean) => void;
 }
 
-type TerrainType = 'forest' | 'desert' | 'beach' | 'volcanic' | 'alien';
+type TerrainType = 'forest' | 'desert' | 'beach' | 'volcanic' | 'alien' | 'grassland' | 'jungle' | 'mountains' | 'swamp' | 'crystal_caves';
 
 interface TerrainConfig {
   type: TerrainType;
@@ -60,6 +60,18 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
     strange_ground: 0,
     alien_plant: 0,
     crystal: 0,
+    grass: 0,
+    flower: 0,
+    jungle_tree: 0,
+    vine: 0,
+    snow: 0,
+    mountain_rock: 0,
+    mud: 0,
+    swamp_water: 0,
+    dead_tree: 0,
+    cave_wall: 0,
+    cave_floor: 0,
+    glowing_crystal: 0,
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -80,6 +92,16 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
         return tileMapping.rock > 0 && tileMapping.lava > 0 && tileMapping.obsidian > 0;
       case 'alien':
         return tileMapping.strange_ground > 0 && tileMapping.alien_plant > 0 && tileMapping.crystal > 0;
+      case 'grassland':
+        return tileMapping.grass > 0 && tileMapping.flower > 0 && tileMapping.rock > 0;
+      case 'jungle':
+          return tileMapping.ground > 0 && tileMapping.jungle_tree > 0 && tileMapping.vine > 0;
+      case 'mountains':
+          return tileMapping.rock > 0 && tileMapping.snow > 0 && tileMapping.mountain_rock > 0;
+      case 'swamp':
+          return tileMapping.mud > 0 && tileMapping.swamp_water > 0 && tileMapping.dead_tree > 0;
+      case 'crystal_caves':
+          return tileMapping.cave_wall > 0 && tileMapping.cave_floor > 0 && tileMapping.glowing_crystal > 0;
       default:
         return false;
     }
@@ -177,6 +199,46 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
             <TileSelect id="crystal-tile" label="Crystal Tile" value={tileMapping.crystal} onValueChange={(v) => handleTileMappingChange('crystal', v)} />
           </>
         );
+      case 'grassland':
+        return (
+          <>
+            <TileSelect id="grass-tile" label="Grass Tile" value={tileMapping.grass} onValueChange={(v) => handleTileMappingChange('grass', v)} />
+            <TileSelect id="flower-tile" label="Flower Tile" value={tileMapping.flower} onValueChange={(v) => handleTileMappingChange('flower', v)} />
+            <TileSelect id="rock-tile" label="Rock Tile" value={tileMapping.rock} onValueChange={(v) => handleTileMappingChange('rock', v)} />
+          </>
+        );
+      case 'jungle':
+        return (
+          <>
+            <TileSelect id="ground-tile" label="Jungle Floor" value={tileMapping.ground} onValueChange={(v) => handleTileMappingChange('ground', v)} />
+            <TileSelect id="jungle-tree-tile" label="Jungle Tree" value={tileMapping.jungle_tree} onValueChange={(v) => handleTileMappingChange('jungle_tree', v)} />
+            <TileSelect id="vine-tile" label="Vine Tile" value={tileMapping.vine} onValueChange={(v) => handleTileMappingChange('vine', v)} />
+          </>
+        );
+      case 'mountains':
+        return (
+          <>
+            <TileSelect id="rock-tile" label="Base Rock Tile" value={tileMapping.rock} onValueChange={(v) => handleTileMappingChange('rock', v)} />
+            <TileSelect id="mountain-rock-tile" label="Mountain Face Tile" value={tileMapping.mountain_rock} onValueChange={(v) => handleTileMappingChange('mountain_rock', v)} />
+            <TileSelect id="snow-tile" label="Snow Cap Tile" value={tileMapping.snow} onValueChange={(v) => handleTileMappingChange('snow', v)} />
+          </>
+        );
+      case 'swamp':
+        return (
+          <>
+            <TileSelect id="mud-tile" label="Mud Tile" value={tileMapping.mud} onValueChange={(v) => handleTileMappingChange('mud', v)} />
+            <TileSelect id="swamp-water-tile" label="Swamp Water Tile" value={tileMapping.swamp_water} onValueChange={(v) => handleTileMappingChange('swamp_water', v)} />
+            <TileSelect id="dead-tree-tile" label="Dead Tree Tile" value={tileMapping.dead_tree} onValueChange={(v) => handleTileMappingChange('dead_tree', v)} />
+          </>
+        );
+      case 'crystal_caves':
+        return (
+          <>
+            <TileSelect id="cave-wall-tile" label="Cave Wall Tile" value={tileMapping.cave_wall} onValueChange={(v) => handleTileMappingChange('cave_wall', v)} />
+            <TileSelect id="cave-floor-tile" label="Cave Floor Tile" value={tileMapping.cave_floor} onValueChange={(v) => handleTileMappingChange('cave_floor', v)} />
+            <TileSelect id="glowing-crystal-tile" label="Glowing Crystal Tile" value={tileMapping.glowing_crystal} onValueChange={(v) => handleTileMappingChange('glowing_crystal', v)} />
+          </>
+        );
       default:
         return null;
     }
@@ -204,9 +266,14 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="forest">Forest</SelectItem>
+                <SelectItem value="grassland">Grassland</SelectItem>
+                <SelectItem value="jungle">Jungle</SelectItem>
                 <SelectItem value="desert">Desert</SelectItem>
                 <SelectItem value="beach">Beach</SelectItem>
+                <SelectItem value="mountains">Mountains</SelectItem>
+                <SelectItem value="swamp">Swamp</SelectItem>
                 <SelectItem value="volcanic">Volcanic</SelectItem>
+                <SelectItem value="crystal_caves">Crystal Caves</SelectItem>
                 <SelectItem value="alien">Alien</SelectItem>
               </SelectContent>
             </Select>

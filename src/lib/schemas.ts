@@ -41,7 +41,7 @@ export type AutoTileOutput = z.infer<typeof AutoTileOutputSchema>;
 
 // generate-terrain.ts
 const TerrainConfigSchema = z.object({
-  type: z.enum(['forest', 'desert', 'beach', 'volcanic', 'alien']).describe('The type of terrain to generate.'),
+  type: z.enum(['forest', 'desert', 'beach', 'volcanic', 'alien', 'grassland', 'jungle', 'mountains', 'swamp', 'crystal_caves']).describe('The type of terrain to generate.'),
   tileMapping: z
     .record(z.string(), z.number())
     .describe(
