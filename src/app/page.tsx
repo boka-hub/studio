@@ -249,22 +249,26 @@ export default function Home() {
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header title="TileForge" icon={GridIcon} actions={headerActions} />
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-72 flex flex-col bg-card border-r border-border">
-            <Toolbar<Tool>
-              actions={toolbarActions}
-              selectedAction={tool}
-              onActionSelect={setTool}
-              gridSize={gridSize}
-              onGridResize={handleGridResize}
-              zoom={zoom}
-              onZoomChange={setZoom}
-            />
-            <TilePalette
-              tiles={tiles}
-              selectedTileId={selectedTileId}
-              onSelectTile={setSelectedTileId}
-              onRenameTile={handleRenameTile}
-            />
+          <aside className="w-72 bg-card border-r border-border">
+            <ScrollArea className="h-full">
+              <div className="flex flex-col">
+                <Toolbar<Tool>
+                  actions={toolbarActions}
+                  selectedAction={tool}
+                  onActionSelect={setTool}
+                  gridSize={gridSize}
+                  onGridResize={handleGridResize}
+                  zoom={zoom}
+                  onZoomChange={setZoom}
+                />
+                <TilePalette
+                  tiles={tiles}
+                  selectedTileId={selectedTileId}
+                  onSelectTile={setSelectedTileId}
+                  onRenameTile={handleRenameTile}
+                />
+              </div>
+            </ScrollArea>
           </aside>
           <main className="flex-1 flex items-center justify-center p-4 bg-muted/20 overflow-auto">
             <MapGrid
