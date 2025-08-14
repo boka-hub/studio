@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
@@ -40,6 +41,7 @@ export const MapGrid: FC<MapGridProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
+  const [previewSelection, setPreviewSelection] = useState<Selection | null>(null);
   const lastCell = useRef<{ row: number, col: number } | null>(null);
   
   const TILE_SIZE = BASE_TILE_SIZE * zoom;
@@ -53,6 +55,7 @@ export const MapGrid: FC<MapGridProps> = ({
     setIsDrawing(true);
     if (tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise') {
         setStartCell({ row, col });
+        setPreviewSelection(null);
         if (tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
             setPreviewGrid(grid); // Start preview from current grid state
         }
@@ -114,7 +117,11 @@ export const MapGrid: FC<MapGridProps> = ({
         }
         setPreviewGrid(newPreviewGrid);
     } else if (tool === 'select' && startCell) {
-        onShapeDraw(startCell, { row, col });
+        const minRow = Math.min(startCell.row, row);
+        const maxRow = Math.max(startCell.row, row);
+        const minCol = Math.min(startCell.col, col);
+        const maxCol = Math.max(startCell.col, col);
+        setPreviewSelection({ minRow, minCol, maxRow, maxCol });
     }
   };
 
@@ -129,6 +136,7 @@ export const MapGrid: FC<MapGridProps> = ({
     setIsDrawing(false);
     setStartCell(null);
     setPreviewGrid(null);
+    setPreviewSelection(null);
     lastCell.current = null;
   };
 
@@ -140,6 +148,7 @@ export const MapGrid: FC<MapGridProps> = ({
         setIsDrawing(false);
         setStartCell(null);
         setPreviewGrid(null);
+        setPreviewSelection(null);
         lastCell.current = null;
     }
   };
@@ -171,6 +180,7 @@ export const MapGrid: FC<MapGridProps> = ({
     }
   };
   
+  const finalSelection = selection || previewSelection;
   const gridToRender = previewGrid || grid;
   const gridHeight = gridToRender.length;
   const gridWidth = gridToRender[0]?.length || 0;
@@ -250,14 +260,14 @@ export const MapGrid: FC<MapGridProps> = ({
           </div>
         )}
       </div>
-       {selection && !selection.selectedCells && !isPreviewMode && (
+       {finalSelection && !finalSelection.selectedCells && !isPreviewMode && (
         <div
           className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
           style={{
-            left: `${selection.minCol * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
-            top: `${selection.minRow * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
-            width: `${(selection.maxCol - selection.minCol + 1) * TILE_SIZE + (selection.maxCol - selection.minCol) * gridLineWidth}px`,
-            height: `${(selection.maxRow - selection.minRow + 1) * TILE_SIZE + (selection.maxRow - selection.minRow) * gridLineWidth}px`,
+            left: `${finalSelection.minCol * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
+            top: `${finalSelection.minRow * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
+            width: `${(finalSelection.maxCol - finalSelection.minCol + 1) * TILE_SIZE + (finalSelection.maxCol - finalSelection.minCol) * gridLineWidth}px`,
+            height: `${(finalSelection.maxRow - finalSelection.minRow + 1) * TILE_SIZE + (finalSelection.maxRow - finalSelection.minRow) * gridLineWidth}px`,
             boxSizing: 'content-box',
           }}
         />
@@ -265,3 +275,5 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
+
+    

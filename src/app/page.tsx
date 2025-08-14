@@ -411,7 +411,15 @@ export default function Home() {
     const maxCol = Math.max(start.col, end.col);
 
     if (tool === 'select') {
-      setSelection({ minRow, minCol, maxRow, maxCol });
+      const selectedCellsGrid = createEmptyGrid(grid[0].length, grid.length);
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r < grid.length && c < grid[0].length) {
+                    selectedCellsGrid[r][c] = 1;
+                }
+            }
+        }
+      setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
       return;
     }
 
@@ -625,14 +633,14 @@ export default function Home() {
   }
 
   const handleCopySelection = () => {
-    if (!selection) return;
+    if (!selection?.selectedCells) return;
 
     const copiedData = grid
       .slice(selection.minRow, selection.maxRow + 1)
       .map((row, rIndex) => row.slice(selection.minCol, selection.maxCol + 1)
         .map((cell, cIndex) => {
           if (selection.selectedCells && selection.selectedCells[selection.minRow + rIndex][selection.minCol + cIndex] === 0) {
-            return -1;
+            return -1; // Use -1 to signify not part of the selection
           }
           return cell;
         })
@@ -732,7 +740,7 @@ export default function Home() {
         } else if (e.key === '=') {
           setZoom(z => Math.min(z + 0.1, 2));
         } else if (e.key === '-') {
-          setZoom(z => Math.max(z - 0.1, 0.1));
+          setZoom(z => Math.max(z - 1, 0.1));
         } else if (e.key === '0') {
           setZoom(1);
         } else if (e.key === 'c' && selection) {
@@ -996,3 +1004,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
