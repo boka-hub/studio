@@ -125,13 +125,15 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseLeave = () => {
-    if (isDrawing && tool === 'path') {
-        onDrawPathEnd();
+    if (isDrawing) {
+        if (tool === 'path') {
+          onDrawPathEnd();
+        }
+        setIsDrawing(false);
+        setStartCell(null);
+        setPreviewGrid(null);
+        lastCell.current = null;
     }
-    setIsDrawing(false);
-    setStartCell(null);
-    setPreviewGrid(null);
-    lastCell.current = null;
   };
   
   const getCursorClass = () => {
@@ -185,7 +187,7 @@ export const MapGrid: FC<MapGridProps> = ({
         {gridToRender.map((row, rowIndex) =>
           row.map((tileId, colIndex) => {
             const tile = tileMap.get(tileId);
-            const isCellSelected = selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
+            const isCellSelectedByWand = selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
 
             return (
               <div
@@ -207,7 +209,7 @@ export const MapGrid: FC<MapGridProps> = ({
                     data-ai-hint="pixel art tile"
                   />
                 )}
-                 {isCellSelected && (
+                 {isCellSelectedByWand && (
                   <div className="absolute inset-0 bg-blue-500/30 pointer-events-none" />
                 )}
               </div>
@@ -219,11 +221,11 @@ export const MapGrid: FC<MapGridProps> = ({
         <div
           className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
           style={{
-            left: `${selection.minCol * (TILE_SIZE + gridLineWidth)}px`,
-            top: `${selection.minRow * (TILE_SIZE + gridLineWidth)}px`,
-            width: `${(selection.maxCol - selection.minCol + 1) * (TILE_SIZE + gridLineWidth)}px`,
-            height: `${(selection.maxRow - selection.minRow + 1) * (TILE_SIZE + gridLineWidth)}px`,
-            boxSizing: 'border-box',
+            left: `${selection.minCol * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
+            top: `${selection.minRow * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
+            width: `${(selection.maxCol - selection.minCol + 1) * TILE_SIZE + (selection.maxCol - selection.minCol) * gridLineWidth}px`,
+            height: `${(selection.maxRow - selection.minRow + 1) * TILE_SIZE + (selection.maxRow - selection.minRow) * gridLineWidth}px`,
+            boxSizing: 'content-box',
           }}
         />
       )}

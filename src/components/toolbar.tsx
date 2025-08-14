@@ -78,7 +78,7 @@ export function Toolbar<T extends string>({
                       className={cn(
                         'w-full flex h-auto py-2 gap-1 text-xs items-center justify-start',
                         isCollapsed ? 'flex-col px-1' : 'flex-row pl-3',
-                         selectedAction === key && 'bg-primary text-primary-foreground hover:bg-primary/90'
+                         selectedAction === key && 'bg-primary/80 text-primary-foreground hover:bg-primary/90'
                       )}
                       onClick={() => onActionSelect(key)}
                       disabled={action.disabled}
