@@ -15,6 +15,8 @@ import {
   Grid as GridIcon,
   Package,
   PaintBucket,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -42,6 +44,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { Terminal } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -76,6 +81,7 @@ export default function Home() {
   const [showApiKeyAlert, setShowApiKeyAlert] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
+  const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
@@ -396,16 +402,42 @@ export default function Home() {
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header title="TileForge" icon={GridIcon} actions={headerActions} />
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-60 bg-card border-r border-border flex flex-col">
-            <Toolbar<Tool>
-              actions={toolbarActions}
-              selectedAction={tool}
-              onActionSelect={setTool}
-              gridSize={gridSize}
-              onGridResize={handleGridResize}
-              zoom={zoom}
-              onZoomChange={setZoom}
-            />
+          <aside
+            className={cn(
+              'bg-card border-r border-border flex flex-col transition-all duration-300',
+              isToolbarCollapsed ? 'w-[73px]' : 'w-60'
+            )}
+          >
+            <div className="flex-grow overflow-y-auto">
+               <Toolbar<Tool>
+                actions={toolbarActions}
+                selectedAction={tool}
+                onActionSelect={setTool}
+                gridSize={gridSize}
+                onGridResize={handleGridResize}
+                zoom={zoom}
+                onZoomChange={setZoom}
+                isCollapsed={isToolbarCollapsed}
+              />
+            </div>
+            <Separator />
+            <div className="p-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setToolbarCollapsed(!isToolbarCollapsed)}
+                    className="w-full"
+                  >
+                    {isToolbarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{isToolbarCollapsed ? 'Expand Toolbar' : 'Collapse Toolbar'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </aside>
           <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto">
              {showApiKeyAlert && (
