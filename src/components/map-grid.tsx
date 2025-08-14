@@ -28,7 +28,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
   };
 
   const handleMouseOver = (row: number, col: number) => {
-    if (isDrawing) {
+    if (isDrawing && (tool === 'brush' || tool === 'eraser')) {
       onCellAction(row, col);
     }
   };
@@ -51,6 +51,8 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
         return 'cursor-pointer';
       case 'ai':
         return 'cursor-help';
+      case 'fill':
+        return 'cursor-copy';
       default:
         return 'cursor-default';
     }

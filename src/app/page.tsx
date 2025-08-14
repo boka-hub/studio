@@ -14,6 +14,7 @@ import {
   Loader,
   Grid as GridIcon,
   Package,
+  PaintBucket,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -237,6 +238,41 @@ export default function Home() {
           setTool('brush');
           toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
         }
+      } else if (tool === 'fill') {
+        const targetId = grid[row][col];
+        const replacementId = selectedTileId;
+
+        if (targetId === replacementId) return;
+
+        const newGrid = grid.map(r => [...r]);
+        const queue: [number, number][] = [[row, col]];
+        const visited = new Set<string>();
+        visited.add(`${row},${col}`);
+
+        const width = newGrid[0].length;
+        const height = newGrid.length;
+
+        while (queue.length > 0) {
+          const [r, c] = queue.shift()!;
+          
+          if (newGrid[r][c] === targetId) {
+            newGrid[r][c] = replacementId;
+
+            const neighbors: [number, number][] = [
+              [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]
+            ];
+
+            for (const [nr, nc] of neighbors) {
+              const key = `${nr},${nc}`;
+              if (nr >= 0 && nr < height && nc >= 0 && nc < width && !visited.has(key)) {
+                queue.push([nr, nc]);
+                visited.add(key);
+              }
+            }
+          }
+        }
+        setGrid(newGrid);
+
       } else if (tool === 'ai') {
         if (grid[row][col] !== 0) return;
         setProcessingAI(true);
@@ -322,6 +358,7 @@ export default function Home() {
           'e': 'eraser',
           'p': 'picker',
           'i': 'ai',
+          'f': 'fill',
         };
         const target = e.target as HTMLElement;
         // Do not switch tools if user is typing in an input
@@ -341,6 +378,7 @@ export default function Home() {
     brush: { icon: Brush, label: 'Brush (B)' },
     eraser: { icon: Eraser, label: 'Eraser (E)' },
     picker: { icon: Pipette, label: 'Picker (P)' },
+    fill: { icon: PaintBucket, label: 'Fill (F)'},
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
 
