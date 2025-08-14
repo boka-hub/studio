@@ -1,4 +1,4 @@
-export type Tool = 'brush' | 'eraser' | 'picker' | 'ai' | 'fill' | 'rectangle' | 'select' | 'spray' | 'gradient';
+export type Tool = 'brush' | 'eraser' | 'picker' | 'ai' | 'fill' | 'rectangle' | 'select' | 'spray' | 'gradient' | 'noise';
 
 export interface Tile {
   id: number;

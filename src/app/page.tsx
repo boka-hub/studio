@@ -28,6 +28,7 @@ import {
   Replace,
   SprayCan,
   Layers,
+  Waves,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -243,7 +244,7 @@ export default function Home() {
   
   const handleCellAction = useCallback(
     (row: number, col: number) => {
-      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient') {
+      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
         // Handled by onShapeDraw
         return;
       }
@@ -415,6 +416,14 @@ export default function Home() {
                 }
             }
         }
+    } else if (tool === 'noise') {
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+              newGrid[r][c] = Math.random() < 0.5 ? selectedTileId : secondarySelectedTileId;
+            }
+          }
+        }
     }
 
     setGrid(newGrid);
@@ -532,6 +541,7 @@ export default function Home() {
           'm': 'select', // M for marquee
           's': 'spray',
           'l': 'gradient', // L for Layers/gradient
+          'n': 'noise',
         };
 
         if (keyMap[e.key]) {
@@ -558,6 +568,7 @@ export default function Home() {
     spray: { icon: SprayCan, label: 'Spray (S)' },
     rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
     gradient: { icon: Layers, label: 'Gradient (L)' },
+    noise: { icon: Waves, label: 'Noise (N)' },
     select: { icon: Lasso, label: 'Select (M)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
