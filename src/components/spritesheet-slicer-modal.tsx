@@ -63,8 +63,8 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
            file,
            src: e.target?.result as string,
            name: file.name.split('.')[0],
-           tileWidth: 32,
-           tileHeight: 32,
+           tileWidth: 16,
+           tileHeight: 16,
          };
          newFiles.push(newFile);
          if(newFiles.length === fileList.length) {
