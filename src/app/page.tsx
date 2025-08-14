@@ -31,6 +31,8 @@ import {
   Waves,
   Wand2,
   GitBranchPlus,
+  FlipHorizontal,
+  FlipVertical,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -588,7 +590,7 @@ export default function Home() {
   }, [grid, setGrid, toast, tiles, selectedTileId]);
 
 
-  const applyToSelection = (callback: (currentValue: number) => number) => {
+  const applyToSelection = (callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection) return;
 
     const newGrid = grid.map((r, rowIndex) => {
@@ -600,7 +602,7 @@ export default function Home() {
                 if (selection.selectedCells && selection.selectedCells[rowIndex][colIndex] === 0) {
                     return cell;
                 }
-                return callback(cell);
+                return callback(cell, rowIndex, colIndex, selection);
             }
             return cell;
         });
@@ -626,6 +628,30 @@ export default function Home() {
     }
     applyToSelection((cell) => cell === selectedTileId ? 0 : selectedTileId);
     toast({ title: 'Selection Inverted', description: 'Tiles in the selected area have been inverted.' });
+  }
+  
+  const handleMirrorHorizontal = () => {
+    if (!selection) return;
+    const selectionWidth = selection.maxCol - selection.minCol + 1;
+    const tempSelection = grid.slice(selection.minRow, selection.maxRow + 1).map(row => row.slice(selection.minCol, selection.maxCol + 1));
+    
+    applyToSelection((_cell, rowIndex, colIndex, sel) => {
+        const sourceCol = sel.minCol + (selectionWidth - 1 - (colIndex - sel.minCol));
+        return tempSelection[rowIndex - sel.minRow][sourceCol - sel.minCol];
+    });
+    toast({ title: 'Selection Mirrored', description: 'The selected area has been mirrored horizontally.' });
+  }
+
+  const handleMirrorVertical = () => {
+    if (!selection) return;
+    const selectionHeight = selection.maxRow - selection.minRow + 1;
+    const tempSelection = grid.slice(selection.minRow, selection.maxRow + 1).map(row => row.slice(selection.minCol, selection.maxCol + 1));
+    
+    applyToSelection((_cell, rowIndex, colIndex, sel) => {
+        const sourceRow = sel.minRow + (selectionHeight - 1 - (rowIndex - sel.minRow));
+        return tempSelection[sourceRow - sel.minRow][colIndex - sel.minCol];
+    });
+     toast({ title: 'Selection Mirrored', description: 'The selected area has been mirrored vertically.' });
   }
 
   const handleCopySelection = () => {
@@ -760,6 +786,8 @@ export default function Home() {
     paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', onClick: handlePasteSelection, disabled: !clipboard },
     delete: { icon: Trash2, label: 'Delete (Del)', onClick: handleDeleteSelection },
     invert: { icon: Replace, label: 'Invert', onClick: handleInvertSelection },
+    mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal', onClick: handleMirrorHorizontal },
+    mirrorVertical: { icon: FlipVertical, label: 'Mirror Vertical', onClick: handleMirrorVertical },
   };
 
 

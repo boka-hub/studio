@@ -61,6 +61,8 @@ export function Toolbar<T extends string>({
     onGridResize(width, height);
   };
   
+  const selectionActionEntries = Object.entries(selectionActions);
+  
   return (
     <ScrollArea className="flex-grow">
       <div className={cn("flex flex-col gap-4 p-2", isCollapsed && "items-center")}>
@@ -104,8 +106,8 @@ export function Toolbar<T extends string>({
                     <div className="px-2 space-y-2">
                         <h3 className="text-sm font-semibold text-muted-foreground">Selection</h3>
                          <div className="grid grid-cols-3 gap-1">
-                          {Object.values(selectionActions).map((action, index) => (
-                              <Tooltip key={index}>
+                          {selectionActionEntries.map(([key, action]) => (
+                              <Tooltip key={key}>
                                   <TooltipTrigger asChild>
                                       <div>
                                           <Button
