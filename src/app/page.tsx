@@ -30,6 +30,7 @@ import {
   Layers,
   Waves,
   Wand2,
+  GitBranchPlus,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -60,6 +61,7 @@ import { Terminal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { autoTile } from '@/ai/flows/auto-tile';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -103,6 +105,7 @@ export default function Home() {
 
   const tileImportRef = useRef<HTMLInputElement>(null);
   const lastDeletedTile = useRef<{ tile: Tile; grid: GridState; tiles: Tile[] } | null>(null);
+  const drawnPathCells = useRef(new Set<string>());
 
   const handleGridResize = (newWidth: number, newHeight: number) => {
     const oldGrid = grid;
@@ -245,8 +248,8 @@ export default function Home() {
   
   const handleCellAction = useCallback(
     async (row: number, col: number) => {
-      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
-        // Handled by onShapeDraw
+      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'path') {
+        // Handled by onShapeDraw or onDrawEnd
         return;
       }
       setSelection(null);
@@ -390,7 +393,6 @@ export default function Home() {
             return;
           }
           
-          // Create a 5x5 window around the target cell
           const windowSize = 5;
           const halfWindow = Math.floor(windowSize / 2);
           const surroundingTiles: number[][] = [];
@@ -462,7 +464,6 @@ export default function Home() {
             for (let c = minCol; c <= maxCol; c++) {
                 if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
                     const step = (c - minCol) / (width - 1);
-                    // Basic dithering pattern
                     const threshold = (r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25);
                     newGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
                 }
@@ -481,6 +482,74 @@ export default function Home() {
     setGrid(newGrid);
   }, [grid, selectedTileId, secondarySelectedTileId, setGrid, tool]);
 
+  const handleDrawPathCell = useCallback((row: number, col: number) => {
+    drawnPathCells.current.add(`${row},${col}`);
+    const newGrid = grid.map(r => [...r]);
+    newGrid[row][col] = selectedTileId;
+    setGrid(newGrid, true); // Bypass history for intermediate drawing steps
+  }, [grid, selectedTileId, setGrid]);
+  
+  const handleDrawPathEnd = useCallback(async () => {
+    if (drawnPathCells.current.size === 0) return;
+    setProcessingAI(true);
+    toast({ title: 'Processing Path...', description: 'AI is adjusting path tiles.' });
+
+    try {
+        const pathCells = Array.from(drawnPathCells.current).map(key => key.split(',').map(Number) as [number, number]);
+        drawnPathCells.current.clear();
+        
+        // This is a simplified approach. A real implementation might batch these.
+        let currentGrid = grid.map(r => [...r]);
+        for (const [row, col] of pathCells) {
+            const affectedCells = [[row, col]];
+            for (let r_offset = -1; r_offset <= 1; r_offset++) {
+              for (let c_offset = -1; c_offset <= 1; c_offset++) {
+                if (r_offset === 0 && c_offset === 0) continue;
+                const affectedRow = row + r_offset;
+                const affectedCol = col + c_offset;
+                if (pathCells.some(([pr, pc]) => pr === affectedRow && pc === affectedCol)) {
+                    affectedCells.push([affectedRow, affectedCol]);
+                }
+              }
+            }
+
+            for(const [r,c] of affectedCells) {
+                const windowSize = 3;
+                const halfWindow = Math.floor(windowSize / 2);
+                const surroundingTiles: number[][] = [];
+                for (let r_offset = -halfWindow; r_offset <= halfWindow; r_offset++) {
+                    const rowTiles: number[] = [];
+                    for (let c_offset = -halfWindow; c_offset <= halfWindow; c_offset++) {
+                        const neighborRow = r + r_offset;
+                        const neighborCol = c + c_offset;
+                        if (neighborRow >= 0 && neighborRow < grid.length && neighborCol >= 0 && neighborCol < grid[0].length) {
+                            rowTiles.push(currentGrid[neighborRow][neighborCol]);
+                        } else {
+                            rowTiles.push(0); 
+                        }
+                    }
+                    surroundingTiles.push(rowTiles);
+                }
+                
+                // For now, let's just place the selected tile. AI logic will go here.
+                // const result = await autoTile({ surroundingTiles, availableTiles: [selectedTileId] });
+                // currentGrid[r][c] = result.suggestedTile;
+            }
+        }
+        
+        // Since the AI flow isn't implemented, we just finalize the drawn path
+        setGrid(currentGrid);
+        toast({ title: 'Path Complete', description: 'AI path adjustments would be applied here.' });
+
+    } catch (error: any) {
+        console.error('Path tool failed:', error);
+        toast({ variant: 'destructive', title: 'Path Error', description: 'Could not finalize the path.' });
+    } finally {
+        setProcessingAI(false);
+    }
+  }, [grid, setGrid, toast]);
+
+
   const applyToSelection = (callback: (currentValue: number) => number) => {
      if (!selection) return;
 
@@ -490,7 +559,6 @@ export default function Home() {
         }
         return r.map((cell, colIndex) => {
             if (colIndex >= selection.minCol && colIndex <= selection.maxCol) {
-                // If we have a detailed selection map (from magic wand), use it
                 if (selection.selectedCells && selection.selectedCells[rowIndex][colIndex] === 0) {
                     return cell;
                 }
@@ -529,7 +597,6 @@ export default function Home() {
       .slice(selection.minRow, selection.maxRow + 1)
       .map((row, rIndex) => row.slice(selection.minCol, selection.maxCol + 1)
         .map((cell, cIndex) => {
-          // If we have a detailed selection, only copy the selected cells
           if (selection.selectedCells && selection.selectedCells[selection.minRow + rIndex][selection.minCol + cIndex] === 0) {
             return -1; // Use -1 to represent "not copied"
           }
@@ -564,13 +631,11 @@ export default function Home() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // prevent browser shortcuts
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-' || e.key === 'c' || e.key === 'v')) {
          e.preventDefault();
       }
       
       const target = e.target as HTMLElement;
-      // Do not process shortcuts if user is typing in an input
       if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea') return;
 
       if (e.ctrlKey || e.metaKey) {
@@ -601,13 +666,14 @@ export default function Home() {
           'e': 'eraser',
           'p': 'picker',
           'i': 'ai',
-          'g': 'fill', // G for GIMP/Photoshop bucket fill
+          'g': 'fill',
           'r': 'rectangle',
-          'm': 'select', // M for marquee
+          'm': 'select',
           'w': 'magic-wand',
           's': 'spray',
-          'l': 'gradient', // L for Layers/gradient
+          'l': 'gradient',
           'n': 'noise',
+          't': 'path', // T for track/path
         };
 
         if (keyMap[e.key]) {
@@ -637,6 +703,7 @@ export default function Home() {
     noise: { icon: Waves, label: 'Noise (N)' },
     select: { icon: Lasso, label: 'Select (M)' },
     'magic-wand': { icon: Wand2, label: 'Wand (W)' },
+    path: { icon: GitBranchPlus, label: 'Path (T)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
 
@@ -726,6 +793,8 @@ export default function Home() {
               tiles={tiles}
               onCellAction={handleCellAction}
               onShapeDraw={handleShapeDraw}
+              onDrawPathCell={handleDrawPathCell}
+              onDrawPathEnd={handleDrawPathEnd}
               tool={tool}
               zoom={zoom}
               selectedTileId={selectedTileId}

@@ -10,6 +10,8 @@ interface MapGridProps {
   tool: Tool;
   onCellAction: (row: number, col: number) => void;
   onShapeDraw: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
+  onDrawPathCell: (row: number, col: number) => void;
+  onDrawPathEnd: () => void;
   zoom?: number;
   selectedTileId: number;
   secondarySelectedTileId: number;
@@ -18,10 +20,23 @@ interface MapGridProps {
 
 const BASE_TILE_SIZE = 32;
 
-export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onShapeDraw, zoom = 1, selectedTileId, secondarySelectedTileId, selection }) => {
+export const MapGrid: FC<MapGridProps> = ({ 
+  grid, 
+  tiles, 
+  tool, 
+  onCellAction, 
+  onShapeDraw, 
+  onDrawPathCell,
+  onDrawPathEnd,
+  zoom = 1, 
+  selectedTileId, 
+  secondarySelectedTileId, 
+  selection 
+}) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
+  const lastCell = useRef<{ row: number, col: number } | null>(null);
   
   const TILE_SIZE = BASE_TILE_SIZE * zoom;
 
@@ -36,6 +51,9 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
         if (tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
             setPreviewGrid(grid); // Start preview from current grid state
         }
+    } else if (tool === 'path') {
+      onDrawPathCell(row, col);
+      lastCell.current = { row, col };
     } else {
         onCellAction(row, col);
     }
@@ -46,6 +64,11 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
 
     if (tool === 'brush' || tool === 'eraser' || tool === 'spray') {
       onCellAction(row, col);
+    } else if (tool === 'path') {
+      if (lastCell.current && (lastCell.current.row !== row || lastCell.current.col !== col)) {
+        onDrawPathCell(row, col);
+        lastCell.current = { row, col };
+      }
     } else if ((tool === 'rectangle' || tool === 'gradient' || tool === 'noise') && startCell) {
         const newPreviewGrid = grid.map(r => [...r]);
         const minRow = Math.min(startCell.row, row);
@@ -67,8 +90,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
                 for (let c = minCol; c <= maxCol; c++) {
                     if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
                         const step = (c - minCol) / Math.max(1, width - 1);
-                        // Basic dithering pattern. Could be improved with more patterns.
-                        const threshold = ((r+c) % 2) / 2 + 0.25; // Simple checkerboard dithering
+                        const threshold = ((r+c) % 2) / 2 + 0.25;
                         newPreviewGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
                     }
                 }
@@ -77,7 +99,6 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
             for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
                     if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                        // For preview, we use a consistent seed so it doesn't flicker
                         const random = Math.sin(r * 1000 + c * 10) * 10000;
                         newPreviewGrid[r][c] = (random - Math.floor(random)) < 0.5 ? selectedTileId : secondarySelectedTileId;
                     }
@@ -91,28 +112,32 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
   };
 
   const handleMouseUp = (row: number, col: number) => {
+    if (isDrawing && tool === 'path') {
+        onDrawPathEnd();
+    }
     if ((tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise') && startCell) {
       onShapeDraw(startCell, { row, col });
     }
     setIsDrawing(false);
     setStartCell(null);
     setPreviewGrid(null);
+    lastCell.current = null;
   };
 
   const handleMouseLeave = () => {
-    // If leaving grid while drawing a shape, commit the shape up to the last known cell
-    if (isDrawing && (tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise') && startCell) {
-        // This is tricky because we don't have the end cell.
-        // For now, we'll just cancel the drawing. A more advanced implementation could track the last cell.
+    if (isDrawing && tool === 'path') {
+        onDrawPathEnd();
     }
     setIsDrawing(false);
     setStartCell(null);
     setPreviewGrid(null);
+    lastCell.current = null;
   };
   
   const getCursorClass = () => {
     switch (tool) {
       case 'brush':
+      case 'path':
         return 'cursor-cell';
       case 'eraser':
         return 'cursor-crosshair';
