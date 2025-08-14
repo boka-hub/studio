@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 
-const MAX_HISTORY_SIZE = 51; // 50 undos + 1 current state
+const MAX_HISTORY_SIZE = 50; 
 
 export const useUndoRedo = <T>(initialState: T) => {
   const [history, setHistory] = useState<T[]>([initialState]);
@@ -19,22 +19,21 @@ export const useUndoRedo = <T>(initialState: T) => {
       return;
     }
 
-    const newHistory = history.slice(0, currentIndex + 1);
-    
-    // Prevent adding identical state to history
-    if (JSON.stringify(newHistory[newHistory.length - 1]) === JSON.stringify(newState)) {
-      return;
+    const currentState = history[currentIndex];
+    if (JSON.stringify(currentState) === JSON.stringify(newState)) {
+      return; // Prevent adding identical state to history
     }
-    
+
+    const newHistory = history.slice(0, currentIndex + 1);
     newHistory.push(newState);
     
-    let finalHistory = newHistory;
     if (newHistory.length > MAX_HISTORY_SIZE) {
-      finalHistory = newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+      // Remove the oldest state to maintain history size
+      newHistory.shift(); 
     }
     
-    setHistory(finalHistory);
-    setCurrentIndex(finalHistory.length - 1);
+    setHistory(newHistory);
+    setCurrentIndex(newHistory.length - 1);
   }, [currentIndex, history]);
   
   const undo = useCallback(() => {
@@ -66,5 +65,3 @@ export const useUndoRedo = <T>(initialState: T) => {
     setCurrentIndex,
   };
 };
-
-    

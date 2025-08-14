@@ -44,7 +44,6 @@ import { useUndoRedo } from '@/hooks/use-undo-redo';
 import { intelligentTilePlacement } from '@/ai/flows/intelligent-tile-placement';
 import { useToast } from "@/hooks/use-toast";
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { isTileTransparent } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -82,8 +81,6 @@ export default function Home() {
     canUndo,
     canRedo,
     resetHistory,
-    history,
-    setCurrentIndex,
   } = useUndoRedo<GridState>(createEmptyGrid(gridSize.width, gridSize.height));
 
   const [tiles, setTiles] = useState<Tile[]>([
@@ -494,22 +491,20 @@ export default function Home() {
   const handleDrawPathEnd = useCallback(async () => {
     if (drawnPathCells.current.size === 0) return;
     
-    // All tiles with same name as selected tile are considered path tiles
     const selectedTile = tiles.find(t => t.id === selectedTileId);
     if (!selectedTile) {
         toast({ variant: 'destructive', title: 'Path Error', description: 'A tile must be selected to draw a path.' });
         return;
     }
-    // Find all tiles that could be part of this path (e.g. grass_path_*, where * is corner, straight, etc)
+    
     const pathFamilyName = selectedTile.name.split('_')[0];
     const availablePathTiles = tiles.filter(t => t.name.startsWith(pathFamilyName));
     const availablePathTileIds = availablePathTiles.map(t => t.id);
     
     if (availablePathTileIds.length <= 1) {
         toast({ title: 'Path Drawn', description: 'To enable auto-tiling, provide a set of named path tiles (e.g., path_straight, path_corner).' });
-        // Finalize the drawn path without AI if not enough tiles
         const finalGrid = grid.map(r => [...r]);
-        setGrid(finalGrid);
+        setGrid(finalGrid); // Finalize history
         drawnPathCells.current.clear();
         return;
     }
@@ -523,7 +518,6 @@ export default function Home() {
         
         let currentGrid = grid.map(r => [...r]);
 
-        // Find all cells that are part of the path OR adjacent to it, as they might need updating
         const cellsToUpdate = new Set<string>();
         pathCellsToProcess.forEach(cellKey => {
             const [row, col] = cellKey.split(',').map(Number);
@@ -543,8 +537,7 @@ export default function Home() {
             }
         });
 
-        const promises = [];
-        for (const cellKey of Array.from(cellsToUpdate)) {
+        const promises = Array.from(cellsToUpdate).map(cellKey => {
             const [row, col] = cellKey.split(',').map(Number);
 
             const windowSize = 3;
@@ -564,14 +557,13 @@ export default function Home() {
                 surroundingTiles.push(rowTiles);
             }
             
-            const promise = autoTile({ surroundingTiles, availableTiles: availablePathTileIds, pathTileId: selectedTileId })
+            return autoTile({ surroundingTiles, availableTiles: availablePathTileIds, pathTileId: selectedTileId })
                 .then(result => ({ row, col, tile: result.suggestedTile }))
                 .catch(err => {
                     console.error(`AI failed for cell ${row},${col}`, err);
-                    return null; // Don't update this cell on failure
+                    return null;
                 });
-            promises.push(promise);
-        }
+        });
         
         const results = await Promise.all(promises);
         const newGrid = currentGrid.map(r => [...r]);
