@@ -1,6 +1,5 @@
 import type { FC } from 'react';
-import React, { useState, useRef, useCallback } from 'react';
-import Image from 'next/image';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import type { Tile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { isTileTransparent } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SpritesheetSlicerModalProps {
   isOpen: boolean;
@@ -32,8 +32,52 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   const [tileWidth, setTileWidth] = useState(32);
   const [tileHeight, setTileHeight] = useState(32);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sliceCanvasRef = useRef<HTMLCanvasElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
+
+  const drawPreview = useCallback(() => {
+    if (!imageSrc || !previewCanvasRef.current) return;
+    const img = new Image();
+    img.src = imageSrc;
+    img.onload = () => {
+      const canvas = previewCanvasRef.current!;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Set canvas size to match image to avoid distortion
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw image
+      ctx.drawImage(img, 0, 0);
+
+      // Draw grid lines
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      
+      // Vertical lines
+      for (let x = tileWidth; x < img.width; x += tileWidth) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, img.height);
+      }
+      
+      // Horizontal lines
+      for (let y = tileHeight; y < img.height; y += tileHeight) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(img.width, y);
+      }
+      
+      ctx.stroke();
+    };
+  }, [imageSrc, tileWidth, tileHeight]);
+
+  useEffect(() => {
+    if (isOpen) {
+      drawPreview();
+    }
+  }, [isOpen, drawPreview]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -48,12 +92,12 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   };
 
   const handleSlice = useCallback(async () => {
-    if (!imageSrc || !canvasRef.current) return;
+    if (!imageSrc || !sliceCanvasRef.current) return;
 
     const img = document.createElement('img');
     img.src = imageSrc;
     img.onload = async () => {
-      const canvas = canvasRef.current!;
+      const canvas = sliceCanvasRef.current!;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
@@ -110,7 +154,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Slice Spritesheet</DialogTitle>
           <DialogDescription>
@@ -130,9 +174,15 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           />
           
           {imageSrc && (
-            <div className="relative w-full h-48 border rounded-md overflow-hidden">
-                <Image src={imageSrc} alt="Spritesheet preview" layout="fill" objectFit="contain" />
-            </div>
+            <ScrollArea className="h-72 w-full rounded-md border">
+              <div className="p-1">
+                <canvas 
+                  ref={previewCanvasRef} 
+                  className="max-w-none"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+            </ScrollArea>
           )}
 
           <div className="grid grid-cols-2 gap-4">
@@ -142,8 +192,9 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                 id="tile-width"
                 type="number"
                 value={tileWidth}
-                onChange={(e) => setTileWidth(Number(e.target.value))}
+                onChange={(e) => setTileWidth(Math.max(1, Number(e.target.value)))}
                 className="w-full"
+                min="1"
               />
             </div>
             <div>
@@ -152,8 +203,9 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                 id="tile-height"
                 type="number"
                 value={tileHeight}
-                onChange={(e) => setTileHeight(Number(e.target.value))}
+                onChange={(e) => setTileHeight(Math.max(1, Number(e.target.value)))}
                 className="w-full"
+                min="1"
               />
             </div>
           </div>
@@ -162,7 +214,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button type="button" onClick={handleSlice} disabled={!imageSrc}>Slice and Add</Button>
         </DialogFooter>
-        <canvas ref={canvasRef} className="hidden" />
+        <canvas ref={sliceCanvasRef} className="hidden" />
       </DialogContent>
     </Dialog>
   );
