@@ -184,8 +184,8 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
             </div>
           </div>
         </div>
-        <DialogFooter className="sm:justify-between gap-2">
-          <div className="flex flex-col sm:flex-row gap-2">
+        <DialogFooter className="sm:justify-between gap-2 flex-col sm:flex-row">
+          <div className="flex flex-col sm:flex-row gap-2 justify-start">
             <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0}>
                 <FileImage className="mr-2 h-4 w-4" />
                 Individual PNGs
@@ -195,7 +195,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
                 Metadata Only
             </Button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-end">
             <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
             <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0}>
                 <Download className="mr-2 h-4 w-4" />
