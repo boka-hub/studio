@@ -54,10 +54,13 @@ export const TilePalette: FC<TilePaletteProps> = ({
             <div key={tile.id} className="group flex flex-col items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectTile(tile.id); }}
                     onClick={() => onSelectTile(tile.id)}
                     className={cn(
-                      'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150',
+                      'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
                       selectedTileId === tile.id
                         ? 'border-primary scale-105 shadow-lg'
                         : 'border-card hover:border-accent'
@@ -70,7 +73,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       alt={tile.name}
                       fill
                       sizes="(max-width: 768px) 10vw, 5vw"
-                      className="object-cover bg-muted/20"
+                      className="object-cover bg-muted/20 pointer-events-none"
                       unoptimized
                       data-ai-hint="pixel art"
                     />
@@ -80,10 +83,11 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         className="absolute top-0.5 right-0.5 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={(e) => handleDelete(e, tile.id)}
                         aria-label={`Delete tile ${tile.name}`}
+                        tabIndex={-1} // Prevent tabbing to the delete button within the tile
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                  </button>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Double-click name to edit</p>
