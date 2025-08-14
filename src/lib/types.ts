@@ -1,4 +1,4 @@
-export type Tool = 'brush' | 'eraser' | 'picker' | 'ai' | 'fill' | 'rectangle';
+export type Tool = 'brush' | 'eraser' | 'picker' | 'ai' | 'fill' | 'rectangle' | 'select';
 
 export interface Tile {
   id: number;
@@ -7,3 +7,10 @@ export interface Tile {
 }
 
 export type GridState = number[][];
+
+export interface Selection {
+  minRow: number;
+  minCol: number;
+  maxRow: number;
+  maxCol: number;
+}

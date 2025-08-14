@@ -7,8 +7,9 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, FileCheck } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { Selection } from '@/lib/types';
 
 interface Action<T extends string> {
   icon: ElementType;
@@ -25,6 +26,8 @@ interface ToolbarProps<T extends string> {
   zoom: number;
   onZoomChange: (zoom: number) => void;
   isCollapsed: boolean;
+  selection: Selection | null;
+  onFillSelection: () => void;
 }
 
 export function Toolbar<T extends string>({
@@ -36,6 +39,8 @@ export function Toolbar<T extends string>({
   zoom,
   onZoomChange,
   isCollapsed,
+  selection,
+  onFillSelection,
 }: ToolbarProps<T>) {
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
@@ -86,6 +91,18 @@ export function Toolbar<T extends string>({
         </div>
         {!isCollapsed && (
           <>
+            {selection && (
+                <>
+                  <Separator />
+                    <div className="px-2 space-y-2">
+                        <h3 className="text-sm font-semibold text-muted-foreground">Selection</h3>
+                        <Button size="sm" variant="outline" className="w-full h-8" onClick={onFillSelection}>
+                            <FileCheck className="h-4 w-4 mr-2" />
+                            Fill Selection
+                        </Button>
+                    </div>
+                </>
+            )}
             <Separator />
             <div className="px-2">
               <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Canvas</h3>

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { GridState, Tile, Tool } from '@/lib/types';
+import type { GridState, Tile, Tool, Selection } from '@/lib/types';
 
 interface MapGridProps {
   grid: GridState;
@@ -12,11 +12,12 @@ interface MapGridProps {
   onShapeDraw: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
   zoom?: number;
   selectedTileId: number;
+  selection: Selection | null;
 }
 
 const BASE_TILE_SIZE = 32;
 
-export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onShapeDraw, zoom = 1, selectedTileId }) => {
+export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onShapeDraw, zoom = 1, selectedTileId, selection }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
@@ -29,9 +30,11 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
 
   const handleMouseDown = (row: number, col: number) => {
     setIsDrawing(true);
-    if (tool === 'rectangle') {
+    if (tool === 'rectangle' || tool === 'select') {
         setStartCell({ row, col });
-        setPreviewGrid(grid); // Start preview from current grid state
+        if (tool === 'rectangle') {
+            setPreviewGrid(grid); // Start preview from current grid state
+        }
     } else {
         onCellAction(row, col);
     }
@@ -57,11 +60,13 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
             }
         }
         setPreviewGrid(newPreviewGrid);
+    } else if (tool === 'select' && startCell) {
+        onShapeDraw(startCell, { row, col });
     }
   };
 
   const handleMouseUp = (row: number, col: number) => {
-    if (tool === 'rectangle' && startCell) {
+    if ((tool === 'rectangle' || tool === 'select') && startCell) {
       onShapeDraw(startCell, { row, col });
     }
     setIsDrawing(false);
@@ -71,7 +76,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
 
   const handleMouseLeave = () => {
     // If leaving grid while drawing a shape, commit the shape up to the last known cell
-    if (isDrawing && tool === 'rectangle' && startCell) {
+    if (isDrawing && (tool === 'rectangle' || tool === 'select') && startCell) {
         // This is tricky because we don't have the end cell.
         // For now, we'll just cancel the drawing. A more advanced implementation could track the last cell.
     }
@@ -93,6 +98,8 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
       case 'fill':
         return 'cursor-copy';
       case 'rectangle':
+        return 'cursor-crosshair';
+      case 'select':
         return 'cursor-crosshair';
       default:
         return 'cursor-default';
@@ -149,6 +156,18 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
           })
         )}
       </div>
+       {selection && (
+        <div
+          className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
+          style={{
+            left: `${selection.minCol * (TILE_SIZE + gridLineWidth)}px`,
+            top: `${selection.minRow * (TILE_SIZE + gridLineWidth)}px`,
+            width: `${(selection.maxCol - selection.minCol + 1) * (TILE_SIZE + gridLineWidth)}px`,
+            height: `${(selection.maxRow - selection.minRow + 1) * (TILE_SIZE + gridLineWidth)}px`,
+            boxSizing: 'border-box',
+          }}
+        />
+      )}
     </div>
   );
 };

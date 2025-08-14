@@ -20,6 +20,8 @@ import {
   PanelRightClose,
   PanelRightOpen,
   RectangleHorizontal,
+  Lasso,
+  FileCheck,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -27,7 +29,7 @@ import { TilePalette } from '@/components/tile-palette';
 import { MapGrid } from '@/components/map-grid';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
-import type { Tool, Tile, GridState } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection } from '@/lib/types';
 import { useUndoRedo } from '@/hooks/use-undo-redo';
 import { intelligentTilePlacement } from '@/ai/flows/intelligent-tile-placement';
 import { useToast } from "@/hooks/use-toast";
@@ -78,6 +80,7 @@ export default function Home() {
   ]);
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
   const [tool, setTool] = useState<Tool>('brush');
+  const [selection, setSelection] = useState<Selection | null>(null);
   const [isSlicerOpen, setSlicerOpen] = useState(false);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isProcessingAI, setProcessingAI] = useState(false);
@@ -104,6 +107,7 @@ export default function Home() {
     }
     setGridSize({ width: newWidth, height: newHeight });
     resetHistory(newGrid);
+    setSelection(null);
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   };
   
@@ -227,7 +231,13 @@ export default function Home() {
   };
   
   const handleCellAction = useCallback(
-    async (row: number, col: number) => {
+    (row: number, col: number) => {
+      if (tool === 'select') {
+        // Selection handled by onShapeDraw
+        return;
+      }
+      setSelection(null);
+      
       if (tool === 'brush') {
         if (grid[row][col] === selectedTileId) return;
         const newGrid = grid.map((r, rIndex) =>
@@ -338,11 +348,19 @@ export default function Home() {
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
-    const newGrid = grid.map(r => [...r]);
     const minRow = Math.min(start.row, end.row);
     const maxRow = Math.max(start.row, end.row);
     const minCol = Math.min(start.col, end.col);
     const maxCol = Math.max(start.col, end.col);
+
+    if (tool === 'select') {
+      setSelection({ minRow, minCol, maxRow, maxCol });
+      return;
+    }
+
+    setSelection(null);
+
+    const newGrid = grid.map(r => [...r]);
 
     for (let r = minRow; r <= maxRow; r++) {
       for (let c = minCol; c <= maxCol; c++) {
@@ -352,7 +370,23 @@ export default function Home() {
       }
     }
     setGrid(newGrid);
-  }, [grid, selectedTileId, setGrid]);
+  }, [grid, selectedTileId, setGrid, tool]);
+
+  const handleFillSelection = () => {
+    if (!selection) return;
+
+    const newGrid = grid.map(r => [...r]);
+    for (let r = selection.minRow; r <= selection.maxRow; r++) {
+      for (let c = selection.minCol; c <= selection.maxCol; c++) {
+        if (r < grid.length && c < grid[0].length) {
+          newGrid[r][c] = selectedTileId;
+        }
+      }
+    }
+    setGrid(newGrid);
+    setSelection(null);
+    toast({ title: 'Selection Filled', description: 'The selected area has been filled with the current tile.' });
+  }
 
 
   useEffect(() => {
@@ -387,7 +421,8 @@ export default function Home() {
           'p': 'picker',
           'i': 'ai',
           'f': 'fill',
-          'r': 'rectangle'
+          'r': 'rectangle',
+          's': 'select',
         };
         const target = e.target as HTMLElement;
         // Do not switch tools if user is typing in an input
@@ -395,12 +430,16 @@ export default function Home() {
 
         if (keyMap[e.key]) {
           setTool(keyMap[e.key]);
+        } else if (e.key === 'Escape') {
+            if (selection) {
+                setSelection(null);
+            }
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, setZoom]);
+  }, [undo, redo, setZoom, selection]);
 
 
   const toolbarActions = {
@@ -409,6 +448,7 @@ export default function Home() {
     picker: { icon: Pipette, label: 'Picker (P)' },
     fill: { icon: PaintBucket, label: 'Fill (F)'},
     rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
+    select: { icon: Lasso, label: 'Select (S)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
 
@@ -436,12 +476,17 @@ export default function Home() {
                <Toolbar<Tool>
                 actions={toolbarActions}
                 selectedAction={tool}
-                onActionSelect={setTool}
+                onActionSelect={(t) => {
+                    setTool(t);
+                    if (t !== 'select') setSelection(null);
+                }}
                 gridSize={gridSize}
                 onGridResize={handleGridResize}
                 zoom={zoom}
                 onZoomChange={setZoom}
                 isCollapsed={isToolbarCollapsed}
+                selection={selection}
+                onFillSelection={handleFillSelection}
               />
             </div>
             <Separator />
@@ -487,6 +532,7 @@ export default function Home() {
               tool={tool}
               zoom={zoom}
               selectedTileId={selectedTileId}
+              selection={selection}
             />
           </main>
           <aside className={cn(
