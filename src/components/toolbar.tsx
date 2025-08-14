@@ -54,7 +54,7 @@ export function Toolbar<T extends string>({
       <div className={cn("flex flex-col gap-4 p-2", isCollapsed && "items-center")}>
         <div>
           <h3 className={cn("text-sm font-semibold mb-2 px-2 text-muted-foreground", isCollapsed && "hidden")}>Tools</h3>
-          <div className={cn("grid gap-1", isCollapsed ? 'grid-cols-1' : 'grid-cols-2')}>
+          <div className={cn("grid gap-1", isCollapsed ? 'grid-cols-2' : 'grid-cols-2')}>
             {(Object.keys(actions) as T[]).map((key) => {
               const action = actions[key];
               const Icon = action.icon;

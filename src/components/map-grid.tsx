@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -9,13 +9,18 @@ interface MapGridProps {
   tiles: Tile[];
   tool: Tool;
   onCellAction: (row: number, col: number) => void;
+  onShapeDraw: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
   zoom?: number;
+  selectedTileId: number;
 }
 
 const BASE_TILE_SIZE = 32;
 
-export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoom = 1 }) => {
+export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onShapeDraw, zoom = 1, selectedTileId }) => {
   const [isDrawing, setIsDrawing] = useState(false);
+  const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
+  const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
+  
   const TILE_SIZE = BASE_TILE_SIZE * zoom;
 
   const tileMap = useMemo(() => {
@@ -24,21 +29,55 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
 
   const handleMouseDown = (row: number, col: number) => {
     setIsDrawing(true);
-    onCellAction(row, col);
-  };
-
-  const handleMouseOver = (row: number, col: number) => {
-    if (isDrawing && (tool === 'brush' || tool === 'eraser')) {
-      onCellAction(row, col);
+    if (tool === 'rectangle') {
+        setStartCell({ row, col });
+        setPreviewGrid(grid); // Start preview from current grid state
+    } else {
+        onCellAction(row, col);
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseOver = (row: number, col: number) => {
+    if (!isDrawing) return;
+
+    if (tool === 'brush' || tool === 'eraser') {
+      onCellAction(row, col);
+    } else if (tool === 'rectangle' && startCell) {
+        const newPreviewGrid = grid.map(r => [...r]);
+        const minRow = Math.min(startCell.row, row);
+        const maxRow = Math.max(startCell.row, row);
+        const minCol = Math.min(startCell.col, col);
+        const maxCol = Math.max(startCell.col, col);
+
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    newPreviewGrid[r][c] = selectedTileId;
+                }
+            }
+        }
+        setPreviewGrid(newPreviewGrid);
+    }
+  };
+
+  const handleMouseUp = (row: number, col: number) => {
+    if (tool === 'rectangle' && startCell) {
+      onShapeDraw(startCell, { row, col });
+    }
     setIsDrawing(false);
+    setStartCell(null);
+    setPreviewGrid(null);
   };
 
   const handleMouseLeave = () => {
+    // If leaving grid while drawing a shape, commit the shape up to the last known cell
+    if (isDrawing && tool === 'rectangle' && startCell) {
+        // This is tricky because we don't have the end cell.
+        // For now, we'll just cancel the drawing. A more advanced implementation could track the last cell.
+    }
     setIsDrawing(false);
+    setStartCell(null);
+    setPreviewGrid(null);
   };
   
   const getCursorClass = () => {
@@ -53,19 +92,21 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
         return 'cursor-help';
       case 'fill':
         return 'cursor-copy';
+      case 'rectangle':
+        return 'cursor-crosshair';
       default:
         return 'cursor-default';
     }
   };
   
-  const gridHeight = grid.length;
-  const gridWidth = grid[0]?.length || 0;
+  const gridToRender = previewGrid || grid;
+  const gridHeight = gridToRender.length;
+  const gridWidth = gridToRender[0]?.length || 0;
   const gridLineWidth = 1;
 
   return (
     <div
       className="relative flex items-center justify-center w-full h-full"
-      onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
     >
       <div
@@ -80,7 +121,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
         }}
       >
-        {grid.map((row, rowIndex) =>
+        {gridToRender.map((row, rowIndex) =>
           row.map((tileId, colIndex) => {
             const tile = tileMap.get(tileId);
             return (
@@ -89,6 +130,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
                 className="relative bg-card"
                 onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
                 onMouseOver={() => handleMouseOver(rowIndex, colIndex)}
+                onMouseUp={() => handleMouseUp(rowIndex, colIndex)}
                 style={{ width: TILE_SIZE, height: TILE_SIZE }}
               >
                 {tile && tile.id !== 0 && (

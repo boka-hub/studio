@@ -19,6 +19,7 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  RectangleHorizontal,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -336,6 +337,24 @@ export default function Home() {
     [grid, selectedTileId, tool, setGrid, tiles, toast]
   );
   
+  const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
+    const newGrid = grid.map(r => [...r]);
+    const minRow = Math.min(start.row, end.row);
+    const maxRow = Math.max(start.row, end.row);
+    const minCol = Math.min(start.col, end.col);
+    const maxCol = Math.max(start.col, end.col);
+
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        if (r < grid.length && c < grid[0].length) {
+          newGrid[r][c] = selectedTileId;
+        }
+      }
+    }
+    setGrid(newGrid);
+  }, [grid, selectedTileId, setGrid]);
+
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // prevent browser shortcuts
@@ -368,6 +387,7 @@ export default function Home() {
           'p': 'picker',
           'i': 'ai',
           'f': 'fill',
+          'r': 'rectangle'
         };
         const target = e.target as HTMLElement;
         // Do not switch tools if user is typing in an input
@@ -388,6 +408,7 @@ export default function Home() {
     eraser: { icon: Eraser, label: 'Eraser (E)' },
     picker: { icon: Pipette, label: 'Picker (P)' },
     fill: { icon: PaintBucket, label: 'Fill (F)'},
+    rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
 
@@ -462,8 +483,10 @@ export default function Home() {
               grid={grid}
               tiles={tiles}
               onCellAction={handleCellAction}
+              onShapeDraw={handleShapeDraw}
               tool={tool}
               zoom={zoom}
+              selectedTileId={selectedTileId}
             />
           </main>
           <aside className={cn(
