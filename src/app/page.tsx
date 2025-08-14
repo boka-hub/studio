@@ -855,7 +855,7 @@ export default function Home() {
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Mountain, label: 'Generate Terrain', onClick: () => setTerrainGeneratorOpen(true) },
-    { icon: isPreviewMode ? Square : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
+    { icon: isPreviewMode ? Square : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
     { icon: Undo, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
     { icon: Redo, label: 'Redo (Ctrl+Shift+Z)', onClick: redo, disabled: !canRedo },
   ];
