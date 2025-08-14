@@ -198,10 +198,34 @@ export default function Home() {
           const availableTiles = tiles.filter(t => t.id !== 0).map(t => t.id);
           if (availableTiles.length === 0) {
             toast({ variant: 'destructive', title: 'AI Error', description: 'No tiles available for AI placement.' });
+            setProcessingAI(false);
             return;
           }
-          const numericGrid = grid.map(r => r.map(c => c));
-          const result = await intelligentTilePlacement({ grid: numericGrid, row, col, availableTiles });
+          
+          // Create a 5x5 window around the target cell
+          const windowSize = 5;
+          const halfWindow = Math.floor(windowSize / 2);
+          const surroundingTiles: number[][] = [];
+          for (let r = -halfWindow; r <= halfWindow; r++) {
+            const rowTiles: number[] = [];
+            for (let c = -halfWindow; c <= halfWindow; c++) {
+              const neighborRow = row + r;
+              const neighborCol = col + c;
+              if (
+                neighborRow >= 0 &&
+                neighborRow < grid.length &&
+                neighborCol >= 0 &&
+                neighborCol < grid[0].length
+              ) {
+                rowTiles.push(grid[neighborRow][neighborCol]);
+              } else {
+                rowTiles.push(0); // Use empty tile for out-of-bounds
+              }
+            }
+            surroundingTiles.push(rowTiles);
+          }
+          
+          const result = await intelligentTilePlacement({ surroundingTiles, availableTiles });
           
           const newGrid = grid.map((r, rIndex) =>
             rIndex === row ? r.map((c, cIndex) => (cIndex === col ? result.suggestedTile : c)) : r
@@ -212,7 +236,7 @@ export default function Home() {
           if (error.message?.includes('API key not found')) {
             setShowApiKeyAlert(true);
           }
-          toast({ variant: 'destructive', title: 'AI Error', description: 'Could not suggest a tile. Is your API key configured?' });
+          toast({ variant: 'destructive', title: 'AI Error', description: 'Could not suggest a tile. Check your API key and network.' });
         } finally {
           setProcessingAI(false);
         }

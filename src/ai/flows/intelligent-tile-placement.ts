@@ -14,11 +14,9 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const IntelligentTilePlacementInputSchema = z.object({
-  grid: z
+  surroundingTiles: z
     .array(z.array(z.number()))
-    .describe('The current state of the tile grid.'),
-  row: z.number().describe('The row index of the tile to be placed.'),
-  col: z.number().describe('The column index of the tile to be placed.'),
+    .describe('A 5x5 window of the grid centered on the target cell.'),
   availableTiles: z.array(z.number()).describe('The list of available tile indices.'),
 });
 export type IntelligentTilePlacementInput = z.infer<
@@ -44,24 +42,20 @@ const prompt = ai.definePrompt({
   name: 'intelligentTilePlacementPrompt',
   input: {schema: IntelligentTilePlacementInputSchema},
   output: {schema: IntelligentTilePlacementOutputSchema},
-  prompt: `You are an expert AI tile map editor. Your task is to suggest the most appropriate tile for an empty space on a map to ensure visual consistency.
+  prompt: `You are an expert AI tile map editor. Your task is to suggest the most appropriate tile for the center of the provided 5x5 grid window. The ID '0' represents an empty tile, which is the tile you need to replace.
 
-The tile map is represented as a grid of numbers, where each number is a tile ID. The ID '0' represents an empty tile.
+Analyze the neighboring tiles around the center of this window. Based on the patterns and tile choices in the vicinity, select the best tile from the available options to create a seamless and logical map.
 
-You will be given the current grid, the coordinates (row, col) of the empty space to fill, and a list of available tile IDs to choose from.
-
-Analyze the neighboring tiles around the target location (row={{row}}, col={{col}}). Based on the patterns and tile choices in the vicinity, select the best tile from the available options to create a seamless and logical map.
-
-Current Grid State:
-{{#each grid as |gridRow|}}
+5x5 Grid Window (target is the center '0'):
+{{#each surroundingTiles as |gridRow|}}
 {{#each gridRow as |cell|}}{{cell}} {{/each}}
 {{/each}}
 
 Available Tile IDs: [{{#each availableTiles}}{{.}}{{#unless @last}}, {{/unless}}{{/each}}]
 
-Your goal is to make the map look natural. For example, if the target cell is surrounded by 'water' tiles, you should probably suggest a 'water' tile. If it's at the border of 'grass' and 'sand', you might suggest a 'sand-to-grass-transition' tile if one is available.
+Your goal is to make the map look natural. For example, if the center cell is surrounded by 'water' tiles, you should probably suggest a 'water' tile. If it's at the border of 'grass' and 'sand', you might suggest a 'sand-to-grass-transition' tile if one is available.
 
-Examine the provided grid and available tiles carefully and decide which tile ID is the best fit.
+Examine the provided grid window and available tiles carefully and decide which tile ID is the best fit for the center.
 `,
 });
 
@@ -76,5 +70,3 @@ const intelligentTilePlacementFlow = ai.defineFlow(
     return output!;
   }
 );
-
-    
