@@ -32,7 +32,7 @@ interface TerrainGeneratorModalProps {
   onProcessingChange: (isProcessing: boolean) => void;
 }
 
-type TerrainType = 'forest' | 'desert' | 'beach' | 'volcanic' | 'alien' | 'grassland' | 'jungle' | 'mountains' | 'swamp' | 'crystal_caves' | 'tundra' | 'wasteland' | 'farmland' | 'ruins';
+type TerrainType = 'forest' | 'desert' | 'beach' | 'volcanic' | 'alien' | 'grassland' | 'jungle' | 'mountains' | 'swamp' | 'crystal_caves' | 'tundra' | 'wasteland' | 'farmland' | 'ruins' | 'simple_village' | 'basic_dungeon';
 
 interface TerrainConfig {
   type: TerrainType;
@@ -85,6 +85,15 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
     overgrown_grass: 0,
     ruined_wall: 0,
     debris_pile: 0,
+    building_wall: 0,
+    building_floor: 0,
+    door: 0,
+    dungeon_wall_solid: 0,
+    dungeon_wall: 0,
+    dungeon_floor: 0,
+    stairs_up: 0,
+    stairs_down: 0,
+    debris: 0,
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -123,6 +132,10 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
           return tileMapping.plowed_soil > 0 && tileMapping.crops > 0 && tileMapping.fence > 0 && tileMapping.path > 0;
       case 'ruins':
           return tileMapping.overgrown_grass > 0 && tileMapping.ruined_wall > 0 && tileMapping.debris_pile > 0;
+      case 'simple_village':
+          return tileMapping.grass > 0 && tileMapping.building_wall > 0 && tileMapping.building_floor > 0 && tileMapping.door > 0 && tileMapping.path > 0 && tileMapping.tree > 0;
+      case 'basic_dungeon':
+          return tileMapping.dungeon_wall_solid > 0 && tileMapping.dungeon_wall > 0 && tileMapping.dungeon_floor > 0 && tileMapping.stairs_up > 0 && tileMapping.stairs_down > 0 && tileMapping.debris > 0;
       default:
         return false;
     }
@@ -293,6 +306,28 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
             <TileSelect id="debris-pile-tile" label="Debris Pile" value={tileMapping.debris_pile} onValueChange={(v) => handleTileMappingChange('debris_pile', v)} />
           </>
         );
+      case 'simple_village':
+        return (
+          <>
+            <TileSelect id="grass-tile" label="Grass" value={tileMapping.grass} onValueChange={(v) => handleTileMappingChange('grass', v)} />
+            <TileSelect id="building-wall-tile" label="Building Wall" value={tileMapping.building_wall} onValueChange={(v) => handleTileMappingChange('building_wall', v)} />
+            <TileSelect id="building-floor-tile" label="Building Floor" value={tileMapping.building_floor} onValueChange={(v) => handleTileMappingChange('building_floor', v)} />
+            <TileSelect id="door-tile" label="Door" value={tileMapping.door} onValueChange={(v) => handleTileMappingChange('door', v)} />
+            <TileSelect id="path-tile" label="Path" value={tileMapping.path} onValueChange={(v) => handleTileMappingChange('path', v)} />
+            <TileSelect id="tree-tile" label="Tree" value={tileMapping.tree} onValueChange={(v) => handleTileMappingChange('tree', v)} />
+          </>
+        );
+      case 'basic_dungeon':
+        return (
+          <>
+            <TileSelect id="dungeon-wall-solid-tile" label="Solid Wall" value={tileMapping.dungeon_wall_solid} onValueChange={(v) => handleTileMappingChange('dungeon_wall_solid', v)} />
+            <TileSelect id="dungeon-wall-tile" label="Interior Wall" value={tileMapping.dungeon_wall} onValueChange={(v) => handleTileMappingChange('dungeon_wall', v)} />
+            <TileSelect id="dungeon-floor-tile" label="Floor" value={tileMapping.dungeon_floor} onValueChange={(v) => handleTileMappingChange('dungeon_floor', v)} />
+            <TileSelect id="stairs-up-tile" label="Stairs Up" value={tileMapping.stairs_up} onValueChange={(v) => handleTileMappingChange('stairs_up', v)} />
+            <TileSelect id="stairs-down-tile" label="Stairs Down" value={tileMapping.stairs_down} onValueChange={(v) => handleTileMappingChange('stairs_down', v)} />
+            <TileSelect id="debris-tile" label="Debris" value={tileMapping.debris} onValueChange={(v) => handleTileMappingChange('debris', v)} />
+          </>
+        );
       default:
         return null;
     }
@@ -333,6 +368,8 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
                   <SelectItem value="ruins">Ruins</SelectItem>
                   <SelectItem value="wasteland">Wasteland</SelectItem>
                   <SelectItem value="alien">Alien</SelectItem>
+                  <SelectItem value="simple_village">Simple Village</SelectItem>
+                  <SelectItem value="basic_dungeon">Basic Dungeon</SelectItem>
               </SelectContent>
             </Select>
           </div>

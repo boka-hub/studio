@@ -28,7 +28,7 @@ const prompt = ai.definePrompt({
   name: 'generateTerrainPrompt',
   input: {schema: GenerateTerrainInputSchema},
   output: {schema: GenerateTerrainOutputSchema},
-  prompt: `You are an expert AI level designer specializing in 2D tile-based maps. Your task is to generate a natural-looking terrain based on the user's configuration, completely replacing the provided grid.
+  prompt: `You are an expert AI level designer specializing in 2D tile-based maps. Your task is to generate a natural-looking terrain or a structured layout based on the user's configuration, completely replacing the provided grid.
 
 The output MUST be a valid JSON object matching the output schema, representing the entire grid.
 
@@ -120,6 +120,22 @@ Instructions for 'ruins':
 2. Create the remnants of stone structures using 'ruined_wall' tiles. These should be broken, incomplete lines and small, hollow rectangular shapes.
 3. Scatter 'debris_pile' tiles inside and around the ruined structures.
 4. The structures should look ancient and reclaimed by nature.
+
+Instructions for 'simple_village':
+1. Fill the entire map with the 'grass' tile.
+2. Create 3-5 simple, rectangular building shapes using the 'building_wall' tile. The buildings should not be touching.
+3. Fill the inside of these buildings with the 'building_floor' tile.
+4. For each building, replace one wall segment with a 'door' tile.
+5. Create simple 'path' tiles connecting the doors of the buildings to each other. The paths should be 1 tile wide.
+6. Sparsely place 'tree' tiles around the village, but not inside buildings or on paths.
+
+Instructions for 'basic_dungeon':
+1. The majority of the map should be 'dungeon_wall_solid', representing solid earth.
+2. Carve out 4-6 rooms of varying rectangular sizes using the 'dungeon_floor' tile. Rooms should not overlap.
+3. Connect the rooms with 1-tile-wide corridors, also using the 'dungeon_floor' tile. Ensure all rooms are accessible.
+4. Replace the 'dungeon_wall_solid' tiles that are adjacent to the floor tiles with 'dungeon_wall' to create the interior walls.
+5. Place a 'stairs_up' tile in one room and a 'stairs_down' tile in another, distant room.
+6. Sparsely place 'debris' tiles in some rooms and corridors.
 
 Generate a complete new grid according to these instructions. The output grid MUST have the same dimensions as the input grid.
 `,
