@@ -740,7 +740,7 @@ export default function Home() {
         } else if (e.key === '=') {
           setZoom(z => Math.min(z + 0.1, 2));
         } else if (e.key === '-') {
-          setZoom(z => Math.max(z - 1, 0.1));
+          setZoom(z => Math.max(z - 0.1, 0.1));
         } else if (e.key === '0') {
           setZoom(1);
         } else if (e.key === 'c' && selection) {
@@ -1008,6 +1008,8 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
 
     
 

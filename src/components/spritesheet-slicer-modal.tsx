@@ -55,7 +55,8 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     const newFiles: FileData[] = [];
     const fileList = Array.from(incomingFiles);
 
-    fileList.forEach((file, index) => {
+    let processedCount = 0;
+    fileList.forEach((file) => {
        const reader = new FileReader();
        reader.onload = (e) => {
          const newFile = {
@@ -67,17 +68,21 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
            tileHeight: 16,
          };
          newFiles.push(newFile);
-         if(newFiles.length === fileList.length) {
-            setFiles(f => [...f, ...newFiles]);
-            // If nothing is selected or the current selection is gone, select the first of the new files
-            if (!selectedFileId || !files.some(f => f.id === selectedFileId)) {
-                setSelectedFileId(newFiles[0].id);
-            }
+         processedCount++;
+         if(processedCount === fileList.length) {
+            setFiles(f => {
+                const updatedFiles = [...f, ...newFiles];
+                 // If nothing was selected before, select the first of the new files
+                if (!selectedFileId) {
+                    setSelectedFileId(newFiles[0]?.id || null);
+                }
+                return updatedFiles;
+            });
          }
        };
        reader.readAsDataURL(file);
     });
-  }, [files, selectedFileId]);
+  }, [selectedFileId]);
   
   useEffect(() => {
     if(isOpen && initialFiles.length > 0) {
@@ -333,3 +338,5 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     </Dialog>
   );
 };
+
+    

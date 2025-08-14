@@ -95,6 +95,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         id: tile.id,
         name: tile.name,
         index: index,
+        solid: tile.solid,
       })),
     };
     const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'text/plain' });
@@ -205,3 +206,5 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     </Dialog>
   );
 };
+
+    

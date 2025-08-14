@@ -37,7 +37,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleStartEditing = (tile: Tile) => {
-    if (isCollapsed) return;
+    if (isCollapsed || tile.id === 0) return;
     setEditingTileId(tile.id);
     setEditingName(tile.name);
   };
@@ -218,3 +218,5 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
+
+    
