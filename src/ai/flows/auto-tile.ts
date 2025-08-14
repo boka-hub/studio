@@ -17,15 +17,16 @@ import {z} from 'genkit';
 const AutoTileInputSchema = z.object({
   surroundingTiles: z
     .array(z.array(z.number()))
-    .describe('A 3x3 window of the grid centered on the target cell.'),
+    .describe('A 3x3 window of the grid centered on the target cell. The center tile is the one to be replaced.'),
   availableTiles: z.array(z.number()).describe('The list of available tile indices that are considered part of the path.'),
+  pathTileId: z.number().describe('The generic path tile ID that was used for drawing the path initially.'),
 });
 export type AutoTileInput = z.infer<typeof AutoTileInputSchema>;
 
 const AutoTileOutputSchema = z.object({
   suggestedTile: z
     .number()
-    .describe('The index of the suggested tile for the given position to make the path connect.'),
+    .describe('The index of the suggested tile for the given position to make the path connect. This must be one of the availableTiles.'),
 });
 export type AutoTileOutput = z.infer<typeof AutoTileOutputSchema>;
 
@@ -39,22 +40,26 @@ const prompt = ai.definePrompt({
   name: 'autoTilePrompt',
   input: {schema: AutoTileInputSchema},
   output: {schema: AutoTileOutputSchema},
-  prompt: `You are an expert AI tile map editor specializing in path creation. Your task is to select the correct tile from a set of available path tiles to place at the center of a 3x3 grid.
+  prompt: `You are an expert AI tile map editor. Your task is to select the correct tile from a set of available path tiles to place at the center of a 3x3 grid to form a continuous path.
 
-The center tile (originally a placeholder) needs to connect logically to its neighbors. The goal is to form a continuous path. The IDs in 'availableTiles' are the only ones you can use.
+The center tile (and any neighbors with the ID {{pathTileId}}) represents a part of the path. The goal is to connect it to its neighbors. The IDs in 'availableTiles' are the only ones you can use for the replacement.
 
-Analyze the 8 neighbors around the center. Based on which neighbors are also path tiles (present in 'availableTiles'), determine the correct tile for the center. For example:
-- If path tiles are only above and below, you need a vertical straight piece.
-- If a path tile is above and to the right, you need a corner piece that connects top and right.
-- If path tiles are to the left, right, and below, you need a T-junction.
-- If path tiles are on all 4 sides, you need a cross-junction.
+Analyze the 8 neighbors. A neighbor is part of the path if its ID is {{pathTileId}} or if it's already one of the 'availableTiles'.
+
+- If path neighbors are ONLY above and below, you need a vertical straight piece.
+- If path neighbors are ONLY left and right, you need a horizontal straight piece.
+- If path neighbors are above and to the right, you need a corner connecting top and right.
+- If path neighbors are to the left, right, and below, you need a T-junction.
+- If path neighbors are on all 4 sides (top, bottom, left, right), you need a cross-junction.
+- Handle all 16 possible connectivity combinations for the 4 cardinal directions (top, right, bottom, left). Diagonals matter less but can inform the decision if the choice is ambiguous.
 
 3x3 Grid Window (target is the center):
 {{#each surroundingTiles as |gridRow|}}
 {{#each gridRow as |cell|}}{{cell}} {{/each}}
 {{/each}}
 
-Available Path Tile IDs: [{{#each availableTiles}}{{.}}{{#unless @last}}, {{/unless}}{{/each}}]
+Generic Path Tile ID used for drawing: {{pathTileId}}
+Available specialized Path Tile IDs for output: [{{#each availableTiles}}{{.}}{{#unless @last}}, {{/unless}}{{/each}}]
 
 Your response must be one of the tile IDs from the 'availableTiles' list. Examine the grid and decide which tile creates the most logical connection.
 `,
@@ -67,15 +72,7 @@ const autoTileFlow = ai.defineFlow(
     outputSchema: AutoTileOutputSchema,
   },
   async input => {
-    // For now, we'll just return the first available tile as a placeholder.
-    // The real implementation will call the AI prompt.
-    if (input.availableTiles.length > 0) {
-      return { suggestedTile: input.availableTiles[0] };
-    }
-    // Fallback to empty if no path tiles are provided.
-    return { suggestedTile: 0 };
-    
-    // const {output} = await prompt(input);
-    // return output!;
+    const {output} = await prompt(input);
+    return output!;
   }
 );

@@ -493,63 +493,107 @@ export default function Home() {
   
   const handleDrawPathEnd = useCallback(async () => {
     if (drawnPathCells.current.size === 0) return;
+    
+    // All tiles with same name as selected tile are considered path tiles
+    const selectedTile = tiles.find(t => t.id === selectedTileId);
+    if (!selectedTile) {
+        toast({ variant: 'destructive', title: 'Path Error', description: 'A tile must be selected to draw a path.' });
+        return;
+    }
+    // Find all tiles that could be part of this path (e.g. grass_path_*, where * is corner, straight, etc)
+    const pathFamilyName = selectedTile.name.split('_')[0];
+    const availablePathTiles = tiles.filter(t => t.name.startsWith(pathFamilyName));
+    const availablePathTileIds = availablePathTiles.map(t => t.id);
+    
+    if (availablePathTileIds.length <= 1) {
+        toast({ title: 'Path Drawn', description: 'To enable auto-tiling, provide a set of named path tiles (e.g., path_straight, path_corner).' });
+        // Finalize the drawn path without AI if not enough tiles
+        const finalGrid = grid.map(r => [...r]);
+        setGrid(finalGrid);
+        drawnPathCells.current.clear();
+        return;
+    }
+
     setProcessingAI(true);
     toast({ title: 'Processing Path...', description: 'AI is adjusting path tiles.' });
 
     try {
-        const pathCells = Array.from(drawnPathCells.current).map(key => key.split(',').map(Number) as [number, number]);
+        const pathCellsToProcess = new Set(drawnPathCells.current);
         drawnPathCells.current.clear();
         
-        // This is a simplified approach. A real implementation might batch these.
         let currentGrid = grid.map(r => [...r]);
-        for (const [row, col] of pathCells) {
-            const affectedCells = [[row, col]];
+
+        // Find all cells that are part of the path OR adjacent to it, as they might need updating
+        const cellsToUpdate = new Set<string>();
+        pathCellsToProcess.forEach(cellKey => {
+            const [row, col] = cellKey.split(',').map(Number);
             for (let r_offset = -1; r_offset <= 1; r_offset++) {
               for (let c_offset = -1; c_offset <= 1; c_offset++) {
-                if (r_offset === 0 && c_offset === 0) continue;
-                const affectedRow = row + r_offset;
-                const affectedCol = col + c_offset;
-                if (pathCells.some(([pr, pc]) => pr === affectedRow && pc === affectedCol)) {
-                    affectedCells.push([affectedRow, affectedCol]);
-                }
+                 const updateRow = row + r_offset;
+                 const updateCol = col + c_offset;
+                 const updateKey = `${updateRow},${updateCol}`;
+
+                 if (updateRow >= 0 && updateRow < grid.length && updateCol >= 0 && updateCol < grid[0].length) {
+                    const tileId = currentGrid[updateRow][updateCol];
+                    if (tileId === selectedTileId || availablePathTileIds.includes(tileId)) {
+                        cellsToUpdate.add(updateKey);
+                    }
+                 }
               }
             }
+        });
 
-            for(const [r,c] of affectedCells) {
-                const windowSize = 3;
-                const halfWindow = Math.floor(windowSize / 2);
-                const surroundingTiles: number[][] = [];
-                for (let r_offset = -halfWindow; r_offset <= halfWindow; r_offset++) {
-                    const rowTiles: number[] = [];
-                    for (let c_offset = -halfWindow; c_offset <= halfWindow; c_offset++) {
-                        const neighborRow = r + r_offset;
-                        const neighborCol = c + c_offset;
-                        if (neighborRow >= 0 && neighborRow < grid.length && neighborCol >= 0 && neighborCol < grid[0].length) {
-                            rowTiles.push(currentGrid[neighborRow][neighborCol]);
-                        } else {
-                            rowTiles.push(0); 
-                        }
+        const promises = [];
+        for (const cellKey of Array.from(cellsToUpdate)) {
+            const [row, col] = cellKey.split(',').map(Number);
+
+            const windowSize = 3;
+            const halfWindow = Math.floor(windowSize / 2);
+            const surroundingTiles: number[][] = [];
+            for (let r_offset = -halfWindow; r_offset <= halfWindow; r_offset++) {
+                const rowTiles: number[] = [];
+                for (let c_offset = -halfWindow; c_offset <= halfWindow; c_offset++) {
+                    const neighborRow = row + r_offset;
+                    const neighborCol = col + c_offset;
+                    if (neighborRow >= 0 && neighborRow < grid.length && neighborCol >= 0 && neighborCol < grid[0].length) {
+                        rowTiles.push(currentGrid[neighborRow][neighborCol]);
+                    } else {
+                        rowTiles.push(0); 
                     }
-                    surroundingTiles.push(rowTiles);
                 }
-                
-                // For now, let's just place the selected tile. AI logic will go here.
-                // const result = await autoTile({ surroundingTiles, availableTiles: [selectedTileId] });
-                // currentGrid[r][c] = result.suggestedTile;
+                surroundingTiles.push(rowTiles);
             }
+            
+            const promise = autoTile({ surroundingTiles, availableTiles: availablePathTileIds, pathTileId: selectedTileId })
+                .then(result => ({ row, col, tile: result.suggestedTile }))
+                .catch(err => {
+                    console.error(`AI failed for cell ${row},${col}`, err);
+                    return null; // Don't update this cell on failure
+                });
+            promises.push(promise);
         }
         
-        // Since the AI flow isn't implemented, we just finalize the drawn path
-        setGrid(currentGrid);
-        toast({ title: 'Path Complete', description: 'AI path adjustments would be applied here.' });
+        const results = await Promise.all(promises);
+        const newGrid = currentGrid.map(r => [...r]);
+        results.forEach(res => {
+            if (res) {
+                newGrid[res.row][res.col] = res.tile;
+            }
+        });
+        
+        setGrid(newGrid);
+        toast({ title: 'Path Complete', description: 'AI has automatically adjusted the path tiles.' });
 
     } catch (error: any) {
         console.error('Path tool failed:', error);
+         if (error.message?.includes('API key not found')) {
+            setShowApiKeyAlert(true);
+          }
         toast({ variant: 'destructive', title: 'Path Error', description: 'Could not finalize the path.' });
     } finally {
         setProcessingAI(false);
     }
-  }, [grid, setGrid, toast]);
+  }, [grid, setGrid, toast, tiles, selectedTileId]);
 
 
   const applyToSelection = (callback: (currentValue: number) => number) => {
