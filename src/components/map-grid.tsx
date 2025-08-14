@@ -197,8 +197,8 @@ export const MapGrid: FC<MapGridProps> = ({
           display: 'grid',
           gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
           gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
-          width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
-          height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
+          width: `${gridWidth * TILE_SIZE + gridWidth * gridLineWidth}px`,
+          height: `${gridHeight * TILE_SIZE + gridHeight * gridLineWidth}px`,
           gap: `${gridLineWidth}px`,
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
         }}
@@ -264,8 +264,8 @@ export const MapGrid: FC<MapGridProps> = ({
         <div
           className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
           style={{
-            left: `${finalSelection.minCol * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
-            top: `${finalSelection.minRow * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
+            left: `${finalSelection.minCol * (TILE_SIZE + gridLineWidth)}px`,
+            top: `${finalSelection.minRow * (TILE_SIZE + gridLineWidth)}px`,
             width: `${(finalSelection.maxCol - finalSelection.minCol + 1) * TILE_SIZE + (finalSelection.maxCol - finalSelection.minCol) * gridLineWidth}px`,
             height: `${(finalSelection.maxRow - finalSelection.minRow + 1) * TILE_SIZE + (finalSelection.maxRow - finalSelection.minRow) * gridLineWidth}px`,
             boxSizing: 'content-box',
