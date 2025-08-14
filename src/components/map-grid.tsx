@@ -95,7 +95,8 @@ export const MapGrid: FC<MapGridProps> = ({
                 for (let c = minCol; c <= maxCol; c++) {
                     if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
                         const step = (c - minCol) / Math.max(1, width - 1);
-                        const threshold = ((r+c) % 2) / 2 + 0.25;
+                        // Deterministic dithering based on coordinates
+                        const threshold = ((r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25));
                         newPreviewGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
                     }
                 }
@@ -104,7 +105,8 @@ export const MapGrid: FC<MapGridProps> = ({
             for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
                     if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                        const random = Math.sin(r * 1000 + c * 10) * 10000;
+                        // Deterministic noise based on coordinates
+                        const random = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453;
                         newPreviewGrid[r][c] = (random - Math.floor(random)) < 0.5 ? selectedTileId : secondarySelectedTileId;
                     }
                 }
