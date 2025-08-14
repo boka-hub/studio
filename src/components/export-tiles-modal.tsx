@@ -184,22 +184,22 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
             </div>
           </div>
         </div>
-        <DialogFooter className="sm:justify-between gap-2 flex-col sm:flex-row">
-          <div className="flex flex-col sm:flex-row gap-2 justify-start">
-            <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0}>
+        <DialogFooter className="flex-col-reverse items-center gap-2 sm:flex-row sm:justify-between sm:space-x-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0} className="w-full sm:w-auto">
                 <FileImage className="mr-2 h-4 w-4" />
                 Individual PNGs
             </Button>
-             <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tiles.length === 0}>
+             <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tiles.length === 0} className="w-full sm:w-auto">
                 <FileText className="mr-2 h-4 w-4" />
                 Metadata Only
             </Button>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0}>
+          <div className="flex gap-2 w-full sm:w-auto justify-end">
+            <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+            <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0} className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
-                Download Spritesheet
+                Spritesheet
             </Button>
           </div>
         </DialogFooter>
