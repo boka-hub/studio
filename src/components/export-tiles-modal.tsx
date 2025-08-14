@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Tile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import { Download } from 'lucide-react';
 
 interface ExportTilesModalProps {
   isOpen: boolean;
@@ -72,8 +73,20 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
       drawSpritesheet();
     }
   }, [isOpen, drawSpritesheet]);
+  
+  const downloadFile = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
   const handleExport = () => {
+    // Export Spritesheet
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -82,26 +95,33 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         toast({ variant: 'destructive', title: 'Export Failed', description: 'Could not generate image file.' });
         return;
       }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'tileforge-spritesheet.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({ title: 'Spritesheet Exported', description: 'Your tiles have been exported as a PNG.' });
-      onClose();
+      downloadFile(blob, 'tileforge-spritesheet.png');
     }, 'image/png');
+    
+    // Export Metadata
+    const metadata = {
+      tileCount: tiles.length,
+      columns: Math.min(columns > 0 ? columns : 1, tiles.length),
+      tiles: tiles.map((tile, index) => ({
+        id: tile.id,
+        name: tile.name,
+        index: index, // Position in the spritesheet array
+      })),
+    };
+    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    downloadFile(metadataBlob, 'tileforge-metadata.json');
+
+    toast({ title: 'Export Complete', description: 'Spritesheet and metadata have been downloaded.' });
+    onClose();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Export Tiles</DialogTitle>
+          <DialogTitle>Export Spritesheet</DialogTitle>
           <DialogDescription>
-            Configure and export your tile palette as a single spritesheet. Assumes all tiles are the same size.
+            Configure and export your tile palette as a single spritesheet and a metadata JSON file.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -137,7 +157,8 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button type="button" onClick={handleExport} disabled={tiles.length === 0}>
-            Download Spritesheet
+            <Download className="mr-2 h-4 w-4" />
+            Download Files
           </Button>
         </DialogFooter>
       </DialogContent>

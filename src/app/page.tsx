@@ -209,7 +209,7 @@ export default function Home() {
     a.href = url;
     a.download = 'tileforge-map.json';
     document.body.appendChild(a);
-    a.click();
+a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({ title: 'Map Exported', description: 'Your map has been saved as tileforge-map.json' });
@@ -347,7 +347,7 @@ export default function Home() {
   const headerActions = [
     { icon: Upload, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet', onClick: () => setSlicerOpen(true) },
-    { icon: Package, label: 'Export Tiles', onClick: () => setExportOpen(true) },
+    { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Undo, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
     { icon: Redo, label: 'Redo (Ctrl+Shift+Z)', onClick: redo, disabled: !canRedo },
@@ -443,5 +443,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
