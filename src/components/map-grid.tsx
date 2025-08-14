@@ -93,9 +93,9 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
                   <Image
                     src={tile.src}
                     alt={tile.name}
-                    width={TILE_SIZE}
-                    height={TILE_SIZE}
-                    className="pointer-events-none"
+                    fill
+                    sizes={`${TILE_SIZE}px`}
+                    className="pointer-events-none object-cover"
                     unoptimized
                     data-ai-hint="pixel art tile"
                   />
