@@ -19,8 +19,6 @@ interface HeaderProps {
 }
 
 export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions, onTitleClick }) => {
-  const mainActions = actions.slice(0, 6);
-  const undoRedoActions = actions.slice(6);
 
   return (
     <header className="flex items-center justify-between p-2 border-b border-border shadow-sm">
@@ -35,7 +33,7 @@ export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions, onTitleCli
         <h1 className="text-xl font-bold text-foreground">{title}</h1>
       </div>
       <div className="flex items-center gap-1">
-        {mainActions.map((action, index) => (
+        {actions.map((action, index) => (
           <Tooltip key={index}>
             <TooltipTrigger asChild>
               <div
@@ -50,31 +48,6 @@ export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions, onTitleCli
                   disabled={action.disabled}
                   aria-label={action.label}
                   className={action.isActive ? 'bg-primary/20' : ''}
-                >
-                  <action.icon className="h-5 w-5" />
-                </Button>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{action.label}</p>
-            </TooltipContent>
-          </Tooltip>
-        ))}
-        <Separator orientation="vertical" className="h-6 mx-1" />
-        {undoRedoActions.map((action, index) => (
-          <Tooltip key={index}>
-            <TooltipTrigger asChild>
-              <div
-                className="inline-block"
-                tabIndex={action.disabled ? -1 : undefined}
-                style={{ pointerEvents: action.disabled ? 'none' : 'auto' }}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={action.onClick}
-                  disabled={action.disabled}
-                  aria-label={action.label}
                 >
                   <action.icon className="h-5 w-5" />
                 </Button>
