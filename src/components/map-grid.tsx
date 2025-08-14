@@ -21,7 +21,7 @@ interface MapGridProps {
   playerPos: {row: number, col: number};
 }
 
-const BASE_TILE_SIZE = 32;
+const BASE_TILE_SIZE = 16;
 
 export const MapGrid: FC<MapGridProps> = ({ 
   grid, 
@@ -275,5 +275,3 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
-
-    
