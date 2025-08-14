@@ -22,6 +22,10 @@ import {
   RectangleHorizontal,
   Lasso,
   FileCheck,
+  Copy,
+  ClipboardPaste,
+  Trash2,
+  Replace,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -81,6 +85,7 @@ export default function Home() {
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
   const [tool, setTool] = useState<Tool>('brush');
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [clipboard, setClipboard] = useState<GridState | null>(null);
   const [isSlicerOpen, setSlicerOpen] = useState(false);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isProcessingAI, setProcessingAI] = useState(false);
@@ -372,30 +377,85 @@ export default function Home() {
     setGrid(newGrid);
   }, [grid, selectedTileId, setGrid, tool]);
 
-  const handleFillSelection = () => {
-    if (!selection) return;
+  const applyToSelection = (callback: (currentValue: number) => number) => {
+     if (!selection) return;
 
-    const newGrid = grid.map(r => [...r]);
-    for (let r = selection.minRow; r <= selection.maxRow; r++) {
-      for (let c = selection.minCol; c <= selection.maxCol; c++) {
-        if (r < grid.length && c < grid[0].length) {
-          newGrid[r][c] = selectedTileId;
+    const newGrid = grid.map((r, rowIndex) => {
+        if (rowIndex < selection.minRow || rowIndex > selection.maxRow) {
+            return r;
         }
-      }
-    }
+        return r.map((cell, colIndex) => {
+            if (colIndex >= selection.minCol && colIndex <= selection.maxCol) {
+                return callback(cell);
+            }
+            return cell;
+        });
+    });
+
     setGrid(newGrid);
-    setSelection(null);
+  }
+
+  const handleFillSelection = () => {
+    applyToSelection(() => selectedTileId);
     toast({ title: 'Selection Filled', description: 'The selected area has been filled with the current tile.' });
   }
 
+  const handleDeleteSelection = () => {
+    applyToSelection(() => 0);
+    toast({ title: 'Selection Deleted', description: 'The selected area has been cleared.' });
+  }
+  
+  const handleInvertSelection = () => {
+    if (selectedTileId === 0) {
+      toast({ variant: 'destructive', title: 'Invert Failed', description: 'Cannot invert with Empty tile. Please select a tile.' });
+      return;
+    }
+    applyToSelection((cell) => cell === selectedTileId ? 0 : selectedTileId);
+    toast({ title: 'Selection Inverted', description: 'Tiles in the selected area have been inverted.' });
+  }
+
+  const handleCopySelection = () => {
+    if (!selection) return;
+
+    const copiedData = grid
+      .slice(selection.minRow, selection.maxRow + 1)
+      .map(row => row.slice(selection.minCol, selection.maxCol + 1));
+    
+    setClipboard(copiedData);
+    toast({ title: 'Selection Copied', description: 'The selected area has been copied to the clipboard.' });
+  }
+
+  const handlePasteSelection = () => {
+    if (!selection || !clipboard) return;
+    
+    const newGrid = grid.map(r => [...r]);
+    const pasteStartRow = selection.minRow;
+    const pasteStartCol = selection.minCol;
+
+    for(let r = 0; r < clipboard.length; r++) {
+        for(let c = 0; c < clipboard[0].length; c++) {
+            const targetRow = pasteStartRow + r;
+            const targetCol = pasteStartCol + c;
+            if (targetRow < grid.length && targetCol < grid[0].length) {
+                newGrid[targetRow][targetCol] = clipboard[r][c];
+            }
+        }
+    }
+    setGrid(newGrid);
+    toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
+  }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // prevent browser shortcuts
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-')) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-' || e.key === 'c' || e.key === 'v')) {
          e.preventDefault();
       }
       
+      const target = e.target as HTMLElement;
+      // Do not process shortcuts if user is typing in an input
+      if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea') return;
+
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 'z') {
           if (e.shiftKey) {
@@ -413,6 +473,10 @@ export default function Home() {
           setZoom(z => Math.max(z - 0.1, 0.1));
         } else if (e.key === '0') {
           setZoom(1);
+        } else if (e.key === 'c' && selection) {
+          handleCopySelection();
+        } else if (e.key === 'v' && selection && clipboard) {
+          handlePasteSelection();
         }
       } else {
          const keyMap: { [key: string]: Tool } = {
@@ -420,13 +484,10 @@ export default function Home() {
           'e': 'eraser',
           'p': 'picker',
           'i': 'ai',
-          'f': 'fill',
+          'g': 'fill', // G for GIMP/Photoshop bucket fill
           'r': 'rectangle',
-          's': 'select',
+          'm': 'select', // M for marquee
         };
-        const target = e.target as HTMLElement;
-        // Do not switch tools if user is typing in an input
-        if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea') return;
 
         if (keyMap[e.key]) {
           setTool(keyMap[e.key]);
@@ -434,21 +495,23 @@ export default function Home() {
             if (selection) {
                 setSelection(null);
             }
+        } else if (e.key === 'Delete' && selection) {
+           handleDeleteSelection();
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, setZoom, selection]);
+  }, [undo, redo, setZoom, selection, grid, clipboard]);
 
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
     eraser: { icon: Eraser, label: 'Eraser (E)' },
     picker: { icon: Pipette, label: 'Picker (P)' },
-    fill: { icon: PaintBucket, label: 'Fill (F)'},
+    fill: { icon: PaintBucket, label: 'Fill (G)'},
     rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
-    select: { icon: Lasso, label: 'Select (S)' },
+    select: { icon: Lasso, label: 'Select (M)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
 
@@ -460,6 +523,15 @@ export default function Home() {
     { icon: Undo, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
     { icon: Redo, label: 'Redo (Ctrl+Shift+Z)', onClick: redo, disabled: !canRedo },
   ];
+  
+  const selectionActions = {
+    fill: { icon: FileCheck, label: 'Fill Selection', onClick: handleFillSelection },
+    copy: { icon: Copy, label: 'Copy (Ctrl+C)', onClick: handleCopySelection },
+    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', onClick: handlePasteSelection, disabled: !clipboard },
+    delete: { icon: Trash2, label: 'Delete (Del)', onClick: handleDeleteSelection },
+    invert: { icon: Replace, label: 'Invert', onClick: handleInvertSelection },
+  };
+
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -486,7 +558,7 @@ export default function Home() {
                 onZoomChange={setZoom}
                 isCollapsed={isToolbarCollapsed}
                 selection={selection}
-                onFillSelection={handleFillSelection}
+                selectionActions={selectionActions}
               />
             </div>
             <Separator />

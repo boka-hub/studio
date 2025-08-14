@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ZoomIn, ZoomOut, Maximize, FileCheck } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Selection } from '@/lib/types';
 
@@ -15,6 +15,13 @@ interface Action<T extends string> {
   icon: ElementType;
   label: string;
   disabled?: boolean;
+}
+
+interface SelectionAction {
+    icon: ElementType;
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
 }
 
 interface ToolbarProps<T extends string> {
@@ -27,7 +34,7 @@ interface ToolbarProps<T extends string> {
   onZoomChange: (zoom: number) => void;
   isCollapsed: boolean;
   selection: Selection | null;
-  onFillSelection: () => void;
+  selectionActions: Record<string, SelectionAction>
 }
 
 export function Toolbar<T extends string>({
@@ -40,7 +47,7 @@ export function Toolbar<T extends string>({
   onZoomChange,
   isCollapsed,
   selection,
-  onFillSelection,
+  selectionActions,
 }: ToolbarProps<T>) {
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
@@ -96,10 +103,28 @@ export function Toolbar<T extends string>({
                   <Separator />
                     <div className="px-2 space-y-2">
                         <h3 className="text-sm font-semibold text-muted-foreground">Selection</h3>
-                        <Button size="sm" variant="outline" className="w-full h-8" onClick={onFillSelection}>
-                            <FileCheck className="h-4 w-4 mr-2" />
-                            Fill Selection
-                        </Button>
+                         <div className="grid grid-cols-2 gap-1">
+                          {Object.values(selectionActions).map((action, index) => (
+                              <Tooltip key={index}>
+                                  <TooltipTrigger asChild>
+                                      <div>
+                                          <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="w-full h-8"
+                                              onClick={action.onClick}
+                                              disabled={action.disabled}
+                                          >
+                                              <action.icon className="h-4 w-4" />
+                                          </Button>
+                                      </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right">
+                                      <p>{action.label}</p>
+                                  </TooltipContent>
+                              </Tooltip>
+                          ))}
+                         </div>
                     </div>
                 </>
             )}
