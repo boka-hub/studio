@@ -202,17 +202,17 @@ export default function Home() {
   };
 
   const handleExportMap = () => {
-    const mapData = JSON.stringify(grid);
-    const blob = new Blob([mapData], { type: 'application/json' });
+    const mapData = grid.map(row => row.join(',')).join('\n');
+    const blob = new Blob([mapData], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'tileforge-map.json';
+    a.download = 'tileforge-map.txt';
     document.body.appendChild(a);
-a.click();
+    a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: 'Map Exported', description: 'Your map has been saved as tileforge-map.json' });
+    toast({ title: 'Map Exported', description: 'Your map has been saved as tileforge-map.txt' });
   };
   
   const handleCellAction = useCallback(
