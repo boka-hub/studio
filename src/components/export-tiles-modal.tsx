@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Tile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { Download } from 'lucide-react';
+import { Download, FileImage } from 'lucide-react';
 
 interface ExportTilesModalProps {
   isOpen: boolean;
@@ -74,22 +74,24 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     }
   }, [isOpen, drawSpritesheet]);
   
-  const downloadFile = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
+  const downloadFile = (blobOrDataUrl: Blob | string, filename: string) => {
+    const url = typeof blobOrDataUrl === 'string' ? blobOrDataUrl : URL.createObjectURL(blobOrDataUrl);
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    if (typeof blobOrDataUrl !== 'string') {
+        URL.revokeObjectURL(url);
+    }
   }
 
-  const handleExport = () => {
-    // Export Spritesheet
+  const handleExportSpritesheet = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Export Spritesheet
     canvas.toBlob((blob) => {
       if (!blob) {
         toast({ variant: 'destructive', title: 'Export Failed', description: 'Could not generate image file.' });
@@ -105,7 +107,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
       tiles: tiles.map((tile, index) => ({
         id: tile.id,
         name: tile.name,
-        index: index, // Position in the spritesheet array
+        index: index,
       })),
     };
     const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
@@ -114,19 +116,35 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     toast({ title: 'Export Complete', description: 'Spritesheet and metadata have been downloaded.' });
     onClose();
   };
+  
+  const handleExportIndividual = () => {
+    if (tiles.length === 0) {
+        toast({ variant: 'destructive', title: 'Export Failed', description: 'No tiles to export.' });
+        return;
+    }
+    
+    tiles.forEach(tile => {
+        // Sanitize filename
+        const filename = `${tile.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+        downloadFile(tile.src, filename);
+    });
+
+    toast({ title: 'Export Complete', description: `${tiles.length} individual tiles have been downloaded.` });
+    onClose();
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Export Spritesheet</DialogTitle>
+          <DialogTitle>Export Spritesheet & Tiles</DialogTitle>
           <DialogDescription>
-            Configure and export your tile palette as a single spritesheet and a metadata JSON file.
+            Configure and export your tile palette as a single spritesheet or as individual files.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-2">
-            <h4 className="font-medium leading-none">Preview</h4>
+            <h4 className="font-medium leading-none">Spritesheet Preview</h4>
             <div className="rounded-md border bg-muted/50 p-2 overflow-auto max-h-64">
                 <canvas ref={canvasRef} className="mx-auto" style={{ imageRendering: 'pixelated' }} />
             </div>
@@ -154,12 +172,18 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="button" onClick={handleExport} disabled={tiles.length === 0}>
-            <Download className="mr-2 h-4 w-4" />
-            Download Files
+        <DialogFooter className="sm:justify-between gap-2">
+          <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0}>
+              <FileImage className="mr-2 h-4 w-4" />
+              Download Individual PNGs
           </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Spritesheet
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
