@@ -16,7 +16,9 @@ import {
   Package,
   PaintBucket,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -82,6 +84,7 @@ export default function Home() {
   const [zoom, setZoom] = useState(1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
+  const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
@@ -463,16 +466,38 @@ export default function Home() {
               zoom={zoom}
             />
           </main>
-          <aside className="w-80 bg-card border-l border-border flex flex-col">
-            <ScrollArea className="flex-grow">
+          <aside className={cn(
+              "bg-card border-l border-border flex flex-col transition-all duration-300",
+              isPaletteCollapsed ? 'w-[73px]' : 'w-80'
+            )}>
+            <div className="flex-grow overflow-y-auto">
               <TilePalette
                 tiles={tiles}
                 selectedTileId={selectedTileId}
                 onSelectTile={setSelectedTileId}
                 onRenameTile={handleRenameTile}
                 onDeleteTile={handleDeleteTile}
+                isCollapsed={isPaletteCollapsed}
               />
-            </ScrollArea>
+            </div>
+            <Separator />
+            <div className="p-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
+                    className="w-full"
+                  >
+                    {isPaletteCollapsed ? <PanelRightOpen /> : <PanelRightClose />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </aside>
         </div>
 

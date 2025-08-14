@@ -15,6 +15,7 @@ interface TilePaletteProps {
   onSelectTile: (id: number) => void;
   onRenameTile: (id: number, newName: string) => void;
   onDeleteTile: (id: number) => void;
+  isCollapsed: boolean;
 }
 
 export const TilePalette: FC<TilePaletteProps> = ({
@@ -23,11 +24,13 @@ export const TilePalette: FC<TilePaletteProps> = ({
   onSelectTile,
   onRenameTile,
   onDeleteTile,
+  isCollapsed,
 }) => {
   const [editingTileId, setEditingTileId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
 
   const handleStartEditing = (tile: Tile) => {
+    if (isCollapsed) return;
     setEditingTileId(tile.id);
     setEditingName(tile.name);
   };
@@ -47,9 +50,12 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <h3 className="text-sm font-semibold p-4 pb-2 text-muted-foreground flex-shrink-0">Palette</h3>
+      <h3 className={cn("text-sm font-semibold p-4 pb-2 text-muted-foreground flex-shrink-0", isCollapsed && "hidden")}>Palette</h3>
       <ScrollArea className="flex-grow">
-        <div className="grid grid-cols-3 gap-4 p-4 pt-2">
+        <div className={cn(
+            "grid gap-4 p-4 pt-2",
+            isCollapsed ? "grid-cols-2" : "grid-cols-3"
+          )}>
           {tiles
             .filter((t) => t.id !== 0)
             .map((tile) => (
@@ -92,39 +98,41 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         </Button>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Double-click name to edit</p>
+                  <TooltipContent side="left">
+                     {isCollapsed ? <p>{tile.name}</p> : <p>Double-click name to edit</p>}
                   </TooltipContent>
                 </Tooltip>
 
-                <div className="w-full text-center h-6">
-                  {editingTileId === tile.id ? (
-                    <Input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onBlur={handleConfirmRename}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleConfirmRename();
-                        }
-                        if (e.key === 'Escape') setEditingTileId(null);
-                      }}
-                      className="text-xs h-full p-1 text-center bg-input border-primary ring-offset-background focus-visible:ring-primary"
-                      autoFocus
-                      onFocus={(e) => e.target.select()}
-                    />
-                  ) : (
-                    <p
-                      onDoubleClick={() => handleStartEditing(tile)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-full px-1 truncate"
-                      title={tile.name}
-                    >
-                      {tile.name}
-                    </p>
-                  )}
-                </div>
+                {!isCollapsed && (
+                  <div className="w-full text-center h-6">
+                    {editingTileId === tile.id ? (
+                      <Input
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onBlur={handleConfirmRename}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleConfirmRename();
+                          }
+                          if (e.key === 'Escape') setEditingTileId(null);
+                        }}
+                        className="text-xs h-full p-1 text-center bg-input border-primary ring-offset-background focus-visible:ring-primary"
+                        autoFocus
+                        onFocus={(e) => e.target.select()}
+                      />
+                    ) : (
+                      <p
+                        onDoubleClick={() => handleStartEditing(tile)}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer w-full px-1 truncate"
+                        title={tile.name}
+                      >
+                        {tile.name}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
         </div>
