@@ -12,23 +12,13 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {
+    AutoTileInputSchema, 
+    AutoTileOutputSchema,
+    type AutoTileInput,
+    type AutoTileOutput
+} from '@/lib/schemas';
 
-const AutoTileInputSchema = z.object({
-  surroundingTiles: z
-    .array(z.array(z.number()))
-    .describe('A 3x3 window of the grid centered on the target cell. The center tile is the one to be replaced.'),
-  availableTiles: z.array(z.number()).describe('The list of available tile indices that are considered part of the path.'),
-  pathTileId: z.number().describe('The generic path tile ID that was used for drawing the path initially.'),
-});
-export type AutoTileInput = z.infer<typeof AutoTileInputSchema>;
-
-const AutoTileOutputSchema = z.object({
-  suggestedTile: z
-    .number()
-    .describe('The index of the suggested tile for the given position to make the path connect. This must be one of the availableTiles.'),
-});
-export type AutoTileOutput = z.infer<typeof AutoTileOutputSchema>;
 
 export async function autoTile(
   input: AutoTileInput

@@ -33,6 +33,7 @@ import {
   GitBranchPlus,
   FlipHorizontal,
   FlipVertical,
+  Mountain,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -41,6 +42,7 @@ import { MapGrid } from '@/components/map-grid';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
+import { TerrainGeneratorModal } from '@/components/terrain-generator-modal';
 import type { Tool, Tile, GridState, Selection } from '@/lib/types';
 import { useUndoRedo } from '@/hooks/use-undo-redo';
 import { intelligentTilePlacement } from '@/ai/flows/intelligent-tile-placement';
@@ -96,6 +98,7 @@ export default function Home() {
   const [isSlicerOpen, setSlicerOpen] = useState(false);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [isTerrainGeneratorOpen, setTerrainGeneratorOpen] = useState(false);
   const [isProcessingAI, setProcessingAI] = useState(false);
   const [showApiKeyAlert, setShowApiKeyAlert] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -776,6 +779,7 @@ export default function Home() {
     { icon: Scissors, label: 'Slice Sheet', onClick: () => setSlicerOpen(true) },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
+    { icon: Mountain, label: 'Generate Terrain', onClick: () => setTerrainGeneratorOpen(true) },
     { icon: Undo, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
     { icon: Redo, label: 'Redo (Ctrl+Shift+Z)', onClick: redo, disabled: !canRedo },
   ];
@@ -933,6 +937,18 @@ export default function Home() {
          <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setSettingsOpen(false)}
+        />
+
+        <TerrainGeneratorModal
+            isOpen={isTerrainGeneratorOpen}
+            onClose={() => setTerrainGeneratorOpen(false)}
+            tiles={tiles.filter(t => t.id !== 0)}
+            grid={grid}
+            onGenerate={(newGrid) => {
+                setGrid(newGrid);
+                toast({ title: 'Terrain Generated', description: 'The new terrain has been applied to your map.'});
+            }}
+            onProcessingChange={setProcessingAI}
         />
         
         <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>

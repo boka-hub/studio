@@ -11,26 +11,13 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {
+    IntelligentTilePlacementInputSchema,
+    IntelligentTilePlacementOutputSchema,
+    type IntelligentTilePlacementInput,
+    type IntelligentTilePlacementOutput,
+} from '@/lib/schemas';
 
-const IntelligentTilePlacementInputSchema = z.object({
-  surroundingTiles: z
-    .array(z.array(z.number()))
-    .describe('A 5x5 window of the grid centered on the target cell.'),
-  availableTiles: z.array(z.number()).describe('The list of available tile indices.'),
-});
-export type IntelligentTilePlacementInput = z.infer<
-  typeof IntelligentTilePlacementInputSchema
->;
-
-const IntelligentTilePlacementOutputSchema = z.object({
-  suggestedTile: z
-    .number()
-    .describe('The index of the suggested tile for the given position.'),
-});
-export type IntelligentTilePlacementOutput = z.infer<
-  typeof IntelligentTilePlacementOutputSchema
->;
 
 export async function intelligentTilePlacement(
   input: IntelligentTilePlacementInput
