@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { FC, ElementType } from 'react';
 import { cn } from '@/lib/utils';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Selection } from '@/lib/types';
+import type { Selection, Tool } from '@/lib/types';
 
 interface Action<T extends string> {
   icon: ElementType;
@@ -34,10 +35,14 @@ interface ToolbarProps<T extends string> {
   onZoomChange: (zoom: number) => void;
   isCollapsed: boolean;
   selection: Selection | null;
-  selectionActions: Record<string, SelectionAction>
+  selectionActions: Record<string, SelectionAction>;
+  sprayRadius: number;
+  onSprayRadiusChange: (radius: number) => void;
+  sprayDensity: number;
+  onSprayDensityChange: (density: number) => void;
 }
 
-export function Toolbar<T extends string>({
+export function Toolbar<T extends Tool>({
   actions,
   selectedAction,
   onActionSelect,
@@ -48,6 +53,10 @@ export function Toolbar<T extends string>({
   isCollapsed,
   selection,
   selectionActions,
+  sprayRadius,
+  onSprayRadiusChange,
+  sprayDensity,
+  onSprayDensityChange,
 }: ToolbarProps<T>) {
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
@@ -100,6 +109,38 @@ export function Toolbar<T extends string>({
         </div>
         {!isCollapsed && (
           <>
+            {selectedAction === 'spray' && (
+              <>
+                <Separator />
+                <div className="px-2 space-y-2">
+                    <h3 className="text-sm font-semibold text-muted-foreground">Spray Settings</h3>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Radius ({sprayRadius} tiles)</Label>
+                            <Slider
+                                value={[sprayRadius]}
+                                onValueChange={(value) => onSprayRadiusChange(value[0])}
+                                min={1}
+                                max={10}
+                                step={1}
+                                aria-label="Spray radius"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Density ({Math.round(sprayDensity * 100)}%)</Label>
+                            <Slider
+                                value={[sprayDensity]}
+                                onValueChange={(value) => onSprayDensityChange(value[0])}
+                                min={0.1}
+                                max={1}
+                                step={0.1}
+                                aria-label="Spray density"
+                            />
+                        </div>
+                    </div>
+                </div>
+              </>
+            )}
             {selection && (
                 <>
                   <Separator />
@@ -189,3 +230,5 @@ export function Toolbar<T extends string>({
     </ScrollArea>
   );
 }
+
+    

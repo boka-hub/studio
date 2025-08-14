@@ -102,6 +102,10 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [isPreviewMode, setPreviewMode] = useState(false);
   const [playerPos, setPlayerPos] = useState({ row: 1, col: 1 });
+  
+  const [sprayRadius, setSprayRadius] = useState(3);
+  const [sprayDensity, setSprayDensity] = useState(0.4);
+
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
@@ -149,14 +153,13 @@ export default function Home() {
     }
     
     if (filteredTiles.length > 0) {
-      const currentTiles = [...tiles];
-      let nextId = currentTiles.length > 0 ? Math.max(...currentTiles.map((t) => t.id)) + 1 : 1;
+      let nextId = tiles.length > 0 ? Math.max(...tiles.map((t) => t.id)) + 1 : 1;
       const tilesWithIds = filteredTiles.map((tile) => ({
         ...tile,
         id: nextId++,
         solid: false,
       }));
-      updateTilesState([...currentTiles, ...tilesWithIds]);
+      updateTilesState([...tiles, ...tilesWithIds]);
     }
   };
 
@@ -280,16 +283,13 @@ export default function Home() {
         }
         return; 
       } else if (tool === 'spray') {
-        const radius = 3; 
-        const density = 0.4;
-        
-        for (let r = -radius; r <= radius; r++) {
-            for (let c = -radius; c <= radius; c++) {
-                if (r * r + c * c <= radius * radius) {
+        for (let r = -sprayRadius; r <= sprayRadius; r++) {
+            for (let c = -sprayRadius; c <= sprayRadius; c++) {
+                if (r * r + c * c <= sprayRadius * sprayRadius) {
                     const targetRow = row + r;
                     const targetCol = col + c;
                     if (targetRow >= 0 && targetRow < grid.length && targetCol >= 0 && targetCol < grid[0].length) {
-                        if (Math.random() < density) {
+                        if (Math.random() < sprayDensity) {
                             newGrid[targetRow][targetCol] = selectedTileId;
                         }
                     }
@@ -401,7 +401,7 @@ export default function Home() {
       }
       updateGridState(newGrid);
     },
-    [grid, selectedTileId, tiles, toast, tool]
+    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity]
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
@@ -732,7 +732,7 @@ export default function Home() {
       }
       
       const target = e.target as HTMLElement;
-      if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea') return;
+      if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.role === 'slider') return;
 
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 's') {
@@ -850,6 +850,10 @@ export default function Home() {
                 isCollapsed={isToolbarCollapsed}
                 selection={selection}
                 selectionActions={selectionActions}
+                sprayRadius={sprayRadius}
+                onSprayRadiusChange={setSprayRadius}
+                sprayDensity={sprayDensity}
+                onSprayDensityChange={setSprayDensity}
               />
             </div>
             <Separator />
@@ -1004,5 +1008,7 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
 
     
