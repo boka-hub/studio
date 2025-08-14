@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -31,7 +31,7 @@ interface TerrainGeneratorModalProps {
   onProcessingChange: (isProcessing: boolean) => void;
 }
 
-type TerrainType = 'forest';
+type TerrainType = 'forest' | 'desert' | 'beach' | 'volcanic' | 'alien';
 
 interface TerrainConfig {
   type: TerrainType;
@@ -50,6 +50,16 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
   const [tileMapping, setTileMapping] = useState<Record<string, number>>({
     ground: 0,
     tree: 0,
+    sand: 0,
+    cactus: 0,
+    water: 0,
+    shallow_water: 0,
+    rock: 0,
+    lava: 0,
+    obsidian: 0,
+    strange_ground: 0,
+    alien_plant: 0,
+    crystal: 0,
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -59,10 +69,20 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
   };
 
   const isConfigValid = () => {
-    if (terrainType === 'forest') {
-      return tileMapping.ground > 0 && tileMapping.tree > 0;
+    switch (terrainType) {
+      case 'forest':
+        return tileMapping.ground > 0 && tileMapping.tree > 0;
+      case 'desert':
+        return tileMapping.sand > 0 && tileMapping.cactus > 0;
+      case 'beach':
+        return tileMapping.water > 0 && tileMapping.sand > 0 && tileMapping.shallow_water > 0;
+      case 'volcanic':
+        return tileMapping.rock > 0 && tileMapping.lava > 0 && tileMapping.obsidian > 0;
+      case 'alien':
+        return tileMapping.strange_ground > 0 && tileMapping.alien_plant > 0 && tileMapping.crystal > 0;
+      default:
+        return false;
     }
-    return false;
   };
 
   const handleGenerate = async () => {
@@ -98,17 +118,13 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
       onProcessingChange(false);
     }
   };
-
-  const renderForestConfig = () => (
-    <>
+  
+  const TileSelect = ({ id, label, value, onValueChange }: { id: string, label: string, value: number, onValueChange: (value: string) => void}) => (
       <div className="space-y-2">
-        <Label htmlFor="ground-tile">Ground Tile</Label>
-        <Select
-          value={String(tileMapping.ground)}
-          onValueChange={(value) => handleTileMappingChange('ground', value)}
-        >
-          <SelectTrigger id="ground-tile">
-            <SelectValue placeholder="Select ground tile" />
+        <Label htmlFor={id}>{label}</Label>
+        <Select value={String(value)} onValueChange={onValueChange}>
+          <SelectTrigger id={id}>
+            <SelectValue placeholder={`Select ${label.toLowerCase()} tile`} />
           </SelectTrigger>
           <SelectContent>
             {tiles.map((tile) => (
@@ -119,26 +135,52 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="tree-tile">Tree Tile</Label>
-        <Select
-          value={String(tileMapping.tree)}
-          onValueChange={(value) => handleTileMappingChange('tree', value)}
-        >
-          <SelectTrigger id="tree-tile">
-            <SelectValue placeholder="Select tree tile" />
-          </SelectTrigger>
-          <SelectContent>
-            {tiles.map((tile) => (
-              <SelectItem key={tile.id} value={String(tile.id)}>
-                {tile.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </>
   );
+
+  const renderConfigOptions = () => {
+    switch (terrainType) {
+      case 'forest':
+        return (
+          <>
+            <TileSelect id="ground-tile" label="Ground Tile" value={tileMapping.ground} onValueChange={(v) => handleTileMappingChange('ground', v)} />
+            <TileSelect id="tree-tile" label="Tree Tile" value={tileMapping.tree} onValueChange={(v) => handleTileMappingChange('tree', v)} />
+          </>
+        );
+      case 'desert':
+        return (
+          <>
+            <TileSelect id="sand-tile" label="Sand Tile" value={tileMapping.sand} onValueChange={(v) => handleTileMappingChange('sand', v)} />
+            <TileSelect id="cactus-tile" label="Cactus Tile" value={tileMapping.cactus} onValueChange={(v) => handleTileMappingChange('cactus', v)} />
+          </>
+        );
+      case 'beach':
+          return (
+            <>
+              <TileSelect id="water-tile" label="Water Tile" value={tileMapping.water} onValueChange={(v) => handleTileMappingChange('water', v)} />
+              <TileSelect id="shallow-water-tile" label="Shallow Water Tile" value={tileMapping.shallow_water} onValueChange={(v) => handleTileMappingChange('shallow_water', v)} />
+              <TileSelect id="sand-tile" label="Sand Tile" value={tileMapping.sand} onValueChange={(v) => handleTileMappingChange('sand', v)} />
+            </>
+          );
+      case 'volcanic':
+        return (
+          <>
+            <TileSelect id="rock-tile" label="Rock Tile" value={tileMapping.rock} onValueChange={(v) => handleTileMappingChange('rock', v)} />
+            <TileSelect id="lava-tile" label="Lava Tile" value={tileMapping.lava} onValueChange={(v) => handleTileMappingChange('lava', v)} />
+            <TileSelect id="obsidian-tile" label="Obsidian Tile" value={tileMapping.obsidian} onValueChange={(v) => handleTileMappingChange('obsidian', v)} />
+          </>
+        );
+      case 'alien':
+        return (
+          <>
+            <TileSelect id="strange-ground-tile" label="Strange Ground Tile" value={tileMapping.strange_ground} onValueChange={(v) => handleTileMappingChange('strange_ground', v)} />
+            <TileSelect id="alien-plant-tile" label="Alien Plant Tile" value={tileMapping.alien_plant} onValueChange={(v) => handleTileMappingChange('alien_plant', v)} />
+            <TileSelect id="crystal-tile" label="Crystal Tile" value={tileMapping.crystal} onValueChange={(v) => handleTileMappingChange('crystal', v)} />
+          </>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -162,12 +204,16 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="forest">Forest</SelectItem>
+                <SelectItem value="desert">Desert</SelectItem>
+                <SelectItem value="beach">Beach</SelectItem>
+                <SelectItem value="volcanic">Volcanic</SelectItem>
+                <SelectItem value="alien">Alien</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-4">
             <h4 className="font-medium">Tile Configuration</h4>
-            {terrainType === 'forest' && renderForestConfig()}
+            {renderConfigOptions()}
           </div>
         </div>
         <DialogFooter>

@@ -47,6 +47,28 @@ Instructions for 'forest':
 3.  The forest should have clearings and paths. Avoid placing trees in perfect lines or patterns. Use organic, clustered shapes.
 4.  Ensure there are open areas, and the forest doesn't cover the entire map edge-to-edge. Create some natural-looking edges to the forest.
 
+Instructions for 'desert':
+1. Fill the entire map with the 'sand' tile.
+2. Sparsely place 'cactus' tiles. Cacti should not be clustered together. They should appear randomly and infrequently.
+3. Ensure large open areas of just sand.
+
+Instructions for 'beach':
+1. Create a shoreline that runs across the map, either horizontally or vertically. The shoreline should be irregular and curved, not a straight line.
+2. One side of the shoreline should be 'water'.
+3. The other side should be 'sand'.
+4. Create a thin, intermittent border of 'shallow_water' between the 'water' and 'sand' to create a smooth transition.
+
+Instructions for 'volcanic':
+1. Fill most of the map with the 'rock' tile.
+2. Create rivers or pools of 'lava' tiles. The lava flows should be winding and look natural.
+3. Scatter 'obsidian' tiles near the edges of the lava flows.
+4. Leave some areas of just rock.
+
+Instructions for 'alien':
+1. Fill the map with 'strange_ground'.
+2. Place clusters of 'alien_plant' tiles. These clusters should be in strange, unnatural shapes.
+3. Scatter individual 'crystal' tiles across the map, but not within the plant clusters. Crystals should be rare.
+
 Generate a complete new grid according to these instructions. The output grid MUST have the same dimensions as the input grid.
 `,
 });
