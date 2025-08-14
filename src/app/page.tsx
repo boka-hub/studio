@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isTileTransparent } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -57,6 +59,7 @@ export default function Home() {
   const [isSlicerOpen, setSlicerOpen] = useState(false);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isProcessingAI, setProcessingAI] = useState(false);
+  const [showApiKeyAlert, setShowApiKeyAlert] = useState(false);
   const [zoom, setZoom] = useState(1);
   const { toast } = useToast();
 
@@ -204,9 +207,12 @@ export default function Home() {
             rIndex === row ? r.map((c, cIndex) => (cIndex === col ? result.suggestedTile : c)) : r
           );
           setGrid(newGrid);
-        } catch (error) {
+        } catch (error: any) {
           console.error('AI placement failed:', error);
-          toast({ variant: 'destructive', title: 'AI Error', description: 'Could not suggest a tile.' });
+          if (error.message?.includes('API key not found')) {
+            setShowApiKeyAlert(true);
+          }
+          toast({ variant: 'destructive', title: 'AI Error', description: 'Could not suggest a tile. Is your API key configured?' });
         } finally {
           setProcessingAI(false);
         }
@@ -302,7 +308,22 @@ export default function Home() {
               />
             </ScrollArea>
           </aside>
-          <main className="flex-1 flex items-center justify-center p-4 bg-muted/20 overflow-auto">
+          <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto">
+             {showApiKeyAlert && (
+              <Alert className="mb-4 max-w-2xl">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Gemini API Key Needed</AlertTitle>
+                <AlertDescription>
+                  The AI tool requires a Gemini API key. Please get one from{' '}
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">
+                    Google AI Studio
+                  </a> and add it to a <code>.env</code> file in your project:
+                  <pre className="mt-2 p-2 bg-muted rounded-md text-xs overflow-x-auto">
+                    GEMINI_API_KEY="YOUR_API_KEY_HERE"
+                  </pre>
+                </AlertDescription>
+              </Alert>
+            )}
             <MapGrid
               grid={grid}
               tiles={tiles}
