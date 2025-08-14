@@ -58,6 +58,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
   
   const gridHeight = grid.length;
   const gridWidth = grid[0]?.length || 0;
+  const gridLineWidth = 1;
 
   return (
     <div
@@ -66,14 +67,14 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
       onMouseLeave={handleMouseLeave}
     >
       <div
-        className={cn("bg-card p-2 rounded-lg shadow-inner select-none", getCursorClass())}
+        className={cn("bg-border p-px rounded-lg shadow-inner select-none", getCursorClass())}
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
           gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
-          width: `${gridWidth * TILE_SIZE}px`,
-          height: `${gridHeight * TILE_SIZE}px`,
-          border: '1px solid hsl(var(--border))',
+          width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
+          height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
+          gap: `${gridLineWidth}px`,
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
         }}
       >
@@ -83,7 +84,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, zoo
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
-                className="relative border-r border-b border-border/20"
+                className="relative bg-card"
                 onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
                 onMouseOver={() => handleMouseOver(rowIndex, colIndex)}
                 style={{ width: TILE_SIZE, height: TILE_SIZE }}
