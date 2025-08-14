@@ -6,7 +6,7 @@ import type { Tile } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff } from 'lucide-react';
+import { X, Shield, ShieldOff, Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TilePaletteProps {
@@ -34,6 +34,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 }) => {
   const [editingTileId, setEditingTileId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleStartEditing = (tile: Tile) => {
     if (isCollapsed) return;
@@ -84,17 +85,30 @@ export const TilePalette: FC<TilePaletteProps> = ({
     return 'border-card hover:border-accent';
   };
 
+  const filteredTiles = tiles
+    .filter(t => t.id !== 0)
+    .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <h3 className={cn("text-sm font-semibold p-4 pb-2 text-muted-foreground flex-shrink-0", isCollapsed && "hidden")}>Palette</h3>
+      <div className={cn("p-4 pb-2 flex-shrink-0 space-y-2", isCollapsed && "hidden")}>
+        <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search tiles..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+      </div>
       <ScrollArea className="flex-grow">
         <div className={cn(
             "grid gap-4 p-4 pt-2",
             isCollapsed ? "grid-cols-2" : "grid-cols-3"
           )}>
-          {tiles
-            .filter((t) => t.id !== 0)
-            .map((tile) => (
+          {filteredTiles.map((tile) => (
               <div key={tile.id} className="group flex flex-col items-center gap-1.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -194,6 +208,11 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 )}
               </div>
             ))}
+            {filteredTiles.length === 0 && searchQuery && (
+                <div className="col-span-full text-center text-sm text-muted-foreground py-4">
+                    No tiles found for &quot;{searchQuery}&quot;.
+                </div>
+            )}
         </div>
       </ScrollArea>
     </div>
