@@ -106,6 +106,7 @@ export default function Home() {
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
@@ -701,6 +702,33 @@ export default function Home() {
     setGrid(newGrid);
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
   }
+  
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const imageFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+      if (imageFiles.length > 0) {
+        openSlicer(imageFiles);
+      } else {
+        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Only image files can be dropped.' });
+      }
+      e.dataTransfer.clearData();
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -803,7 +831,21 @@ export default function Home() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex flex-col h-screen bg-background text-foreground font-body">
+      <div 
+        className="flex flex-col h-screen bg-background text-foreground font-body relative"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+       {isDragging && (
+          <div className="absolute inset-0 bg-primary/20 border-4 border-dashed border-primary z-50 flex items-center justify-center pointer-events-none">
+            <div className="text-center p-8 bg-background/80 rounded-lg">
+              <Upload className="h-16 w-16 mx-auto text-primary" />
+              <h2 className="text-2xl font-bold mt-4">Drop to Upload</h2>
+              <p className="text-muted-foreground">Drop image(s) to open in the Batch Slicer.</p>
+            </div>
+          </div>
+        )}
         <Header 
             title="TileForge" 
             icon={GridIcon} 

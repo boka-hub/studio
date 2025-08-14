@@ -42,21 +42,24 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
 }) => {
   const [files, setFiles] = useState<FileData[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const sliceCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFiles = (incomingFiles: FileList | null) => {
+  const handleFiles = useCallback((incomingFiles: FileList | null) => {
     if (!incomingFiles) return;
 
     const newFiles: FileData[] = [];
-    for (const file of Array.from(incomingFiles)) {
+    const fileList = Array.from(incomingFiles);
+
+    fileList.forEach((file, index) => {
        const reader = new FileReader();
        reader.onload = (e) => {
          const newFile = {
-           id: `${file.name}-${file.lastModified}`,
+           id: `${file.name}-${file.lastModified}-${Math.random()}`,
            file,
            src: e.target?.result as string,
            name: file.name.split('.')[0],
@@ -64,16 +67,17 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
            tileHeight: 32,
          };
          newFiles.push(newFile);
-         if(newFiles.length === incomingFiles.length) {
+         if(newFiles.length === fileList.length) {
             setFiles(f => [...f, ...newFiles]);
-            if (!selectedFileId) {
+            // If nothing is selected or the current selection is gone, select the first of the new files
+            if (!selectedFileId || !files.some(f => f.id === selectedFileId)) {
                 setSelectedFileId(newFiles[0].id);
             }
          }
        };
        reader.readAsDataURL(file);
-    }
-  };
+    });
+  }, [files, selectedFileId]);
   
   useEffect(() => {
     if(isOpen && initialFiles.length > 0) {
@@ -81,7 +85,8 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         initialFiles.forEach(file => dataTransfer.items.add(file));
         handleFiles(dataTransfer.files);
     }
-  }, [isOpen, initialFiles]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialFiles]); // handleFiles is stable
 
 
   const selectedFile = files.find(f => f.id === selectedFileId);
@@ -204,17 +209,48 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     handleClose();
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+      <DialogContent 
+        className="max-w-4xl h-[90vh] flex flex-col"
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
         <DialogHeader>
           <DialogTitle>Batch Spritesheet Slicer</DialogTitle>
           <DialogDescription>
-            Import one or more spritesheets, configure their slice dimensions, and add all tiles to your palette at once.
+            Drag-and-drop or import one or more spritesheets, configure their slice dimensions, and add all tiles to your palette at once.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden">
+        <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden relative">
+          {isDragging && (
+            <div className="absolute inset-0 bg-primary/20 border-2 border-dashed border-primary z-10 flex items-center justify-center pointer-events-none">
+              <div className="text-center p-4 bg-background/80 rounded-lg">
+                <h3 className="font-bold text-primary">Drop to add spritesheet(s)</h3>
+              </div>
+            </div>
+          )}
           {/* File List */}
           <div className="md:col-span-1 h-full flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-muted-foreground">Spritesheets</h3>
@@ -232,9 +268,10 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                                 className="h-6 w-6"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setFiles(f => f.filter(f => f.id !== file.id));
+                                    const newFiles = files.filter(f => f.id !== file.id);
+                                    setFiles(newFiles);
                                     if (selectedFileId === file.id) {
-                                        setSelectedFileId(files.length > 1 ? files.find(f => f.id !== file.id)!.id : null);
+                                        setSelectedFileId(newFiles.length > 0 ? newFiles[0].id : null);
                                     }
                                 }}>
                                 <X className="h-4 w-4"/>
@@ -254,7 +291,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
              <h3 className="text-sm font-semibold text-muted-foreground">Preview & Configuration</h3>
              {selectedFile ? (
                 <>
-                <ScrollArea className="w-full rounded-md border max-h-[60vh]">
+                <ScrollArea className="w-full rounded-md border max-h-[60vh] bg-muted/20">
                     <div className="flex items-center justify-center p-1">
                         <canvas ref={previewCanvasRef} className="max-w-full h-auto" style={{ imageRendering: 'pixelated' }} />
                     </div>
@@ -275,8 +312,10 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                 </div>
                 </>
              ) : (
-                <div className="flex flex-col items-center justify-center h-full border-2 border-dashed rounded-lg">
-                    <p className="text-muted-foreground">Select or upload a spritesheet to begin.</p>
+                <div className="flex flex-col items-center justify-center h-full border-2 border-dashed rounded-lg text-center p-4">
+                    <Upload className="h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground mt-4">Select or upload a spritesheet to begin.</p>
+                     <p className="text-sm text-muted-foreground/80">You can also drag and drop files here.</p>
                 </div>
              )}
           </div>
