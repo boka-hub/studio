@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -43,20 +44,24 @@ const prompt = ai.definePrompt({
   name: 'intelligentTilePlacementPrompt',
   input: {schema: IntelligentTilePlacementInputSchema},
   output: {schema: IntelligentTilePlacementOutputSchema},
-  prompt: `You are an AI assistant that suggests the best tile to place in a tile grid based on the surrounding tiles.
+  prompt: `You are an expert AI tile map editor. Your task is to suggest the most appropriate tile for an empty space on a map to ensure visual consistency.
 
-Given the following tile grid:
-{{#each grid}}
-  {{this}}
+The tile map is represented as a grid of numbers, where each number is a tile ID. The ID '0' represents an empty tile.
+
+You will be given the current grid, the coordinates (row, col) of the empty space to fill, and a list of available tile IDs to choose from.
+
+Analyze the neighboring tiles around the target location (row={{row}}, col={{col}}). Based on the patterns and tile choices in the vicinity, select the best tile from the available options to create a seamless and logical map.
+
+Current Grid State:
+{{#each grid as |gridRow|}}
+{{#each gridRow as |cell|}}{{cell}} {{/each}}
 {{/each}}
 
-And the target row and column: row={{row}}, col={{col}}
+Available Tile IDs: [{{#each availableTiles}}{{.}}{{#unless @last}}, {{/unless}}{{/each}}]
 
-And the available tiles: {{availableTiles}}
+Your goal is to make the map look natural. For example, if the target cell is surrounded by 'water' tiles, you should probably suggest a 'water' tile. If it's at the border of 'grass' and 'sand', you might suggest a 'sand-to-grass-transition' tile if one is available.
 
-Suggest the most appropriate tile (as an index from the available tiles) to place in the grid at the specified row and column, considering the surrounding tiles to create a consistent and visually appealing map.
-
-Return ONLY the index of the suggested tile from the availableTiles.
+Examine the provided grid and available tiles carefully and decide which tile ID is the best fit.
 `,
 });
 
@@ -71,3 +76,5 @@ const intelligentTilePlacementFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
