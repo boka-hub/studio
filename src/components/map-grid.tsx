@@ -43,7 +43,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
   const handleMouseOver = (row: number, col: number) => {
     if (!isDrawing) return;
 
-    if (tool === 'brush' || tool === 'eraser') {
+    if (tool === 'brush' || tool === 'eraser' || tool === 'spray') {
       onCellAction(row, col);
     } else if (tool === 'rectangle' && startCell) {
         const newPreviewGrid = grid.map(r => [...r]);
@@ -97,6 +97,8 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
         return 'cursor-help';
       case 'fill':
         return 'cursor-copy';
+      case 'spray':
+        return 'cursor-cell';
       case 'rectangle':
         return 'cursor-crosshair';
       case 'select':

@@ -26,6 +26,7 @@ import {
   ClipboardPaste,
   Trash2,
   Replace,
+  SprayCan,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -243,17 +244,15 @@ export default function Home() {
       }
       setSelection(null);
       
+      const newGrid = grid.map(r => [...r]);
+
       if (tool === 'brush') {
         if (grid[row][col] === selectedTileId) return;
-        const newGrid = grid.map((r, rIndex) =>
-          rIndex === row ? r.map((c, cIndex) => (cIndex === col ? selectedTileId : c)) : r
-        );
+        newGrid[row][col] = selectedTileId;
         setGrid(newGrid);
       } else if (tool === 'eraser') {
         if (grid[row][col] === 0) return;
-        const newGrid = grid.map((r, rIndex) =>
-          rIndex === row ? r.map((c, cIndex) => (cIndex === col ? 0 : c)) : r
-        );
+        newGrid[row][col] = 0;
         setGrid(newGrid);
       } else if (tool === 'picker') {
         const tileId = grid[row][col];
@@ -263,13 +262,37 @@ export default function Home() {
           setTool('brush');
           toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
         }
+      } else if (tool === 'spray') {
+        const radius = 3; // The radius of the spray circle
+        const density = 0.4; // 40% chance to place a tile
+        
+        for (let r = -radius; r <= radius; r++) {
+            for (let c = -radius; c <= radius; c++) {
+                // Check if the cell is within the circle
+                if (r * r + c * c <= radius * radius) {
+                    const targetRow = row + r;
+                    const targetCol = col + c;
+
+                    // Check if the cell is within grid bounds
+                    if (
+                        targetRow >= 0 && targetRow < grid.length &&
+                        targetCol >= 0 && targetCol < grid[0].length
+                    ) {
+                        // Apply tile based on density
+                        if (Math.random() < density) {
+                            newGrid[targetRow][targetCol] = selectedTileId;
+                        }
+                    }
+                }
+            }
+        }
+        setGrid(newGrid);
       } else if (tool === 'fill') {
         const targetId = grid[row][col];
         const replacementId = selectedTileId;
 
         if (targetId === replacementId) return;
 
-        const newGrid = grid.map(r => [...r]);
         const queue: [number, number][] = [[row, col]];
         const visited = new Set<string>();
         visited.add(`${row},${col}`);
@@ -487,6 +510,7 @@ export default function Home() {
           'g': 'fill', // G for GIMP/Photoshop bucket fill
           'r': 'rectangle',
           'm': 'select', // M for marquee
+          's': 'spray',
         };
 
         if (keyMap[e.key]) {
@@ -510,6 +534,7 @@ export default function Home() {
     eraser: { icon: Eraser, label: 'Eraser (E)' },
     picker: { icon: Pipette, label: 'Picker (P)' },
     fill: { icon: PaintBucket, label: 'Fill (G)'},
+    spray: { icon: SprayCan, label: 'Spray (S)' },
     rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
     select: { icon: Lasso, label: 'Select (M)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
