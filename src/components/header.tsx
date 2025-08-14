@@ -13,12 +13,19 @@ interface HeaderProps {
   title: string;
   icon: ElementType;
   actions: HeaderAction[];
+  onTitleClick?: () => void;
 }
 
-export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions }) => {
+export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions, onTitleClick }) => {
   return (
     <header className="flex items-center justify-between p-2 border-b border-border shadow-sm">
-      <div className="flex items-center gap-2">
+      <div 
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={onTitleClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onTitleClick?.()}
+      >
         <Icon className="h-6 w-6 text-primary" />
         <h1 className="text-xl font-bold text-foreground">{title}</h1>
       </div>
