@@ -87,6 +87,20 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     }
   }
 
+  const downloadMetadata = () => {
+    const metadata = {
+      tileCount: tiles.length,
+      columns: Math.min(columns > 0 ? columns : 1, tiles.length),
+      tiles: tiles.map((tile, index) => ({
+        id: tile.id,
+        name: tile.name,
+        index: index,
+      })),
+    };
+    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'text/plain' });
+    downloadFile(metadataBlob, 'tileforge-metadata.txt');
+  };
+
   const handleExportSpritesheet = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -101,17 +115,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     }, 'image/png');
     
     // Export Metadata
-    const metadata = {
-      tileCount: tiles.length,
-      columns: Math.min(columns > 0 ? columns : 1, tiles.length),
-      tiles: tiles.map((tile, index) => ({
-        id: tile.id,
-        name: tile.name,
-        index: index,
-      })),
-    };
-    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'text/plain' });
-    downloadFile(metadataBlob, 'tileforge-metadata.txt');
+    downloadMetadata();
 
     toast({ title: 'Export Complete', description: 'Spritesheet and metadata.txt have been downloaded.' });
     onClose();
@@ -123,13 +127,16 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         return;
     }
     
+    // Export Individual Tiles
     tiles.forEach(tile => {
-        // Sanitize filename
         const filename = `${tile.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
         downloadFile(tile.src, filename);
     });
 
-    toast({ title: 'Export Complete', description: `${tiles.length} individual tiles have been downloaded.` });
+    // Export Metadata
+    downloadMetadata();
+
+    toast({ title: 'Export Complete', description: `${tiles.length} individual tiles and metadata.txt have been downloaded.` });
     onClose();
   }
 
