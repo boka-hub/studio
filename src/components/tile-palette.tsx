@@ -67,6 +67,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                     )}
                     aria-label={`Select tile ${tile.name}`}
                     aria-pressed={selectedTileId === tile.id}
+                    style={{ imageRendering: 'pixelated' }}
                   >
                     <Image
                       src={tile.src}
