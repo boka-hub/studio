@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Tile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import { isTileTransparent } from '@/lib/utils';
 
 interface SpritesheetSlicerModalProps {
   isOpen: boolean;
@@ -46,12 +47,12 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     }
   };
 
-  const handleSlice = useCallback(() => {
+  const handleSlice = useCallback(async () => {
     if (!imageSrc || !canvasRef.current) return;
 
     const img = document.createElement('img');
     img.src = imageSrc;
-    img.onload = () => {
+    img.onload = async () => {
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -59,6 +60,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
       const cols = Math.floor(img.width / tileWidth);
       const rows = Math.floor(img.height / tileHeight);
       const newTiles: Omit<Tile, 'id'>[] = [];
+      let transparentCount = 0;
 
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
@@ -76,11 +78,27 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
             tileHeight
           );
           const dataUrl = canvas.toDataURL();
-          newTiles.push({ name: `${imageName}_${x}_${y}`, src: dataUrl });
+          
+          if (await isTileTransparent(dataUrl)) {
+            transparentCount++;
+          } else {
+            newTiles.push({ name: `${imageName}_${x}_${y}`, src: dataUrl });
+          }
         }
       }
+      
       onSlice(newTiles);
-      toast({ title: 'Spritesheet Sliced', description: `${newTiles.length} tiles added to your palette.` });
+      
+      if (newTiles.length > 0) {
+        toast({ title: 'Spritesheet Sliced', description: `${newTiles.length} tiles added to your palette.` });
+      }
+      if (transparentCount > 0) {
+        toast({ title: 'Transparent Tiles Skipped', description: `${transparentCount} tile(s) were fully transparent and have been ignored.` });
+      }
+      if (newTiles.length === 0 && transparentCount === 0) {
+         toast({ variant: 'destructive', title: 'Slicing Error', description: 'Could not slice any tiles. Check tile dimensions.' });
+      }
+      
       onClose();
       setImageSrc(null);
     };

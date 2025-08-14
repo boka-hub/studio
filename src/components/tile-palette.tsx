@@ -5,13 +5,16 @@ import { cn } from '@/lib/utils';
 import type { Tile } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { X } from 'lucide-react';
 
 interface TilePaletteProps {
   tiles: Tile[];
   selectedTileId: number;
   onSelectTile: (id: number) => void;
   onRenameTile: (id: number, newName: string) => void;
+  onDeleteTile: (id: number) => void;
 }
 
 export const TilePalette: FC<TilePaletteProps> = ({
@@ -19,6 +22,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
   selectedTileId,
   onSelectTile,
   onRenameTile,
+  onDeleteTile,
 }) => {
   const [editingTileId, setEditingTileId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -35,6 +39,11 @@ export const TilePalette: FC<TilePaletteProps> = ({
     setEditingTileId(null);
     setEditingName('');
   };
+  
+  const handleDelete = (e: React.MouseEvent, tileId: number) => {
+    e.stopPropagation();
+    onDeleteTile(tileId);
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -44,7 +53,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
           {tiles
             .filter((t) => t.id !== 0)
             .map((tile) => (
-              <div key={tile.id} className="flex flex-col items-center gap-1.5">
+              <div key={tile.id} className="group flex flex-col items-center gap-1.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -67,6 +76,15 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         unoptimized
                         data-ai-hint="pixel art"
                       />
+                       <Button 
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-0.5 right-0.5 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleDelete(e, tile.id)}
+                          aria-label={`Delete tile ${tile.name}`}
+                        >
+                          <X className="h-4 w-4" />
+                       </Button>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>

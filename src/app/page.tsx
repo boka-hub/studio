@@ -27,6 +27,7 @@ import { intelligentTilePlacement } from '@/ai/flows/intelligent-tile-placement'
 import { useToast } from "@/hooks/use-toast";
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { isTileTransparent } from '@/lib/utils';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -50,7 +51,7 @@ export default function Home() {
   const [tiles, setTiles] = useState<Tile[]>([
     { id: 0, name: 'Empty', src: '' }, // Empty tile
   ]);
-  const [selectedTileId, setSelectedTileId] = useState<number>(1);
+  const [selectedTileId, setSelectedTileId] = useState<number>(0);
   const [tool, setTool] = useState<Tool>('brush');
   const [isSlicerOpen, setSlicerOpen] = useState(false);
   const [isExportOpen, setExportOpen] = useState(false);
@@ -76,16 +77,32 @@ export default function Home() {
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   };
   
-  const addTiles = (newTiles: Omit<Tile, 'id'>[]) => {
-    setTiles((prevTiles) => {
-      let nextId = prevTiles.length > 0 ? Math.max(...prevTiles.map((t) => t.id)) + 1 : 1;
-      const tilesWithIds = newTiles.map((tile) => {
-        const uniqueName = tile.name;
-        // Ensure unique name on import, though renaming handles conflicts later
-        return { ...tile, name: uniqueName, id: nextId++ };
+  const addTiles = async (newTiles: Omit<Tile, 'id'>[]) => {
+    const filteredTiles = [];
+    for (const tile of newTiles) {
+      if (!(await isTileTransparent(tile.src))) {
+        filteredTiles.push(tile);
+      }
+    }
+
+    if (filteredTiles.length < newTiles.length) {
+      const skippedCount = newTiles.length - filteredTiles.length;
+      toast({
+        title: 'Transparent Tiles Skipped',
+        description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
       });
-      return [...prevTiles, ...tilesWithIds];
-    });
+    }
+    
+    if (filteredTiles.length > 0) {
+      setTiles((prevTiles) => {
+        let nextId = prevTiles.length > 0 ? Math.max(...prevTiles.map((t) => t.id)) + 1 : 1;
+        const tilesWithIds = filteredTiles.map((tile) => ({
+          ...tile,
+          id: nextId++,
+        }));
+        return [...prevTiles, ...tilesWithIds];
+      });
+    }
   };
 
   const handleRenameTile = (tileId: number, newName: string) => {
@@ -100,6 +117,19 @@ export default function Home() {
         tile.id === tileId ? { ...tile, name: newName } : tile
       );
     });
+  };
+
+  const handleDeleteTile = (tileId: number) => {
+    const tileName = tiles.find(t => t.id === tileId)?.name;
+    // Remove tile from palette
+    setTiles(prevTiles => prevTiles.filter(t => t.id !== tileId));
+    // Remove tile from grid
+    setGrid(prevGrid => prevGrid.map(row => row.map(cell => (cell === tileId ? 0 : cell))));
+    // If deleted tile was selected, select empty tile
+    if (selectedTileId === tileId) {
+      setSelectedTileId(0);
+    }
+    toast({ title: 'Tile Deleted', description: `Tile "${tileName}" has been removed.` });
   };
 
   const handleImportTiles = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,26 +279,23 @@ export default function Home() {
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header title="TileForge" icon={GridIcon} actions={headerActions} />
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-72 bg-card border-r border-border">
-            <ScrollArea className="h-full">
-              <div className="flex flex-col">
-                <Toolbar<Tool>
-                  actions={toolbarActions}
-                  selectedAction={tool}
-                  onActionSelect={setTool}
-                  gridSize={gridSize}
-                  onGridResize={handleGridResize}
-                  zoom={zoom}
-                  onZoomChange={setZoom}
-                />
-                <TilePalette
-                  tiles={tiles}
-                  selectedTileId={selectedTileId}
-                  onSelectTile={setSelectedTileId}
-                  onRenameTile={handleRenameTile}
-                />
-              </div>
-            </ScrollArea>
+          <aside className="w-72 bg-card border-r border-border flex flex-col">
+            <Toolbar<Tool>
+              actions={toolbarActions}
+              selectedAction={tool}
+              onActionSelect={setTool}
+              gridSize={gridSize}
+              onGridResize={handleGridResize}
+              zoom={zoom}
+              onZoomChange={setZoom}
+            />
+            <TilePalette
+              tiles={tiles}
+              selectedTileId={selectedTileId}
+              onSelectTile={setSelectedTileId}
+              onRenameTile={handleRenameTile}
+              onDeleteTile={handleDeleteTile}
+            />
           </aside>
           <main className="flex-1 flex items-center justify-center p-4 bg-muted/20 overflow-auto">
             <MapGrid
