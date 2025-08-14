@@ -37,8 +37,8 @@ export const TilePalette: FC<TilePaletteProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col">
-      <h3 className="text-sm font-semibold p-2 px-4 text-muted-foreground">Palette</h3>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <h3 className="text-sm font-semibold p-2 px-4 text-muted-foreground flex-shrink-0">Palette</h3>
       <ScrollArea className="flex-1">
         <div className="grid grid-cols-3 gap-4 p-4 pt-0">
           {tiles
