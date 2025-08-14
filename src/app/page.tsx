@@ -29,6 +29,7 @@ import {
   SprayCan,
   Layers,
   Waves,
+  Wand2,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -243,7 +244,7 @@ export default function Home() {
   };
   
   const handleCellAction = useCallback(
-    (row: number, col: number) => {
+    async (row: number, col: number) => {
       if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
         // Handled by onShapeDraw
         return;
@@ -319,16 +320,67 @@ export default function Home() {
             for (const [nr, nc] of neighbors) {
               const key = `${nr},${nc}`;
               if (nr >= 0 && nr < height && nc >= 0 && nc < width && !visited.has(key)) {
-                queue.push([nr, nc]);
+                if(newGrid[nr][nc] === targetId) {
+                    queue.push([nr, nc]);
+                }
                 visited.add(key);
               }
             }
           }
         }
         setGrid(newGrid);
+      } else if (tool === 'magic-wand') {
+        const targetId = grid[row][col];
+        if (targetId === 0) return;
+
+        const queue: [number, number][] = [[row, col]];
+        const visited = new Set<string>();
+        visited.add(`${row},${col}`);
+
+        let minRow = row, maxRow = row, minCol = col, maxCol = col;
+        
+        const width = grid[0].length;
+        const height = grid.length;
+
+        while (queue.length > 0) {
+          const [r, c] = queue.shift()!;
+
+          minRow = Math.min(minRow, r);
+          maxRow = Math.max(maxRow, r);
+          minCol = Math.min(minCol, c);
+          maxCol = Math.max(maxCol, c);
+          
+          const neighbors: [number, number][] = [
+            [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]
+          ];
+
+          for (const [nr, nc] of neighbors) {
+            const key = `${nr},${nc}`;
+            if (nr >= 0 && nr < height && nc >= 0 && nc < width && !visited.has(key)) {
+                visited.add(key);
+                if (grid[nr][nc] === targetId) {
+                    queue.push([nr, nc]);
+                }
+            }
+          }
+        }
+
+        const selectedCellsGrid = createEmptyGrid(width, height);
+        visited.forEach(key => {
+            const [r, c] = key.split(',').map(Number);
+            if(grid[r][c] === targetId) {
+                selectedCellsGrid[r][c] = 1; // Mark as selected
+            }
+        });
+        
+        setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
+        toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
 
       } else if (tool === 'ai') {
-        if (grid[row][col] !== 0) return;
+        if (grid[row][col] !== 0) {
+          toast({ variant: 'destructive', title: 'AI Error', description: 'AI can only place tiles on empty cells.' });
+          return;
+        }
         setProcessingAI(true);
         try {
           const availableTiles = tiles.filter(t => t.id !== 0).map(t => t.id);
@@ -378,7 +430,7 @@ export default function Home() {
         }
       }
     },
-    [grid, selectedTileId, tool, setGrid, tiles, toast]
+    [grid, selectedTileId, setGrid, tiles, toast, tool]
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
@@ -438,6 +490,10 @@ export default function Home() {
         }
         return r.map((cell, colIndex) => {
             if (colIndex >= selection.minCol && colIndex <= selection.maxCol) {
+                // If we have a detailed selection map (from magic wand), use it
+                if (selection.selectedCells && selection.selectedCells[rowIndex][colIndex] === 0) {
+                    return cell;
+                }
                 return callback(cell);
             }
             return cell;
@@ -471,7 +527,15 @@ export default function Home() {
 
     const copiedData = grid
       .slice(selection.minRow, selection.maxRow + 1)
-      .map(row => row.slice(selection.minCol, selection.maxCol + 1));
+      .map((row, rIndex) => row.slice(selection.minCol, selection.maxCol + 1)
+        .map((cell, cIndex) => {
+          // If we have a detailed selection, only copy the selected cells
+          if (selection.selectedCells && selection.selectedCells[selection.minRow + rIndex][selection.minCol + cIndex] === 0) {
+            return -1; // Use -1 to represent "not copied"
+          }
+          return cell;
+        })
+      );
     
     setClipboard(copiedData);
     toast({ title: 'Selection Copied', description: 'The selected area has been copied to the clipboard.' });
@@ -488,8 +552,9 @@ export default function Home() {
         for(let c = 0; c < clipboard[0].length; c++) {
             const targetRow = pasteStartRow + r;
             const targetCol = pasteStartCol + c;
-            if (targetRow < grid.length && targetCol < grid[0].length) {
-                newGrid[targetRow][targetCol] = clipboard[r][c];
+            const copiedCell = clipboard[r][c];
+            if (copiedCell !== -1 && targetRow < grid.length && targetCol < grid[0].length) {
+                newGrid[targetRow][targetCol] = copiedCell;
             }
         }
     }
@@ -539,6 +604,7 @@ export default function Home() {
           'g': 'fill', // G for GIMP/Photoshop bucket fill
           'r': 'rectangle',
           'm': 'select', // M for marquee
+          'w': 'magic-wand',
           's': 'spray',
           'l': 'gradient', // L for Layers/gradient
           'n': 'noise',
@@ -570,6 +636,7 @@ export default function Home() {
     gradient: { icon: Layers, label: 'Gradient (L)' },
     noise: { icon: Waves, label: 'Noise (N)' },
     select: { icon: Lasso, label: 'Select (M)' },
+    'magic-wand': { icon: Wand2, label: 'Wand (W)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
 
@@ -608,7 +675,7 @@ export default function Home() {
                 selectedAction={tool}
                 onActionSelect={(t) => {
                     setTool(t);
-                    if (t !== 'select') setSelection(null);
+                    if (t !== 'select' && t !== 'magic-wand') setSelection(null);
                 }}
                 gridSize={gridSize}
                 onGridResize={handleGridResize}

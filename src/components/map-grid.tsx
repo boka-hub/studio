@@ -121,6 +121,7 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
       case 'ai':
         return 'cursor-help';
       case 'fill':
+      case 'magic-wand':
         return 'cursor-copy';
       case 'spray':
         return 'cursor-cell';
@@ -159,6 +160,8 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
         {gridToRender.map((row, rowIndex) =>
           row.map((tileId, colIndex) => {
             const tile = tileMap.get(tileId);
+            const isCellSelected = selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
+
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
@@ -179,12 +182,15 @@ export const MapGrid: FC<MapGridProps> = ({ grid, tiles, tool, onCellAction, onS
                     data-ai-hint="pixel art tile"
                   />
                 )}
+                 {isCellSelected && (
+                  <div className="absolute inset-0 bg-blue-500/30 pointer-events-none" />
+                )}
               </div>
             );
           })
         )}
       </div>
-       {selection && (
+       {selection && !selection.selectedCells && (
         <div
           className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
           style={{

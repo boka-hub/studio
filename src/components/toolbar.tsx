@@ -66,7 +66,7 @@ export function Toolbar<T extends string>({
       <div className={cn("flex flex-col gap-4 p-2", isCollapsed && "items-center")}>
         <div>
           <h3 className={cn("text-sm font-semibold mb-2 px-2 text-muted-foreground", isCollapsed && "hidden")}>Tools</h3>
-          <div className={cn("grid gap-1", isCollapsed ? 'grid-cols-2' : 'grid-cols-2')}>
+          <div className={cn("grid gap-1", isCollapsed ? 'grid-cols-2' : 'grid-cols-3')}>
             {(Object.keys(actions) as T[]).map((key) => {
               const action = actions[key];
               const Icon = action.icon;
@@ -76,8 +76,8 @@ export function Toolbar<T extends string>({
                     <Button
                       variant={selectedAction === key ? 'secondary' : 'ghost'}
                       className={cn(
-                        'w-full flex h-auto py-2 gap-1 text-xs',
-                        isCollapsed ? 'flex-col' : 'flex-col',
+                        'w-full flex h-auto py-2 gap-1 text-xs items-center justify-start',
+                        isCollapsed ? 'flex-col px-1' : 'flex-row pl-3',
                          selectedAction === key && 'bg-primary text-primary-foreground hover:bg-primary/90'
                       )}
                       onClick={() => onActionSelect(key)}
@@ -103,7 +103,7 @@ export function Toolbar<T extends string>({
                   <Separator />
                     <div className="px-2 space-y-2">
                         <h3 className="text-sm font-semibold text-muted-foreground">Selection</h3>
-                         <div className="grid grid-cols-2 gap-1">
+                         <div className="grid grid-cols-3 gap-1">
                           {Object.values(selectionActions).map((action, index) => (
                               <Tooltip key={index}>
                                   <TooltipTrigger asChild>
