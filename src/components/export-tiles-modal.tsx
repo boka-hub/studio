@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Tile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { Download, FileImage } from 'lucide-react';
+import { Download, FileImage, FileText } from 'lucide-react';
 
 interface ExportTilesModalProps {
   isOpen: boolean;
@@ -101,6 +101,11 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     downloadFile(metadataBlob, 'tileforge-metadata.txt');
   };
 
+  const handleDownloadMetadata = () => {
+    downloadMetadata();
+    toast({ title: 'Metadata Downloaded', description: 'tileforge-metadata.txt has been downloaded.' });
+  }
+
   const handleExportSpritesheet = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -180,10 +185,16 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
           </div>
         </div>
         <DialogFooter className="sm:justify-between gap-2">
-          <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0}>
-              <FileImage className="mr-2 h-4 w-4" />
-              Download Individual PNGs
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0}>
+                <FileImage className="mr-2 h-4 w-4" />
+                Individual PNGs
+            </Button>
+             <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tiles.length === 0}>
+                <FileText className="mr-2 h-4 w-4" />
+                Metadata Only
+            </Button>
+          </div>
           <div className="flex gap-2">
             <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
             <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0}>
