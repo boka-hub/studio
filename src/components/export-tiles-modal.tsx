@@ -110,10 +110,10 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         index: index,
       })),
     };
-    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
-    downloadFile(metadataBlob, 'tileforge-metadata.json');
+    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'text/plain' });
+    downloadFile(metadataBlob, 'tileforge-metadata.txt');
 
-    toast({ title: 'Export Complete', description: 'Spritesheet and metadata have been downloaded.' });
+    toast({ title: 'Export Complete', description: 'Spritesheet and metadata.txt have been downloaded.' });
     onClose();
   };
   
