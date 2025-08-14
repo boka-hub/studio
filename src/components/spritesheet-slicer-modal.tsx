@@ -78,6 +78,21 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
       drawPreview();
     }
   }, [isOpen, drawPreview]);
+  
+  const resetState = () => {
+    setImageSrc(null);
+    setImageName('');
+    setTileWidth(32);
+    setTileHeight(32);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+  }
+
+  const handleClose = () => {
+    resetState();
+    onClose();
+  }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -143,17 +158,16 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
          toast({ variant: 'destructive', title: 'Slicing Error', description: 'Could not slice any tiles. Check tile dimensions.' });
       }
       
-      onClose();
-      setImageSrc(null);
+      handleClose();
     };
     img.onerror = () => {
       toast({ variant: 'destructive', title: 'Error', description: 'Could not load image.' });
     };
 
-  }, [imageSrc, tileWidth, tileHeight, onSlice, onClose, imageName, toast]);
+  }, [imageSrc, tileWidth, tileHeight, onSlice, imageName, toast]);
   
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Slice Spritesheet</DialogTitle>
@@ -162,9 +176,11 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-            Upload Spritesheet
-          </Button>
+          {!imageSrc && (
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+              Upload Spritesheet
+            </Button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -174,44 +190,46 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           />
           
           {imageSrc && (
-            <ScrollArea className="h-72 w-full rounded-md border">
-              <div className="p-1">
+            <>
+            <ScrollArea className="w-full rounded-md border max-h-[50vh]">
+              <div className="flex items-center justify-center p-1">
                 <canvas 
                   ref={previewCanvasRef} 
-                  className="max-w-none"
+                  className="max-w-full h-auto"
                   style={{ imageRendering: 'pixelated' }}
                 />
               </div>
             </ScrollArea>
-          )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="tile-width">Tile Width (px)</Label>
-              <Input
-                id="tile-width"
-                type="number"
-                value={tileWidth}
-                onChange={(e) => setTileWidth(Math.max(1, Number(e.target.value)))}
-                className="w-full"
-                min="1"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="tile-width">Tile Width (px)</Label>
+                <Input
+                  id="tile-width"
+                  type="number"
+                  value={tileWidth}
+                  onChange={(e) => setTileWidth(Math.max(1, Number(e.target.value)))}
+                  className="w-full"
+                  min="1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="tile-height">Tile Height (px)</Label>
+                <Input
+                  id="tile-height"
+                  type="number"
+                  value={tileHeight}
+                  onChange={(e) => setTileHeight(Math.max(1, Number(e.target.value)))}
+                  className="w-full"
+                  min="1"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="tile-height">Tile Height (px)</Label>
-              <Input
-                id="tile-height"
-                type="number"
-                value={tileHeight}
-                onChange={(e) => setTileHeight(Math.max(1, Number(e.target.value)))}
-                className="w-full"
-                min="1"
-              />
-            </div>
-          </div>
+            </>
+          )}
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
           <Button type="button" onClick={handleSlice} disabled={!imageSrc}>Slice and Add</Button>
         </DialogFooter>
         <canvas ref={sliceCanvasRef} className="hidden" />
