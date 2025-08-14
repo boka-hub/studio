@@ -8,6 +8,7 @@ interface HeaderAction {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  isActive?: boolean;
 }
 
 interface HeaderProps {
@@ -18,8 +19,8 @@ interface HeaderProps {
 }
 
 export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions, onTitleClick }) => {
-  const mainActions = actions.slice(0, 5);
-  const undoRedoActions = actions.slice(5);
+  const mainActions = actions.slice(0, 6);
+  const undoRedoActions = actions.slice(6);
 
   return (
     <header className="flex items-center justify-between p-2 border-b border-border shadow-sm">
@@ -43,11 +44,12 @@ export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions, onTitleCli
                 style={{ pointerEvents: action.disabled ? 'none' : 'auto' }}
               >
                 <Button
-                  variant="ghost"
+                  variant={action.isActive ? 'secondary' : 'ghost'}
                   size="icon"
                   onClick={action.onClick}
                   disabled={action.disabled}
                   aria-label={action.label}
+                  className={action.isActive ? 'bg-primary/20' : ''}
                 >
                   <action.icon className="h-5 w-5" />
                 </Button>

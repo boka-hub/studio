@@ -34,6 +34,8 @@ import {
   FlipHorizontal,
   FlipVertical,
   Mountain,
+  Play,
+  Square,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -88,7 +90,7 @@ export default function Home() {
   } = useUndoRedo<GridState>(createEmptyGrid(gridSize.width, gridSize.height));
 
   const [tiles, setTiles] = useState<Tile[]>([
-    { id: 0, name: 'Empty', src: '' }, // Empty tile
+    { id: 0, name: 'Empty', src: '', solid: false }, // Empty tile
   ]);
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
   const [secondarySelectedTileId, setSecondarySelectedTileId] = useState<number>(0);
@@ -107,6 +109,8 @@ export default function Home() {
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isPreviewMode, setPreviewMode] = useState(false);
+  const [playerPos, setPlayerPos] = useState({ row: 1, col: 1 });
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
@@ -152,6 +156,7 @@ export default function Home() {
         const tilesWithIds = filteredTiles.map((tile) => ({
           ...tile,
           id: nextId++,
+          solid: false, // Default new tiles to not solid
         }));
         return [...prevTiles, ...tilesWithIds];
       });
@@ -170,6 +175,12 @@ export default function Home() {
         tile.id === tileId ? { ...tile, name: newName } : tile
       );
     });
+  };
+
+  const handleToggleSolid = (tileId: number) => {
+    setTiles(prevTiles => prevTiles.map(t =>
+      t.id === tileId ? { ...t, solid: !t.solid } : t
+    ));
   };
 
   const handleUndoDelete = () => {
@@ -732,6 +743,36 @@ export default function Home() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Allow keyboard shortcuts if not in preview mode or if specific preview keys are pressed
+      if (isPreviewMode) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
+            e.preventDefault();
+            if (e.key === 'Escape') {
+                setPreviewMode(false);
+                toast({ title: 'Exited Preview Mode' });
+                return;
+            }
+            
+            let { row, col } = playerPos;
+            if (e.key === 'ArrowUp') row--;
+            if (e.key === 'ArrowDown') row++;
+            if (e.key === 'ArrowLeft') col--;
+            if (e.key === 'ArrowRight') col++;
+
+            // Clamp position to grid bounds
+            row = Math.max(0, Math.min(grid.length - 1, row));
+            col = Math.max(0, Math.min(grid[0].length - 1, col));
+
+            // Collision detection
+            const tileId = grid[row][col];
+            const tile = tiles.find(t => t.id === tileId);
+            if (!tile?.solid) {
+                setPlayerPos({ row, col });
+            }
+        }
+        return;
+      }
+      
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-' || e.key === 'c' || e.key === 'v')) {
          e.preventDefault();
       }
@@ -790,7 +831,7 @@ export default function Home() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, setZoom, selection, grid, clipboard]);
+  }, [undo, redo, setZoom, selection, grid, clipboard, isPreviewMode, playerPos, tiles]);
 
 
   const toolbarActions = {
@@ -814,6 +855,7 @@ export default function Home() {
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Mountain, label: 'Generate Terrain', onClick: () => setTerrainGeneratorOpen(true) },
+    { icon: isPreviewMode ? Square : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
     { icon: Undo, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
     { icon: Redo, label: 'Redo (Ctrl+Shift+Z)', onClick: redo, disabled: !canRedo },
   ];
@@ -856,9 +898,11 @@ export default function Home() {
           <aside
             className={cn(
               'bg-card border-r border-border flex flex-col transition-all duration-300',
-              isToolbarCollapsed ? 'w-[73px]' : 'w-60'
+              (isToolbarCollapsed || isPreviewMode) ? 'w-0 p-0 border-r-0' : 'w-60'
             )}
           >
+           {!isPreviewMode && (
+            <>
             <div className="flex-grow overflow-y-auto">
                <Toolbar<Tool>
                 actions={toolbarActions}
@@ -894,6 +938,8 @@ export default function Home() {
                 </TooltipContent>
               </Tooltip>
             </div>
+            </>
+           )}
           </aside>
           <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto">
              {showApiKeyAlert && (
@@ -923,42 +969,49 @@ export default function Home() {
               selectedTileId={selectedTileId}
               secondarySelectedTileId={secondarySelectedTileId}
               selection={selection}
+              isPreviewMode={isPreviewMode}
+              playerPos={playerPos}
             />
           </main>
           <aside className={cn(
               "bg-card border-l border-border flex flex-col transition-all duration-300",
-              isPaletteCollapsed ? 'w-[73px]' : 'w-80'
+              (isPaletteCollapsed || isPreviewMode) ? 'w-0 p-0 border-l-0' : 'w-80'
             )}>
-            <div className="flex-grow overflow-y-auto">
-              <TilePalette
-                tiles={tiles}
-                selectedTileId={selectedTileId}
-                secondarySelectedTileId={secondarySelectedTileId}
-                onSelectTile={setSelectedTileId}
-                onSelectSecondaryTile={setSecondarySelectedTileId}
-                onRenameTile={handleRenameTile}
-                onDeleteTile={handleDeleteTile}
-                isCollapsed={isPaletteCollapsed}
-              />
-            </div>
-            <Separator />
-            <div className="p-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
-                    className="w-full"
-                  >
-                    {isPaletteCollapsed ? <PanelRightOpen /> : <PanelRightClose />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            {!isPreviewMode && (
+            <>
+              <div className="flex-grow overflow-y-auto">
+                <TilePalette
+                  tiles={tiles}
+                  selectedTileId={selectedTileId}
+                  secondarySelectedTileId={secondarySelectedTileId}
+                  onSelectTile={setSelectedTileId}
+                  onSelectSecondaryTile={setSecondarySelectedTileId}
+                  onRenameTile={handleRenameTile}
+                  onDeleteTile={handleDeleteTile}
+                  onToggleSolid={handleToggleSolid}
+                  isCollapsed={isPaletteCollapsed}
+                />
+              </div>
+              <Separator />
+              <div className="p-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
+                      className="w-full"
+                    >
+                      {isPaletteCollapsed ? <PanelRightOpen /> : <PanelRightClose />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              </>
+            )}
           </aside>
         </div>
 

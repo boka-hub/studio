@@ -4,6 +4,7 @@ export interface Tile {
   id: number;
   name: string;
   src: string;
+  solid?: boolean;
 }
 
 export type GridState = number[][];

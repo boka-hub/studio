@@ -16,6 +16,8 @@ interface MapGridProps {
   selectedTileId: number;
   secondarySelectedTileId: number;
   selection: Selection | null;
+  isPreviewMode: boolean;
+  playerPos: {row: number, col: number};
 }
 
 const BASE_TILE_SIZE = 32;
@@ -31,7 +33,9 @@ export const MapGrid: FC<MapGridProps> = ({
   zoom = 1, 
   selectedTileId, 
   secondarySelectedTileId, 
-  selection 
+  selection,
+  isPreviewMode,
+  playerPos,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
@@ -45,6 +49,7 @@ export const MapGrid: FC<MapGridProps> = ({
   }, [tiles]);
 
   const handleMouseDown = (row: number, col: number) => {
+    if (isPreviewMode) return;
     setIsDrawing(true);
     if (tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise') {
         setStartCell({ row, col });
@@ -60,7 +65,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseOver = (row: number, col: number) => {
-    if (!isDrawing) return;
+    if (!isDrawing || isPreviewMode) return;
 
     if (tool === 'brush' || tool === 'eraser' || tool === 'spray') {
       onCellAction(row, col);
@@ -112,6 +117,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseUp = (row: number, col: number) => {
+    if (isPreviewMode) return;
     if (isDrawing && tool === 'path') {
         onDrawPathEnd();
     }
@@ -137,6 +143,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
   
   const getCursorClass = () => {
+    if (isPreviewMode) return 'cursor-none';
     switch (tool) {
       case 'brush':
       case 'path':
@@ -216,8 +223,32 @@ export const MapGrid: FC<MapGridProps> = ({
             );
           })
         )}
+
+         {isPreviewMode && (
+          <div 
+            className="absolute bg-white rounded-sm shadow-lg pointer-events-none"
+            style={{
+              left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.25}px`,
+              top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.25}px`,
+              width: `${TILE_SIZE * 0.5}px`,
+              height: `${TILE_SIZE * 0.5}px`,
+              transition: 'left 150ms ease-out, top 150ms ease-out',
+            }}
+          >
+             <style jsx>{`
+              .player-animation {
+                animation: bob 1s ease-in-out infinite;
+              }
+              @keyframes bob {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-${TILE_SIZE * 0.1}px); }
+              }
+            `}</style>
+            <div className="player-animation w-full h-full bg-white rounded-sm" />
+          </div>
+        )}
       </div>
-       {selection && !selection.selectedCells && (
+       {selection && !selection.selectedCells && !isPreviewMode && (
         <div
           className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
           style={{
