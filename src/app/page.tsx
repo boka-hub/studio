@@ -26,6 +26,7 @@ import { useUndoRedo } from '@/hooks/use-undo-redo';
 import { intelligentTilePlacement } from '@/ai/flows/intelligent-tile-placement';
 import { useToast } from "@/hooks/use-toast";
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -249,21 +250,23 @@ export default function Home() {
         <Header title="TileForge" icon={GridIcon} actions={headerActions} />
         <div className="flex flex-1 overflow-hidden">
           <aside className="w-72 flex flex-col bg-card border-r border-border">
-            <Toolbar<Tool>
-              actions={toolbarActions}
-              selectedAction={tool}
-              onActionSelect={setTool}
-              gridSize={gridSize}
-              onGridResize={handleGridResize}
-              zoom={zoom}
-              onZoomChange={setZoom}
-            />
-            <TilePalette
-              tiles={tiles}
-              selectedTileId={selectedTileId}
-              onSelectTile={setSelectedTileId}
-              onRenameTile={handleRenameTile}
-            />
+             <ScrollArea className="flex-1">
+              <Toolbar<Tool>
+                actions={toolbarActions}
+                selectedAction={tool}
+                onActionSelect={setTool}
+                gridSize={gridSize}
+                onGridResize={handleGridResize}
+                zoom={zoom}
+                onZoomChange={setZoom}
+              />
+              <TilePalette
+                tiles={tiles}
+                selectedTileId={selectedTileId}
+                onSelectTile={setSelectedTileId}
+                onRenameTile={handleRenameTile}
+              />
+            </ScrollArea>
           </aside>
           <main className="flex-1 flex items-center justify-center p-4 bg-muted/20 overflow-auto">
             <MapGrid
