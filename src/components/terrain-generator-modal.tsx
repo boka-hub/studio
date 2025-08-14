@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Tile, GridState } from '@/lib/types';
 import { generateTerrain } from '@/ai/flows/generate-terrain';
 import { Loader } from 'lucide-react';
+import { ScrollArea } from './ui/scroll-area';
 
 interface TerrainGeneratorModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ interface TerrainGeneratorModalProps {
   onProcessingChange: (isProcessing: boolean) => void;
 }
 
-type TerrainType = 'forest' | 'desert' | 'beach' | 'volcanic' | 'alien' | 'grassland' | 'jungle' | 'mountains' | 'swamp' | 'crystal_caves';
+type TerrainType = 'forest' | 'desert' | 'beach' | 'volcanic' | 'alien' | 'grassland' | 'jungle' | 'mountains' | 'swamp' | 'crystal_caves' | 'tundra' | 'wasteland' | 'farmland' | 'ruins';
 
 interface TerrainConfig {
   type: TerrainType;
@@ -72,6 +73,18 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
     cave_wall: 0,
     cave_floor: 0,
     glowing_crystal: 0,
+    ice: 0,
+    frozen_rock: 0,
+    dead_earth: 0,
+    toxic_waste: 0,
+    ruined_debris: 0,
+    plowed_soil: 0,
+    crops: 0,
+    fence: 0,
+    path: 0,
+    overgrown_grass: 0,
+    ruined_wall: 0,
+    debris_pile: 0,
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
@@ -102,6 +115,14 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
           return tileMapping.mud > 0 && tileMapping.swamp_water > 0 && tileMapping.dead_tree > 0;
       case 'crystal_caves':
           return tileMapping.cave_wall > 0 && tileMapping.cave_floor > 0 && tileMapping.glowing_crystal > 0;
+      case 'tundra':
+          return tileMapping.snow > 0 && tileMapping.ice > 0 && tileMapping.frozen_rock > 0;
+      case 'wasteland':
+          return tileMapping.dead_earth > 0 && tileMapping.toxic_waste > 0 && tileMapping.ruined_debris > 0;
+      case 'farmland':
+          return tileMapping.plowed_soil > 0 && tileMapping.crops > 0 && tileMapping.fence > 0 && tileMapping.path > 0;
+      case 'ruins':
+          return tileMapping.overgrown_grass > 0 && tileMapping.ruined_wall > 0 && tileMapping.debris_pile > 0;
       default:
         return false;
     }
@@ -112,7 +133,7 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
       toast({
         variant: 'destructive',
         title: 'Configuration Incomplete',
-        description: 'Please select a tile for each terrain element.',
+        description: 'Please select a tile for each required terrain element.',
       });
       return;
     }
@@ -239,6 +260,39 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
             <TileSelect id="glowing-crystal-tile" label="Glowing Crystal Tile" value={tileMapping.glowing_crystal} onValueChange={(v) => handleTileMappingChange('glowing_crystal', v)} />
           </>
         );
+       case 'tundra':
+        return (
+          <>
+            <TileSelect id="snow-tile" label="Snow Tile" value={tileMapping.snow} onValueChange={(v) => handleTileMappingChange('snow', v)} />
+            <TileSelect id="ice-tile" label="Ice Tile" value={tileMapping.ice} onValueChange={(v) => handleTileMappingChange('ice', v)} />
+            <TileSelect id="frozen-rock-tile" label="Frozen Rock Tile" value={tileMapping.frozen_rock} onValueChange={(v) => handleTileMappingChange('frozen_rock', v)} />
+          </>
+        );
+      case 'wasteland':
+        return (
+          <>
+            <TileSelect id="dead-earth-tile" label="Dead Earth" value={tileMapping.dead_earth} onValueChange={(v) => handleTileMappingChange('dead_earth', v)} />
+            <TileSelect id="toxic-waste-tile" label="Toxic Waste" value={tileMapping.toxic_waste} onValueChange={(v) => handleTileMappingChange('toxic_waste', v)} />
+            <TileSelect id="ruined-debris-tile" label="Ruined Debris" value={tileMapping.ruined_debris} onValueChange={(v) => handleTileMappingChange('ruined_debris', v)} />
+          </>
+        );
+      case 'farmland':
+        return (
+          <>
+            <TileSelect id="plowed-soil-tile" label="Plowed Soil" value={tileMapping.plowed_soil} onValueChange={(v) => handleTileMappingChange('plowed_soil', v)} />
+            <TileSelect id="crops-tile" label="Crops" value={tileMapping.crops} onValueChange={(v) => handleTileMappingChange('crops', v)} />
+            <TileSelect id="fence-tile" label="Fence" value={tileMapping.fence} onValueChange={(v) => handleTileMappingChange('fence', v)} />
+            <TileSelect id="path-tile" label="Path" value={tileMapping.path} onValueChange={(v) => handleTileMappingChange('path', v)} />
+          </>
+        );
+      case 'ruins':
+        return (
+          <>
+            <TileSelect id="overgrown-grass-tile" label="Overgrown Grass" value={tileMapping.overgrown_grass} onValueChange={(v) => handleTileMappingChange('overgrown_grass', v)} />
+            <TileSelect id="ruined-wall-tile" label="Ruined Wall" value={tileMapping.ruined_wall} onValueChange={(v) => handleTileMappingChange('ruined_wall', v)} />
+            <TileSelect id="debris-pile-tile" label="Debris Pile" value={tileMapping.debris_pile} onValueChange={(v) => handleTileMappingChange('debris_pile', v)} />
+          </>
+        );
       default:
         return null;
     }
@@ -246,7 +300,7 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md flex flex-col h-[90vh]">
         <DialogHeader>
           <DialogTitle>Generate Random Terrain</DialogTitle>
           <DialogDescription>
@@ -254,7 +308,7 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
             current map content.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-6 py-4">
+        <div className="grid gap-6 py-4 flex-grow overflow-hidden">
           <div className="space-y-2">
             <Label htmlFor="terrain-type">Terrain Type</Label>
             <Select
@@ -265,25 +319,31 @@ export const TerrainGeneratorModal: FC<TerrainGeneratorModalProps> = ({
                 <SelectValue placeholder="Select terrain type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="forest">Forest</SelectItem>
-                <SelectItem value="grassland">Grassland</SelectItem>
-                <SelectItem value="jungle">Jungle</SelectItem>
-                <SelectItem value="desert">Desert</SelectItem>
-                <SelectItem value="beach">Beach</SelectItem>
-                <SelectItem value="mountains">Mountains</SelectItem>
-                <SelectItem value="swamp">Swamp</SelectItem>
-                <SelectItem value="volcanic">Volcanic</SelectItem>
-                <SelectItem value="crystal_caves">Crystal Caves</SelectItem>
-                <SelectItem value="alien">Alien</SelectItem>
+                  <SelectItem value="forest">Forest</SelectItem>
+                  <SelectItem value="grassland">Grassland</SelectItem>
+                  <SelectItem value="jungle">Jungle</SelectItem>
+                  <SelectItem value="desert">Desert</SelectItem>
+                  <SelectItem value="beach">Beach</SelectItem>
+                  <SelectItem value="mountains">Mountains</SelectItem>
+                  <SelectItem value="swamp">Swamp</SelectItem>
+                  <SelectItem value="volcanic">Volcanic</SelectItem>
+                  <SelectItem value="crystal_caves">Crystal Caves</SelectItem>
+                  <SelectItem value="tundra">Tundra</SelectItem>
+                  <SelectItem value="farmland">Farmland</SelectItem>
+                  <SelectItem value="ruins">Ruins</SelectItem>
+                  <SelectItem value="wasteland">Wasteland</SelectItem>
+                  <SelectItem value="alien">Alien</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-4">
-            <h4 className="font-medium">Tile Configuration</h4>
-            {renderConfigOptions()}
-          </div>
+          <ScrollArea className="flex-grow">
+            <div className="space-y-4 pr-6">
+                <h4 className="font-medium">Tile Configuration</h4>
+                {renderConfigOptions()}
+            </div>
+          </ScrollArea>
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isGenerating}>
             Cancel
           </Button>

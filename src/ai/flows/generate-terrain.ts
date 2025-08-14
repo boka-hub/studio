@@ -97,6 +97,30 @@ Instructions for 'crystal_caves':
 2. Carve out open pathways and rooms using the 'cave_floor' tile. These paths should be winding and interconnected.
 3. Place 'glowing_crystal' tiles in clusters along the 'cave_wall' edges bordering the 'cave_floor'. Crystals should not be in the middle of paths.
 
+Instructions for 'tundra':
+1. Fill the map with 'snow' tile.
+2. Create large patches of 'ice' tiles, representing frozen lakes or glaciers. These should have hard, sharp edges.
+3. Sparsely place 'frozen_rock' tiles. These should not be clustered.
+4. The landscape should feel cold and barren.
+
+Instructions for 'wasteland':
+1. Fill the map with 'dead_earth' tile.
+2. Create patches and small pools of 'toxic_waste' tiles.
+3. Scatter 'ruined_debris' tiles around the edges of the toxic pools and randomly across the landscape.
+4. The overall feel should be desolate and post-apocalyptic.
+
+Instructions for 'farmland':
+1. Create distinct rectangular or square fields using 'plowed_soil' and 'crops' tiles.
+2. Separate the fields with lines of 'fence' tiles.
+3. Place a few 'path' tiles to create dirt roads between some fields.
+4. The layout should feel organized but not perfectly grid-aligned.
+
+Instructions for 'ruins':
+1. Fill the map with a base of 'overgrown_grass'.
+2. Create the remnants of stone structures using 'ruined_wall' tiles. These should be broken, incomplete lines and small, hollow rectangular shapes.
+3. Scatter 'debris_pile' tiles inside and around the ruined structures.
+4. The structures should look ancient and reclaimed by nature.
+
 Generate a complete new grid according to these instructions. The output grid MUST have the same dimensions as the input grid.
 `,
 });
