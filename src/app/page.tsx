@@ -27,6 +27,7 @@ import {
   Trash2,
   Replace,
   SprayCan,
+  Layers,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -84,6 +85,7 @@ export default function Home() {
     { id: 0, name: 'Empty', src: '' }, // Empty tile
   ]);
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
+  const [secondarySelectedTileId, setSecondarySelectedTileId] = useState<number>(0);
   const [tool, setTool] = useState<Tool>('brush');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
@@ -188,6 +190,9 @@ export default function Home() {
     if (selectedTileId === tileId) {
       setSelectedTileId(0);
     }
+    if (secondarySelectedTileId === tileId) {
+      setSecondarySelectedTileId(0);
+    }
     toast({ 
       title: 'Tile Deleted', 
       description: `Tile "${tileToDelete.name}" has been removed.`,
@@ -238,8 +243,8 @@ export default function Home() {
   
   const handleCellAction = useCallback(
     (row: number, col: number) => {
-      if (tool === 'select') {
-        // Selection handled by onShapeDraw
+      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient') {
+        // Handled by onShapeDraw
         return;
       }
       setSelection(null);
@@ -390,15 +395,30 @@ export default function Home() {
 
     const newGrid = grid.map(r => [...r]);
 
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
-        if (r < grid.length && c < grid[0].length) {
-          newGrid[r][c] = selectedTileId;
+    if (tool === 'rectangle') {
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (r < grid.length && c < grid[0].length) {
+              newGrid[r][c] = selectedTileId;
+            }
+          }
         }
-      }
+    } else if (tool === 'gradient') {
+        const width = maxCol - minCol + 1;
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    const step = (c - minCol) / (width - 1);
+                    // Basic dithering pattern
+                    const threshold = (r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25);
+                    newGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
+                }
+            }
+        }
     }
+
     setGrid(newGrid);
-  }, [grid, selectedTileId, setGrid, tool]);
+  }, [grid, selectedTileId, secondarySelectedTileId, setGrid, tool]);
 
   const applyToSelection = (callback: (currentValue: number) => number) => {
      if (!selection) return;
@@ -511,6 +531,7 @@ export default function Home() {
           'r': 'rectangle',
           'm': 'select', // M for marquee
           's': 'spray',
+          'l': 'gradient', // L for Layers/gradient
         };
 
         if (keyMap[e.key]) {
@@ -536,6 +557,7 @@ export default function Home() {
     fill: { icon: PaintBucket, label: 'Fill (G)'},
     spray: { icon: SprayCan, label: 'Spray (S)' },
     rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
+    gradient: { icon: Layers, label: 'Gradient (L)' },
     select: { icon: Lasso, label: 'Select (M)' },
     ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
@@ -629,6 +651,7 @@ export default function Home() {
               tool={tool}
               zoom={zoom}
               selectedTileId={selectedTileId}
+              secondarySelectedTileId={secondarySelectedTileId}
               selection={selection}
             />
           </main>
@@ -640,7 +663,9 @@ export default function Home() {
               <TilePalette
                 tiles={tiles}
                 selectedTileId={selectedTileId}
+                secondarySelectedTileId={secondarySelectedTileId}
                 onSelectTile={setSelectedTileId}
+                onSelectSecondaryTile={setSecondarySelectedTileId}
                 onRenameTile={handleRenameTile}
                 onDeleteTile={handleDeleteTile}
                 isCollapsed={isPaletteCollapsed}

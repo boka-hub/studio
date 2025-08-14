@@ -12,7 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface TilePaletteProps {
   tiles: Tile[];
   selectedTileId: number;
+  secondarySelectedTileId: number;
   onSelectTile: (id: number) => void;
+  onSelectSecondaryTile: (id: number) => void;
   onRenameTile: (id: number, newName: string) => void;
   onDeleteTile: (id: number) => void;
   isCollapsed: boolean;
@@ -21,7 +23,9 @@ interface TilePaletteProps {
 export const TilePalette: FC<TilePaletteProps> = ({
   tiles,
   selectedTileId,
+  secondarySelectedTileId,
   onSelectTile,
+  onSelectSecondaryTile,
   onRenameTile,
   onDeleteTile,
   isCollapsed,
@@ -48,6 +52,31 @@ export const TilePalette: FC<TilePaletteProps> = ({
     onDeleteTile(tileId);
   }
 
+  const handleTileClick = (e: React.MouseEvent, tileId: number) => {
+    if (e.button === 2) { // Right-click
+      e.preventDefault();
+      onSelectSecondaryTile(tileId);
+    } else {
+      onSelectTile(tileId);
+    }
+  };
+
+  const getBorderStyle = (tileId: number) => {
+    const isPrimary = selectedTileId === tileId;
+    const isSecondary = secondarySelectedTileId === tileId;
+
+    if (isPrimary && isSecondary) {
+      return 'border-purple-500 scale-105 shadow-lg';
+    }
+    if (isPrimary) {
+      return 'border-primary scale-105 shadow-lg';
+    }
+    if (isSecondary) {
+      return 'border-green-500 scale-105 shadow-lg';
+    }
+    return 'border-card hover:border-accent';
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <h3 className={cn("text-sm font-semibold p-4 pb-2 text-muted-foreground flex-shrink-0", isCollapsed && "hidden")}>Palette</h3>
@@ -65,13 +94,12 @@ export const TilePalette: FC<TilePaletteProps> = ({
                     <div
                       role="button"
                       tabIndex={0}
+                      onContextMenu={(e) => handleTileClick(e, tile.id)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectTile(tile.id); }}
-                      onClick={() => onSelectTile(tile.id)}
+                      onClick={(e) => handleTileClick(e, tile.id)}
                       className={cn(
                         'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                        selectedTileId === tile.id
-                          ? 'border-primary scale-105 shadow-lg'
-                          : 'border-card hover:border-accent'
+                        getBorderStyle(tile.id)
                       )}
                       aria-label={`Select tile ${tile.name}`}
                       aria-pressed={selectedTileId === tile.id}
@@ -99,7 +127,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="left">
-                     {isCollapsed ? <p>{tile.name}</p> : <p>Double-click name to edit</p>}
+                     {isCollapsed ? <p>{tile.name}</p> : <div><p>Left-click: Set Primary</p><p>Right-click: Set Secondary</p></div>}
                   </TooltipContent>
                 </Tooltip>
 
