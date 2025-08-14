@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -217,12 +218,16 @@ export default function Home() {
     const files = event.target.files;
     if (!files) return;
 
+    const fileList = Array.from(files);
     const newTiles: Omit<Tile, 'id'>[] = [];
-    Array.from(files).forEach((file) => {
+    let processedCount = 0;
+
+    fileList.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         newTiles.push({ name: file.name.replace(/\.[^/.]+$/, ""), src: e.target?.result as string });
-        if (newTiles.length === files.length) {
+        processedCount++;
+        if (processedCount === fileList.length) {
           addTiles(newTiles);
         }
       };
