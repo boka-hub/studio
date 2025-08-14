@@ -29,6 +29,17 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { isTileTransparent } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from '@/components/ui/button';
 import { Terminal } from 'lucide-react';
 
 const INITIAL_GRID_SIZE = 32;
@@ -49,6 +60,8 @@ export default function Home() {
     canUndo,
     canRedo,
     resetHistory,
+    history,
+    setCurrentIndex,
   } = useUndoRedo<GridState>(createEmptyGrid(gridSize.width, gridSize.height));
 
   const [tiles, setTiles] = useState<Tile[]>([
@@ -61,9 +74,11 @@ export default function Home() {
   const [isProcessingAI, setProcessingAI] = useState(false);
   const [showApiKeyAlert, setShowApiKeyAlert] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
+  const lastDeletedTile = useRef<{ tile: Tile; grid: GridState; tiles: Tile[] } | null>(null);
 
   const handleGridResize = (newWidth: number, newHeight: number) => {
     const oldGrid = grid;
@@ -123,8 +138,26 @@ export default function Home() {
     });
   };
 
-  const handleDeleteTile = (tileId: number) => {
-    const tileName = tiles.find(t => t.id === tileId)?.name;
+  const handleUndoDelete = () => {
+    if (lastDeletedTile.current) {
+      setTiles(lastDeletedTile.current.tiles);
+      setGrid(lastDeletedTile.current.grid, true); // bypass history
+      lastDeletedTile.current = null;
+      toast({ title: 'Deletion Undone', description: 'The tile has been restored.' });
+    }
+  };
+
+  const confirmDeleteTile = () => {
+    if (!tileToDelete) return;
+
+    const tileId = tileToDelete.id;
+    
+    lastDeletedTile.current = {
+      tile: tileToDelete,
+      grid: grid,
+      tiles: tiles,
+    };
+
     // Remove tile from palette
     setTiles(prevTiles => prevTiles.filter(t => t.id !== tileId));
     // Remove tile from grid and update history
@@ -134,7 +167,20 @@ export default function Home() {
     if (selectedTileId === tileId) {
       setSelectedTileId(0);
     }
-    toast({ title: 'Tile Deleted', description: `Tile "${tileName}" has been removed.` });
+    toast({ 
+      title: 'Tile Deleted', 
+      description: `Tile "${tileToDelete.name}" has been removed.`,
+      action: <Button variant="secondary" onClick={handleUndoDelete}>Undo</Button>,
+      duration: 5000,
+    });
+    setTileToDelete(null);
+  };
+
+  const handleDeleteTile = (tileId: number) => {
+    const tile = tiles.find(t => t.id === tileId);
+    if(tile) {
+      setTileToDelete(tile);
+    }
   };
 
   const handleImportTiles = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -377,7 +423,25 @@ export default function Home() {
           onClose={() => setExportOpen(false)}
           tiles={tiles.filter((t) => t.id !== 0)}
         />
+        
+        <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove the tile &quot;{tileToDelete?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone for a few seconds.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setTileToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteTile}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
     </TooltipProvider>
   );
 }
+
+    

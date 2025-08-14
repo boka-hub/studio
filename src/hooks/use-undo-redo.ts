@@ -11,7 +11,14 @@ export const useUndoRedo = <T>(initialState: T) => {
   const canUndo = currentIndex > 0;
   const canRedo = currentIndex < history.length - 1;
 
-  const setState = useCallback((newState: T) => {
+  const setState = useCallback((newState: T, bypassHistory: boolean = false) => {
+    if (bypassHistory) {
+      const newHistory = [...history];
+      newHistory[currentIndex] = newState;
+      setHistory(newHistory);
+      return;
+    }
+
     const newHistory = history.slice(0, currentIndex + 1);
     
     // Prevent adding identical state to history
@@ -55,5 +62,9 @@ export const useUndoRedo = <T>(initialState: T) => {
     canUndo,
     canRedo,
     resetHistory,
+    history,
+    setCurrentIndex,
   };
 };
+
+    
