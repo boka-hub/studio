@@ -396,25 +396,16 @@ export default function Home() {
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header title="TileForge" icon={GridIcon} actions={headerActions} />
         <div className="flex flex-1 overflow-hidden">
-          <aside className="w-72 bg-card border-r border-border flex flex-col">
-            <ScrollArea className="flex-grow">
-              <Toolbar<Tool>
-                actions={toolbarActions}
-                selectedAction={tool}
-                onActionSelect={setTool}
-                gridSize={gridSize}
-                onGridResize={handleGridResize}
-                zoom={zoom}
-                onZoomChange={setZoom}
-              />
-              <TilePalette
-                tiles={tiles}
-                selectedTileId={selectedTileId}
-                onSelectTile={setSelectedTileId}
-                onRenameTile={handleRenameTile}
-                onDeleteTile={handleDeleteTile}
-              />
-            </ScrollArea>
+          <aside className="w-60 bg-card border-r border-border flex flex-col">
+            <Toolbar<Tool>
+              actions={toolbarActions}
+              selectedAction={tool}
+              onActionSelect={setTool}
+              gridSize={gridSize}
+              onGridResize={handleGridResize}
+              zoom={zoom}
+              onZoomChange={setZoom}
+            />
           </aside>
           <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto">
              {showApiKeyAlert && (
@@ -440,6 +431,17 @@ export default function Home() {
               zoom={zoom}
             />
           </main>
+          <aside className="w-80 bg-card border-l border-border flex flex-col">
+            <ScrollArea className="flex-grow">
+              <TilePalette
+                tiles={tiles}
+                selectedTileId={selectedTileId}
+                onSelectTile={setSelectedTileId}
+                onRenameTile={handleRenameTile}
+                onDeleteTile={handleDeleteTile}
+              />
+            </ScrollArea>
+          </aside>
         </div>
 
         <input
