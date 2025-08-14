@@ -12,16 +12,23 @@ export const useUndoRedo = <T>(initialState: T) => {
   const canRedo = currentIndex < history.length - 1;
 
   const setState = useCallback((newState: T) => {
-    setHistory(prevHistory => {
-      const newHistory = prevHistory.slice(0, currentIndex + 1);
-      newHistory.push(newState);
-      if (newHistory.length > MAX_HISTORY_SIZE) {
-        return newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
-      }
-      return newHistory;
-    });
-    setCurrentIndex(prevIndex => Math.min(prevIndex + 1, MAX_HISTORY_SIZE - 1));
-  }, [currentIndex]);
+    const newHistory = history.slice(0, currentIndex + 1);
+    
+    // Prevent adding identical state to history
+    if (JSON.stringify(newHistory[newHistory.length - 1]) === JSON.stringify(newState)) {
+      return;
+    }
+    
+    newHistory.push(newState);
+    
+    let finalHistory = newHistory;
+    if (newHistory.length > MAX_HISTORY_SIZE) {
+      finalHistory = newHistory.slice(newHistory.length - MAX_HISTORY_SIZE);
+    }
+    
+    setHistory(finalHistory);
+    setCurrentIndex(finalHistory.length - 1);
+  }, [currentIndex, history]);
   
   const undo = useCallback(() => {
     if (canUndo) {
@@ -35,6 +42,11 @@ export const useUndoRedo = <T>(initialState: T) => {
     }
   }, [canRedo]);
   
+  const resetHistory = useCallback((newState: T) => {
+    setHistory([newState]);
+    setCurrentIndex(0);
+  }, []);
+
   return {
     state: history[currentIndex],
     setState,
@@ -42,5 +54,6 @@ export const useUndoRedo = <T>(initialState: T) => {
     redo,
     canUndo,
     canRedo,
+    resetHistory,
   };
 };

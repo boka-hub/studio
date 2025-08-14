@@ -46,6 +46,7 @@ export default function Home() {
     redo,
     canUndo,
     canRedo,
+    resetHistory,
   } = useUndoRedo<GridState>(createEmptyGrid(gridSize.width, gridSize.height));
 
   const [tiles, setTiles] = useState<Tile[]>([
@@ -73,7 +74,7 @@ export default function Home() {
       }
     }
     setGridSize({ width: newWidth, height: newHeight });
-    setGrid(newGrid);
+    resetHistory(newGrid);
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   };
   
@@ -123,8 +124,9 @@ export default function Home() {
     const tileName = tiles.find(t => t.id === tileId)?.name;
     // Remove tile from palette
     setTiles(prevTiles => prevTiles.filter(t => t.id !== tileId));
-    // Remove tile from grid
-    setGrid(prevGrid => prevGrid.map(row => row.map(cell => (cell === tileId ? 0 : cell))));
+    // Remove tile from grid and update history
+    const newGrid = grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
+    setGrid(newGrid);
     // If deleted tile was selected, select empty tile
     if (selectedTileId === tileId) {
       setSelectedTileId(0);
@@ -180,10 +182,11 @@ export default function Home() {
         setGrid(newGrid);
       } else if (tool === 'picker') {
         const tileId = grid[row][col];
-        if (tiles.find(t => t.id === tileId)) {
+        const pickedTile = tiles.find(t => t.id === tileId);
+        if (pickedTile) {
           setSelectedTileId(tileId);
           setTool('brush');
-          toast({title: 'Tile Picked', description: `Switched to brush with tile "${tiles.find(t => t.id === tileId)?.name}"`});
+          toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
         }
       } else if (tool === 'ai') {
         if (grid[row][col] !== 0) return;
@@ -271,7 +274,7 @@ export default function Home() {
     { icon: Package, label: 'Export Tiles', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Undo, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
-    { icon: Redo, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
+    { icon: Redo, label: 'Redo (Ctrl+Shift+Z)', onClick: redo, disabled: !canRedo },
   ];
 
   return (
@@ -280,7 +283,7 @@ export default function Home() {
         <Header title="TileForge" icon={GridIcon} actions={headerActions} />
         <div className="flex flex-1 overflow-hidden">
           <aside className="w-72 bg-card border-r border-border flex flex-col">
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-grow">
               <Toolbar<Tool>
                 actions={toolbarActions}
                 selectedAction={tool}
