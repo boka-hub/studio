@@ -7,9 +7,10 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Keyboard, Info, Code } from 'lucide-react';
+import { Keyboard, Info, ToyBrick } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -41,6 +42,74 @@ const shortcuts = [
     { keys: ['Ctrl', 'S'], description: 'Export Map as .txt' },
 ];
 
+const features = [
+    { 
+        name: "Brush Tool",
+        short: "Paints individual tiles on the canvas.",
+        long: "The most basic tool. Click on any cell to place the currently selected primary tile from the palette. You can also click and drag to draw freeform lines."
+    },
+    { 
+        name: "Eraser Tool",
+        short: "Removes tiles from the canvas.",
+        long: "The eraser sets any tile it touches back to the default 'Empty' state (ID 0). You can click to erase a single tile or click and drag to erase multiple tiles."
+    },
+    { 
+        name: "Picker Tool",
+        short: "Selects a tile directly from the canvas.",
+        long: "Instead of finding a tile in the palette, use the picker to click on any tile already placed on the grid. That tile will become your new primary selected tile, and the tool will automatically switch back to the brush."
+    },
+    { 
+        name: "Fill (Bucket) Tool",
+        short: "Fills a contiguous area of the same tile.",
+        long: "Click on any tile on the grid, and the fill tool will replace that tile and every connected tile of the same type with your currently selected primary tile. It will not cross boundaries of different tile types."
+    },
+    { 
+        name: "Spray Tool",
+        short: "Scatters the selected tile in a random pattern.",
+        long: "Creates a more natural, randomized look. When you click and drag, the spray tool applies the primary tile in a circular area around the cursor, but only to a random subset of the cells within that circle, based on a fixed density. Great for grass, rocks, and flowers."
+    },
+    {
+        name: "Rectangle Tool",
+        short: "Draws a filled rectangle of tiles.",
+        long: "Click and drag to define the two opposite corners of a rectangle. The tool will preview the shape as you drag, and upon release, it will fill the entire rectangular area with your currently selected primary tile."
+    },
+    {
+        name: "Gradient Tool",
+        short: "Blends two tiles over a rectangular area.",
+        long: "This tool creates a smooth transition between your primary and secondary tiles using a dithering pattern. Select a primary tile (left-click) and a secondary tile (right-click) in the palette. Then, click and drag to define an area. The area will be filled with a mix of the two tiles, creating a gradient effect."
+    },
+    {
+        name: "Noise Tool",
+        short: "Fills a rectangle with a random mix of two tiles.",
+        long: "Similar to the Gradient tool, this uses your primary and secondary tiles. Click and drag to define a rectangle. Upon release, every cell in the area will be randomly set to either the primary or secondary tile with a 50/50 chance. Ideal for creating varied, non-uniform terrain."
+    },
+    {
+        name: "Select (Lasso) Tool",
+        short: "Selects a rectangular area of tiles.",
+        long: "Click and drag to draw a rectangular selection box. Once an area is selected, you can use the Selection Actions (Fill, Copy, Paste, Delete, Invert) on it. Press 'Escape' to deselect."
+    },
+    {
+        name: "Magic Wand Tool",
+        short: "Selects a connected area of identical tiles.",
+        long: "A powerful selection tool. Click on any tile, and the magic wand will automatically select all adjacent tiles of the same type, no matter how complex the shape. You can then use the Selection Actions on this precise selection."
+    },
+    {
+        name: "Path Tool",
+        short: "Draws intelligent paths that connect automatically.",
+        long: "This AI-powered tool simplifies creating roads, walls, or rivers. To use it, import a set of path tiles with a common naming prefix (e.g., 'road_straight', 'road_corner'). Select any of these tiles in the palette and draw a path. The AI will analyze the connections and automatically swap in the correct straight, corner, or T-junction tiles to make the path seamless."
+    },
+    {
+        name: "AI Place Tool",
+        short: "Intelligently suggests a tile for an empty space.",
+        long: "This tool uses AI to analyze the tiles surrounding an empty cell and predicts the best tile to place there. Simply select the tool and click on an empty (white) cell. The AI will attempt to fill it in a way that logically matches the surrounding environment."
+    },
+    {
+        name: "Selection Actions",
+        short: "Perform actions on a selected area.",
+        long: "Once you have an area selected with the Lasso or Magic Wand, a new set of tools appears in the toolbar: Fill (fills with primary tile), Copy (copies tile data), Paste (pastes copied data at selection start), Delete (clears the area), and Invert (swaps primary tile with others)."
+    }
+];
+
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   return (
@@ -52,11 +121,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             View keyboard shortcuts, app information, and other settings.
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="shortcuts" className="flex-grow flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="features" className="flex-grow flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="features"><ToyBrick className="mr-2 h-4 w-4" />Features</TabsTrigger>
             <TabsTrigger value="shortcuts"><Keyboard className="mr-2 h-4 w-4" />Shortcuts</TabsTrigger>
             <TabsTrigger value="about"><Info className="mr-2 h-4 w-4" />About</TabsTrigger>
           </TabsList>
+          <TabsContent value="features" className="flex-grow overflow-hidden">
+             <ScrollArea className="h-full">
+                <Accordion type="single" collapsible className="w-full p-4">
+                  {features.map((feature, index) => (
+                     <AccordionItem value={`item-${index}`} key={index}>
+                        <AccordionTrigger className="text-left hover:no-underline">
+                            <div className="flex flex-col gap-1">
+                                <p className="font-semibold">{feature.name}</p>
+                                <p className="text-sm font-normal text-muted-foreground">{feature.short}</p>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="text-sm text-muted-foreground">
+                          {feature.long}
+                        </AccordionContent>
+                      </AccordionItem>
+                  ))}
+                </Accordion>
+            </ScrollArea>
+          </TabsContent>
           <TabsContent value="shortcuts" className="flex-grow overflow-hidden">
             <ScrollArea className="h-full">
               <div className="space-y-4 p-4">
