@@ -10,8 +10,8 @@ import {
   Download,
   Package,
   PaintBucket,
-  PanelBottom,
-  PanelTop,
+  PanelLeft,
+  PanelRight,
   RectangleHorizontal,
   Lasso,
   FileCheck,
@@ -703,7 +703,7 @@ export default function Home() {
                           onClick={() => setToolbarCollapsed(!isToolbarCollapsed)}
                           className="w-full h-8 rounded-none"
                       >
-                          {isToolbarCollapsed ? <PanelTop /> : <PanelBottom />}
+                          {isToolbarCollapsed ? <PanelRight /> : <PanelLeft />}
                       </Button>
                       </TooltipTrigger>
                       <TooltipContent side="right">
@@ -761,7 +761,7 @@ export default function Home() {
                             onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
                             className="w-full h-8 rounded-none"
                             >
-                            {isPaletteCollapsed ? <PanelTop /> : <PanelBottom />}
+                            {isPaletteCollapsed ? <PanelLeft /> : <PanelRight />}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="left">
