@@ -942,7 +942,7 @@ export default function Home() {
             )}
             <aside className={cn(
                 "bg-card border-l border-border flex flex-col transition-all duration-300",
-                (isPaletteCollapsed || isPreviewMode) ? 'w-0 p-0 border-l-0' : 'w-80'
+                (isPaletteCollapsed || isPreviewMode) ? 'w-20' : 'w-80'
                 )}>
                 {!isPreviewMode && (
                     <div className="flex-grow overflow-y-auto">

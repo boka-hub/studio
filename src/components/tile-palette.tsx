@@ -106,7 +106,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
       <ScrollArea className="flex-grow">
         <div className={cn(
             "grid gap-4 p-4 pt-2",
-            isCollapsed ? "grid-cols-2" : "grid-cols-3"
+            isCollapsed ? "grid-cols-1" : "grid-cols-3"
           )}>
           {filteredTiles.map((tile) => (
               <div key={tile.id} className="group flex flex-col items-center gap-1.5">
@@ -218,5 +218,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    
