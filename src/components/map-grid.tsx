@@ -238,25 +238,16 @@ export const MapGrid: FC<MapGridProps> = ({
 
          {isPreviewMode && (
           <div 
-            className="absolute bg-white rounded-sm shadow-lg pointer-events-none"
+            className="absolute rounded-full shadow-lg pointer-events-none bg-white/80 ring-2 ring-white"
             style={{
-              left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.25}px`,
-              top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.25}px`,
-              width: `${TILE_SIZE * 0.5}px`,
-              height: `${TILE_SIZE * 0.5}px`,
+              left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.15}px`,
+              top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.15}px`,
+              width: `${TILE_SIZE * 0.7}px`,
+              height: `${TILE_SIZE * 0.7}px`,
               transition: 'left 150ms ease-out, top 150ms ease-out',
             }}
           >
-             <style jsx>{`
-              .player-animation {
-                animation: bob 1s ease-in-out infinite;
-              }
-              @keyframes bob {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-${TILE_SIZE * 0.1}px); }
-              }
-            `}</style>
-            <div className="player-animation w-full h-full bg-white rounded-sm" />
+            <div className="w-full h-full rounded-full shadow-inner" />
           </div>
         )}
       </div>

@@ -21,7 +21,7 @@ interface HeaderProps {
 export const Header: FC<HeaderProps> = ({ title, icon: Icon, actions, onTitleClick }) => {
 
   return (
-    <header className="flex items-center justify-between p-2 border-b border-border shadow-sm">
+    <header className="flex items-center justify-between p-2 border-b border-border shadow-sm z-10">
       <div 
         className="flex items-center gap-2 cursor-pointer"
         onClick={onTitleClick}

@@ -87,9 +87,8 @@ export function Toolbar<T extends Tool>({
                     <Button
                       variant={selectedAction === key ? 'secondary' : 'ghost'}
                       className={cn(
-                        'w-full flex h-auto py-2 gap-1 text-xs items-center justify-start',
-                        isCollapsed ? 'flex-col px-1' : 'flex-row pl-3',
-                         selectedAction === key && 'bg-primary/80 text-primary-foreground hover:bg-primary/90'
+                        'w-full flex h-auto py-2 gap-2 items-center justify-start',
+                        isCollapsed ? 'flex-col px-1 h-auto text-xs' : 'flex-row pl-3',
                       )}
                       onClick={() => onActionSelect(key)}
                       disabled={action.disabled}
@@ -230,5 +229,3 @@ export function Toolbar<T extends Tool>({
     </ScrollArea>
   );
 }
-
-    

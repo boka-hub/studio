@@ -36,6 +36,7 @@ import {
   Play,
   Square,
   ToyBrick,
+  StopCircle,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -244,7 +245,7 @@ export default function Home() {
     setSlicerOpen(true);
   }
 
-  const handleExportMap = () => {
+  const handleExportMap = useCallback(() => {
     const mapData = grid.map(row => row.join(',')).join('\n');
     const blob = new Blob([mapData], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -256,7 +257,7 @@ export default function Home() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({ title: 'Map Exported', description: 'Your map has been saved as tileforge-map.txt' });
-  };
+  },[grid, toast]);
   
   const handleCellAction = useCallback(
     async (row: number, col: number) => {
@@ -632,7 +633,7 @@ export default function Home() {
      toast({ title: 'Selection Mirrored', description: 'The selected area has been mirrored vertically.' });
   }
 
-  const handleCopySelection = () => {
+  const handleCopySelection = useCallback(() => {
     if (!selection?.selectedCells) return;
 
     const copiedData = grid
@@ -648,9 +649,9 @@ export default function Home() {
     
     setClipboard(copiedData);
     toast({ title: 'Selection Copied', description: 'The selected area has been copied to the clipboard.' });
-  }
+  }, [grid, selection, toast]);
 
-  const handlePasteSelection = () => {
+  const handlePasteSelection = useCallback(() => {
     if (!selection || !clipboard) return;
     
     const newGrid = grid.map(r => [...r]);
@@ -669,7 +670,7 @@ export default function Home() {
     }
     updateGridState(newGrid);
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-  }
+  }, [grid, selection, clipboard, toast]);
   
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -698,75 +699,76 @@ export default function Home() {
     setIsDragging(false);
   }
 
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (isPreviewMode) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
+          e.preventDefault();
+          if (e.key === 'Escape') {
+              setPreviewMode(false);
+              toast({ title: 'Exited Preview Mode' });
+              return;
+          }
+          
+          let { row, col } = playerPos;
+          if (e.key === 'ArrowUp') row--;
+          if (e.key === 'ArrowDown') row++;
+          if (e.key === 'ArrowLeft') col--;
+          if (e.key === 'ArrowRight') col++;
+
+          row = Math.max(0, Math.min(grid.length - 1, row));
+          col = Math.max(0, Math.min(grid[0].length - 1, col));
+
+          const tileId = grid[row][col];
+          const tile = tiles.find(t => t.id === tileId);
+          if (!tile?.solid) {
+              setPlayerPos({ row, col });
+          }
+      }
+      return;
+    }
+    
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-' || e.key === 'c' || e.key === 'v')) {
+       e.preventDefault();
+    }
+    
+    const target = e.target as HTMLElement;
+    if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.role === 'slider') return;
+
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 's') {
+        handleExportMap();
+      } else if (e.key === '=') {
+        setZoom(z => Math.min(z + 0.1, 2));
+      } else if (e.key === '-') {
+        setZoom(z => Math.max(z - 0.1, 0.1));
+      } else if (e.key === '0') {
+        setZoom(1);
+      } else if (e.key === 'c' && selection) {
+        handleCopySelection();
+      } else if (e.key === 'v' && selection && clipboard) {
+        handlePasteSelection();
+      }
+    } else {
+       const keyMap: { [key: string]: Tool } = {
+        'b': 'brush', 'e': 'eraser', 'p': 'picker', 'i': 'ai', 'g': 'fill',
+        'r': 'rectangle', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
+        'l': 'gradient', 'n': 'noise', 't': 'path',
+      };
+
+      if (keyMap[e.key]) {
+        setTool(keyMap[e.key]);
+      } else if (e.key === 'Escape') {
+          if (selection) setSelection(null);
+      } else if (e.key === 'Delete' && selection) {
+         handleDeleteSelection();
+      }
+    }
+  }, [clipboard, grid, handleCopySelection, handleExportMap, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast]);
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isPreviewMode) {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
-            e.preventDefault();
-            if (e.key === 'Escape') {
-                setPreviewMode(false);
-                toast({ title: 'Exited Preview Mode' });
-                return;
-            }
-            
-            let { row, col } = playerPos;
-            if (e.key === 'ArrowUp') row--;
-            if (e.key === 'ArrowDown') row++;
-            if (e.key === 'ArrowLeft') col--;
-            if (e.key === 'ArrowRight') col++;
-
-            row = Math.max(0, Math.min(grid.length - 1, row));
-            col = Math.max(0, Math.min(grid[0].length - 1, col));
-
-            const tileId = grid[row][col];
-            const tile = tiles.find(t => t.id === tileId);
-            if (!tile?.solid) {
-                setPlayerPos({ row, col });
-            }
-        }
-        return;
-      }
-      
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-' || e.key === 'c' || e.key === 'v')) {
-         e.preventDefault();
-      }
-      
-      const target = e.target as HTMLElement;
-      if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.role === 'slider') return;
-
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 's') {
-          handleExportMap();
-        } else if (e.key === '=') {
-          setZoom(z => Math.min(z + 0.1, 2));
-        } else if (e.key === '-') {
-          setZoom(z => Math.max(z - 0.1, 0.1));
-        } else if (e.key === '0') {
-          setZoom(1);
-        } else if (e.key === 'c' && selection) {
-          handleCopySelection();
-        } else if (e.key === 'v' && selection && clipboard) {
-          handlePasteSelection();
-        }
-      } else {
-         const keyMap: { [key: string]: Tool } = {
-          'b': 'brush', 'e': 'eraser', 'p': 'picker', 'i': 'ai', 'g': 'fill',
-          'r': 'rectangle', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
-          'l': 'gradient', 'n': 'noise', 't': 'path',
-        };
-
-        if (keyMap[e.key]) {
-          setTool(keyMap[e.key]);
-        } else if (e.key === 'Escape') {
-            if (selection) setSelection(null);
-        } else if (e.key === 'Delete' && selection) {
-           handleDeleteSelection();
-        }
-      }
-    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setZoom, selection, grid, clipboard, isPreviewMode, playerPos, tiles]);
+  }, [handleKeyDown]);
 
 
   const toolbarActions = {
@@ -790,7 +792,7 @@ export default function Home() {
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Mountain, label: 'Generate Terrain', onClick: () => setTerrainGeneratorOpen(true) },
-    { icon: isPreviewMode ? Square : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
+    { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
   ];
   
   const selectionActions = {
@@ -827,56 +829,60 @@ export default function Home() {
             onTitleClick={() => setSettingsOpen(true)}
         />
         <div className="flex flex-1 overflow-hidden">
-          <aside
-            className={cn(
-              'bg-card border-r border-border flex flex-col transition-all duration-300',
-              (isToolbarCollapsed || isPreviewMode) ? 'w-0 p-0 border-r-0' : 'w-60'
+          <div className="flex items-stretch">
+            <aside
+              className={cn(
+                'bg-card border-r border-border flex flex-col transition-all duration-300',
+                (isToolbarCollapsed || isPreviewMode) ? 'w-0 p-0 border-r-0' : 'w-60'
+              )}
+            >
+             {!isPreviewMode && (
+              <>
+              <div className="flex-grow overflow-y-auto">
+                 <Toolbar<Tool>
+                  actions={toolbarActions}
+                  selectedAction={tool}
+                  onActionSelect={(t) => {
+                      setTool(t);
+                      if (t !== 'select' && t !== 'magic-wand') setSelection(null);
+                  }}
+                  gridSize={gridSize}
+                  onGridResize={handleGridResize}
+                  zoom={zoom}
+                  onZoomChange={setZoom}
+                  isCollapsed={isToolbarCollapsed}
+                  selection={selection}
+                  selectionActions={selectionActions}
+                  sprayRadius={sprayRadius}
+                  onSprayRadiusChange={setSprayRadius}
+                  sprayDensity={sprayDensity}
+                  onSprayDensityChange={setSprayDensity}
+                />
+              </div>
+              </>
+             )}
+            </aside>
+            {!isPreviewMode && (
+              <div className="flex items-center border-r border-border bg-card">
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                      <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setToolbarCollapsed(!isToolbarCollapsed)}
+                          className="h-full w-6 rounded-none"
+                      >
+                          {isToolbarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                      <p>{isToolbarCollapsed ? 'Expand Toolbar' : 'Collapse Toolbar'}</p>
+                      </TooltipContent>
+                  </Tooltip>
+              </div>
             )}
-          >
-           {!isPreviewMode && (
-            <>
-            <div className="flex-grow overflow-y-auto">
-               <Toolbar<Tool>
-                actions={toolbarActions}
-                selectedAction={tool}
-                onActionSelect={(t) => {
-                    setTool(t);
-                    if (t !== 'select' && t !== 'magic-wand') setSelection(null);
-                }}
-                gridSize={gridSize}
-                onGridResize={handleGridResize}
-                zoom={zoom}
-                onZoomChange={setZoom}
-                isCollapsed={isToolbarCollapsed}
-                selection={selection}
-                selectionActions={selectionActions}
-                sprayRadius={sprayRadius}
-                onSprayRadiusChange={setSprayRadius}
-                sprayDensity={sprayDensity}
-                onSprayDensityChange={setSprayDensity}
-              />
-            </div>
-            <Separator />
-            <div className="p-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setToolbarCollapsed(!isToolbarCollapsed)}
-                    className="w-full"
-                  >
-                    {isToolbarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>{isToolbarCollapsed ? 'Expand Toolbar' : 'Collapse Toolbar'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            </>
-           )}
-          </aside>
+          </div>
+
           <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto">
              {showApiKeyAlert && (
               <Alert className="mb-4 max-w-2xl">
@@ -909,46 +915,48 @@ export default function Home() {
               playerPos={playerPos}
             />
           </main>
-          <aside className={cn(
-              "bg-card border-l border-border flex flex-col transition-all duration-300",
-              (isPaletteCollapsed || isPreviewMode) ? 'w-0 p-0 border-l-0' : 'w-80'
-            )}>
+          
+          <div className="flex items-stretch">
             {!isPreviewMode && (
-            <>
-              <div className="flex-grow overflow-y-auto">
-                <TilePalette
-                  tiles={tiles}
-                  selectedTileId={selectedTileId}
-                  secondarySelectedTileId={secondarySelectedTileId}
-                  onSelectTile={setSelectedTileId}
-                  onSelectSecondaryTile={setSecondarySelectedTileId}
-                  onRenameTile={handleRenameTile}
-                  onDeleteTile={handleDeleteTile}
-                  onToggleSolid={handleToggleSolid}
-                  isCollapsed={isPaletteCollapsed}
-                />
-              </div>
-              <Separator />
-              <div className="p-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
-                      className="w-full"
-                    >
-                      {isPaletteCollapsed ? <PanelRightOpen /> : <PanelRightClose />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              </>
+                <div className="flex items-center border-l border-border bg-card">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
+                            className="h-full w-6 rounded-none"
+                            >
+                            {isPaletteCollapsed ? <PanelRightOpen /> : <PanelRightClose />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left">
+                            <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
             )}
-          </aside>
+            <aside className={cn(
+                "bg-card border-l border-border flex flex-col transition-all duration-300",
+                (isPaletteCollapsed || isPreviewMode) ? 'w-0 p-0 border-l-0' : 'w-80'
+                )}>
+                {!isPreviewMode && (
+                    <div className="flex-grow overflow-y-auto">
+                        <TilePalette
+                        tiles={tiles}
+                        selectedTileId={selectedTileId}
+                        secondarySelectedTileId={secondarySelectedTileId}
+                        onSelectTile={setSelectedTileId}
+                        onSelectSecondaryTile={setSecondarySelectedTileId}
+                        onRenameTile={handleRenameTile}
+                        onDeleteTile={handleDeleteTile}
+                        onToggleSolid={handleToggleSolid}
+                        isCollapsed={isPaletteCollapsed}
+                        />
+                    </div>
+                )}
+            </aside>
+          </div>
         </div>
 
         <input
@@ -1008,9 +1016,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
-
-    
-
-    
