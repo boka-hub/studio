@@ -73,7 +73,7 @@ export function Toolbar<T extends Tool>({
   const selectionActionEntries = Object.entries(selectionActions);
   
   return (
-    <ScrollArea className="flex-grow">
+    <ScrollArea>
       <div className="flex flex-col gap-4 p-2">
         <div>
           <h3 className={cn("text-sm font-semibold mb-2 px-2 text-muted-foreground", isCollapsed && "hidden")}>Tools</h3>
