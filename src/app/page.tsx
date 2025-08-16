@@ -10,10 +10,8 @@ import {
   Download,
   Package,
   PaintBucket,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
+  PanelDown,
+  PanelUp,
   RectangleHorizontal,
   Lasso,
   FileCheck,
@@ -669,10 +667,10 @@ export default function Home() {
             onTitleClick={() => setSettingsOpen(true)}
         />
         <div className="flex flex-1 overflow-hidden">
-          <div className="flex items-stretch">
+          <div className="bg-card border-r border-border flex flex-col">
             <aside
               className={cn(
-                'bg-card border-r border-border flex flex-col transition-all duration-300',
+                'flex flex-col transition-all duration-300 flex-grow',
                 (isToolbarCollapsed || isPreviewMode) ? 'w-20' : 'w-60'
               )}
             >
@@ -696,16 +694,16 @@ export default function Home() {
              )}
             </aside>
             {!isPreviewMode && (
-              <div className="flex items-center border-r border-border bg-card">
+              <div className="flex items-center justify-center border-t border-border">
                   <Tooltip>
                       <TooltipTrigger asChild>
                       <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setToolbarCollapsed(!isToolbarCollapsed)}
-                          className="h-full w-6 rounded-none"
+                          className="w-full h-8 rounded-none"
                       >
-                          {isToolbarCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+                          {isToolbarCollapsed ? <PanelUp /> : <PanelDown />}
                       </Button>
                       </TooltipTrigger>
                       <TooltipContent side="right">
@@ -732,28 +730,9 @@ export default function Home() {
             />
           </main>
           
-          <div className="flex items-stretch">
-            {!isPreviewMode && (
-                <div className="flex items-center border-l border-border bg-card">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
-                            className="h-full w-6 rounded-none"
-                            >
-                            {isPaletteCollapsed ? <PanelRightOpen /> : <PanelRightClose />}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="left">
-                            <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-            )}
+          <div className="bg-card border-l border-border flex flex-col">
             <aside className={cn(
-                "bg-card border-l border-border flex flex-col transition-all duration-300",
+                "flex flex-col transition-all duration-300 flex-grow",
                 (isPaletteCollapsed || isPreviewMode) ? 'w-20' : 'w-80'
                 )}>
                 {!isPreviewMode && (
@@ -772,6 +751,25 @@ export default function Home() {
                     </div>
                 )}
             </aside>
+             {!isPreviewMode && (
+                <div className="flex items-center justify-center border-t border-border">
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
+                            className="w-full h-8 rounded-none"
+                            >
+                            {isPaletteCollapsed ? <PanelUp /> : <PanelDown />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left">
+                            <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+            )}
           </div>
         </div>
 
