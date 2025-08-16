@@ -27,8 +27,8 @@ import {
   Play,
   StopCircle,
   ToyBrick,
-  LogIn,
-  LogOut,
+  Upload,
+  Download,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -52,7 +52,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Upload } from 'lucide-react';
 import { MapGrid } from '@/components/map-grid';
 
 const INITIAL_GRID_SIZE = 32;
@@ -627,10 +626,10 @@ export default function Home() {
   };
 
   const headerActions = [
-    { icon: LogIn, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
+    { icon: Upload, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
-    { icon: LogOut, label: 'Export Map', onClick: handleExportMap },
+    { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
   ];
   
