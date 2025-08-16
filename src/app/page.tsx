@@ -7,7 +7,6 @@ import {
   Eraser,
   Pipette,
   Scissors,
-  Download,
   Package,
   PaintBucket,
   PanelLeft,
@@ -28,6 +27,8 @@ import {
   Play,
   StopCircle,
   ToyBrick,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -626,10 +627,10 @@ export default function Home() {
   };
 
   const headerActions = [
-    { icon: Upload, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
+    { icon: LogIn, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
-    { icon: Download, label: 'Export Map', onClick: handleExportMap },
+    { icon: LogOut, label: 'Export Map', onClick: handleExportMap },
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
   ];
   
@@ -674,7 +675,8 @@ export default function Home() {
                 (isToolbarCollapsed || isPreviewMode) ? 'w-20' : 'w-60'
               )}
             >
-             {!isPreviewMode && (
+             <div className='flex-grow overflow-y-auto'>
+              {!isPreviewMode && (
               <Toolbar<Tool>
                 actions={toolbarActions}
                 selectedAction={tool}
@@ -691,7 +693,8 @@ export default function Home() {
                 sprayDensity={sprayDensity}
                 onSprayDensityChange={setSprayDensity}
               />
-             )}
+              )}
+             </div>
             </aside>
             {!isPreviewMode && (
               <div className="flex items-center justify-center border-t border-border">
@@ -735,21 +738,21 @@ export default function Home() {
                 "flex flex-col transition-all duration-300 flex-grow",
                 (isPaletteCollapsed || isPreviewMode) ? 'w-20' : 'w-80'
                 )}>
-                {!isPreviewMode && (
-                    <div className="flex-grow overflow-y-auto">
-                        <TilePalette
-                        tiles={tiles}
-                        selectedTileId={selectedTileId}
-                        secondarySelectedTileId={secondarySelectedTileId}
-                        onSelectTile={setSelectedTileId}
-                        onSelectSecondaryTile={setSecondarySelectedTileId}
-                        onRenameTile={handleRenameTile}
-                        onDeleteTile={handleDeleteTile}
-                        onToggleSolid={handleToggleSolid}
-                        isCollapsed={isPaletteCollapsed}
-                        />
-                    </div>
-                )}
+                <div className="flex-grow overflow-y-auto">
+                  {!isPreviewMode && (
+                      <TilePalette
+                      tiles={tiles}
+                      selectedTileId={selectedTileId}
+                      secondarySelectedTileId={secondarySelectedTileId}
+                      onSelectTile={setSelectedTileId}
+                      onSelectSecondaryTile={setSecondarySelectedTileId}
+                      onRenameTile={handleRenameTile}
+                      onDeleteTile={handleDeleteTile}
+                      onToggleSolid={handleToggleSolid}
+                      isCollapsed={isPaletteCollapsed}
+                      />
+                  )}
+                </div>
             </aside>
              {!isPreviewMode && (
                 <div className="flex items-center justify-center border-t border-border">
