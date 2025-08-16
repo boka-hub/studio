@@ -6,12 +6,9 @@ import {
   Brush,
   Eraser,
   Pipette,
-  Sparkles,
-  Upload,
   Scissors,
   Download,
   Loader,
-  Grid as GridIcon,
   Package,
   PaintBucket,
   PanelLeftClose,
@@ -29,29 +26,24 @@ import {
   Layers,
   Waves,
   Wand2,
-  GitBranchPlus,
   FlipHorizontal,
   FlipVertical,
   Mountain,
   Play,
-  Square,
-  ToyBrick,
   StopCircle,
+  ToyBrick,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
 import { TilePalette } from '@/components/tile-palette';
-import { MapGrid } from '@/components/map-grid';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { TerrainGeneratorModal } from '@/components/terrain-generator-modal';
 import type { Tool, Tile, GridState, Selection } from '@/lib/types';
-import { intelligentTilePlacement } from '@/ai/flows/intelligent-tile-placement';
 import { useToast } from "@/hooks/use-toast";
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isTileTransparent } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,11 +55,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
-import { Terminal } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { autoTile } from '@/ai/flows/auto-tile';
+import { Upload } from 'lucide-react';
+import { MapGrid } from '@/components/map-grid';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -95,7 +85,6 @@ export default function Home() {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isTerrainGeneratorOpen, setTerrainGeneratorOpen] = useState(false);
   const [isProcessingAI, setProcessingAI] = useState(false);
-  const [showApiKeyAlert, setShowApiKeyAlert] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
@@ -110,7 +99,6 @@ export default function Home() {
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
-  const drawnPathCells = useRef(new Set<string>());
 
   const updateGridState = (newGrid: GridState) => {
     setGrid(newGrid);
@@ -261,7 +249,7 @@ export default function Home() {
   
   const handleCellAction = useCallback(
     async (row: number, col: number) => {
-      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'path') {
+      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
         return;
       }
       setSelection(null);
@@ -358,47 +346,6 @@ export default function Home() {
         setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
         toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
         return; 
-      } else if (tool === 'ai') {
-        if (grid[row][col] !== 0) {
-          toast({ variant: 'destructive', title: 'AI Error', description: 'AI can only place tiles on empty cells.' });
-          return;
-        }
-        setProcessingAI(true);
-        try {
-          const availableTiles = tiles.filter(t => t.id !== 0).map(t => t.id);
-          if (availableTiles.length === 0) {
-            toast({ variant: 'destructive', title: 'AI Error', description: 'No tiles available for AI placement.' });
-            setProcessingAI(false);
-            return;
-          }
-          
-          const windowSize = 5;
-          const halfWindow = Math.floor(windowSize / 2);
-          const surroundingTiles: number[][] = [];
-          for (let r = -halfWindow; r <= halfWindow; r++) {
-            const rowTiles: number[] = [];
-            for (let c = -halfWindow; c <= halfWindow; c++) {
-              const neighborRow = row + r;
-              const neighborCol = col + c;
-              if (neighborRow >= 0 && neighborRow < grid.length && neighborCol >= 0 && neighborCol < grid[0].length) {
-                rowTiles.push(grid[neighborRow][neighborCol]);
-              } else {
-                rowTiles.push(0); 
-              }
-            }
-            surroundingTiles.push(rowTiles);
-          }
-          
-          const result = await intelligentTilePlacement({ surroundingTiles, availableTiles });
-          newGrid[row][col] = result.suggestedTile;
-
-        } catch (error: any) {
-          console.error('AI placement failed:', error);
-          if (error.message?.includes('API key not found')) setShowApiKeyAlert(true);
-          toast({ variant: 'destructive', title: 'AI Error', description: 'Could not suggest a tile. Check your API key and network.' });
-        } finally {
-          setProcessingAI(false);
-        }
       }
       updateGridState(newGrid);
     },
@@ -458,116 +405,6 @@ export default function Home() {
     }
     updateGridState(newGrid);
   }, [grid, selectedTileId, secondarySelectedTileId, tool]);
-
-  const handleDrawPathCell = useCallback((row: number, col: number) => {
-    drawnPathCells.current.add(`${row},${col}`);
-    const newGrid = grid.map(r => [...r]);
-    newGrid[row][col] = selectedTileId;
-    setGrid(newGrid); // Update local grid for visual feedback
-  }, [grid, selectedTileId]);
-  
-  const handleDrawPathEnd = useCallback(async () => {
-    if (drawnPathCells.current.size === 0) return;
-    
-    const selectedTile = tiles.find(t => t.id === selectedTileId);
-    if (!selectedTile) {
-        toast({ variant: 'destructive', title: 'Path Error', description: 'A tile must be selected to draw a path.' });
-        return;
-    }
-    
-    const pathFamilyName = selectedTile.name.split('_')[0];
-    const availablePathTiles = tiles.filter(t => t.name.startsWith(pathFamilyName));
-    const availablePathTileIds = availablePathTiles.map(t => t.id);
-    
-    let finalGrid = grid.map(r => [...r]);
-    drawnPathCells.current.forEach(cellKey => {
-        const [row, col] = cellKey.split(',').map(Number);
-        finalGrid[row][col] = selectedTileId;
-    });
-
-    if (availablePathTileIds.length <= 1) {
-        toast({ title: 'Path Drawn', description: 'To enable auto-tiling, provide a set of named path tiles (e.g., path_straight, path_corner).' });
-        drawnPathCells.current.clear();
-        updateGridState(finalGrid);
-        return;
-    }
-
-    setProcessingAI(true);
-    toast({ title: 'Processing Path...', description: 'AI is adjusting path tiles.' });
-
-    try {
-        const pathCellsToProcess = new Set(drawnPathCells.current);
-        drawnPathCells.current.clear();
-        
-        let currentGrid = grid.map(r => [...r]);
-
-        const cellsToUpdate = new Set<string>();
-        pathCellsToProcess.forEach(cellKey => {
-            const [row, col] = cellKey.split(',').map(Number);
-            currentGrid[row][col] = selectedTileId; // Ensure path cells are set
-            for (let r_offset = -1; r_offset <= 1; r_offset++) {
-              for (let c_offset = -1; c_offset <= 1; c_offset++) {
-                 const updateRow = row + r_offset;
-                 const updateCol = col + c_offset;
-                 const updateKey = `${updateRow},${updateCol}`;
-
-                 if (updateRow >= 0 && updateRow < grid.length && updateCol >= 0 && updateCol < grid[0].length) {
-                    const tileId = currentGrid[updateRow][updateCol];
-                    if (tileId === selectedTileId || availablePathTileIds.includes(tileId)) {
-                        cellsToUpdate.add(updateKey);
-                    }
-                 }
-              }
-            }
-        });
-
-        const promises = Array.from(cellsToUpdate).map(cellKey => {
-            const [row, col] = cellKey.split(',').map(Number);
-            const windowSize = 3;
-            const halfWindow = Math.floor(windowSize / 2);
-            const surroundingTiles: number[][] = [];
-            for (let r_offset = -halfWindow; r_offset <= halfWindow; r_offset++) {
-                const rowTiles: number[] = [];
-                for (let c_offset = -halfWindow; c_offset <= halfWindow; c_offset++) {
-                    const neighborRow = row + r_offset;
-                    const neighborCol = col + c_offset;
-                    if (neighborRow >= 0 && neighborRow < grid.length && neighborCol >= 0 && neighborCol < grid[0].length) {
-                        rowTiles.push(currentGrid[neighborRow][neighborCol]);
-                    } else {
-                        rowTiles.push(0); 
-                    }
-                }
-                surroundingTiles.push(rowTiles);
-            }
-            
-            return autoTile({ surroundingTiles, availableTiles: availablePathTileIds, pathTileId: selectedTileId })
-                .then(result => ({ row, col, tile: result.suggestedTile }))
-                .catch(err => {
-                    console.error(`AI failed for cell ${row},${col}`, err);
-                    return null;
-                });
-        });
-        
-        const results = await Promise.all(promises);
-        results.forEach(res => {
-            if (res) {
-                finalGrid[res.row][res.col] = res.tile;
-            }
-        });
-        
-        updateGridState(finalGrid);
-        toast({ title: 'Path Complete', description: 'AI has automatically adjusted the path tiles.' });
-
-    } catch (error: any) {
-        console.error('Path tool failed:', error);
-         if (error.message?.includes('API key not found')) {
-            setShowApiKeyAlert(true);
-          }
-        toast({ variant: 'destructive', title: 'Path Error', description: 'Could not finalize the path.' });
-    } finally {
-        setProcessingAI(false);
-    }
-  }, [grid, toast, tiles, selectedTileId]);
 
   const applyToSelection = (callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection) return;
@@ -750,9 +587,9 @@ export default function Home() {
       }
     } else {
        const keyMap: { [key: string]: Tool } = {
-        'b': 'brush', 'e': 'eraser', 'p': 'picker', 'i': 'ai', 'g': 'fill',
+        'b': 'brush', 'e': 'eraser', 'p': 'picker', 'g': 'fill',
         'r': 'rectangle', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
-        'l': 'gradient', 'n': 'noise', 't': 'path',
+        'l': 'gradient', 'n': 'noise',
       };
 
       if (keyMap[e.key]) {
@@ -793,8 +630,6 @@ export default function Home() {
     noise: { icon: Waves, label: 'Noise (N)' },
     select: { icon: Lasso, label: 'Select (M)' },
     'magic-wand': { icon: Wand2, label: 'Wand (W)' },
-    path: { icon: GitBranchPlus, label: 'Path (T)' },
-    ai: { icon: isProcessingAI ? Loader : Sparkles, label: isProcessingAI ? 'Thinking...' : 'AI Place (I)', disabled: isProcessingAI },
   };
 
   const headerActions = [
@@ -888,28 +723,11 @@ export default function Home() {
           </div>
 
           <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto">
-             {showApiKeyAlert && (
-              <Alert className="mb-4 max-w-2xl">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Gemini API Key Needed</AlertTitle>
-                <AlertDescription>
-                  The AI tool requires a Gemini API key. Please get one from{' '}
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">
-                    Google AI Studio
-                  </a> and add it to a <code>.env</code> file in your project:
-                  <pre className="mt-2 p-2 bg-muted rounded-md text-xs overflow-x-auto">
-                    GEMINI_API_KEY="YOUR_API_KEY_HERE"
-                  </pre>
-                </AlertDescription>
-              </Alert>
-            )}
             <MapGrid
               grid={grid}
               tiles={tiles}
               onCellAction={handleCellAction}
               onShapeDraw={handleShapeDraw}
-              onDrawPathCell={handleDrawPathCell}
-              onDrawPathEnd={handleDrawPathEnd}
               tool={tool}
               zoom={zoom}
               selectedTileId={selectedTileId}
@@ -1015,8 +833,16 @@ export default function Home() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
+        
+        {isProcessingAI && (
+          <div className="absolute bottom-4 right-4 bg-background/80 p-3 rounded-lg shadow-lg flex items-center gap-2 border border-primary">
+              <Loader className="animate-spin text-primary" />
+              <p className="text-sm text-primary-foreground">AI is thinking...</p>
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
 }
+
+    

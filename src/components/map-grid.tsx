@@ -11,8 +11,6 @@ interface MapGridProps {
   tool: Tool;
   onCellAction: (row: number, col: number) => void;
   onShapeDraw: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
-  onDrawPathCell: (row: number, col: number) => void;
-  onDrawPathEnd: () => void;
   zoom?: number;
   selectedTileId: number;
   secondarySelectedTileId: number;
@@ -29,8 +27,6 @@ export const MapGrid: FC<MapGridProps> = ({
   tool, 
   onCellAction, 
   onShapeDraw, 
-  onDrawPathCell,
-  onDrawPathEnd,
   zoom = 1, 
   selectedTileId, 
   secondarySelectedTileId, 
@@ -42,7 +38,6 @@ export const MapGrid: FC<MapGridProps> = ({
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
   const [previewSelection, setPreviewSelection] = useState<Selection | null>(null);
-  const lastCell = useRef<{ row: number, col: number } | null>(null);
   
   const TILE_SIZE = BASE_TILE_SIZE * zoom;
 
@@ -59,9 +54,6 @@ export const MapGrid: FC<MapGridProps> = ({
         if (tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
             setPreviewGrid(grid); // Start preview from current grid state
         }
-    } else if (tool === 'path') {
-      onDrawPathCell(row, col);
-      lastCell.current = { row, col };
     } else {
         onCellAction(row, col);
     }
@@ -72,11 +64,6 @@ export const MapGrid: FC<MapGridProps> = ({
 
     if (tool === 'brush' || tool === 'eraser' || tool === 'spray') {
       onCellAction(row, col);
-    } else if (tool === 'path') {
-      if (lastCell.current && (lastCell.current.row !== row || lastCell.current.col !== col)) {
-        onDrawPathCell(row, col);
-        lastCell.current = { row, col };
-      }
     } else if ((tool === 'rectangle' || tool === 'gradient' || tool === 'noise') && startCell) {
         const newPreviewGrid = grid.map(r => [...r]);
         const minRow = Math.min(startCell.row, row);
@@ -127,9 +114,6 @@ export const MapGrid: FC<MapGridProps> = ({
 
   const handleMouseUp = (row: number, col: number) => {
     if (isPreviewMode) return;
-    if (isDrawing && tool === 'path') {
-        onDrawPathEnd();
-    }
     if ((tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise') && startCell) {
       onShapeDraw(startCell, { row, col });
     }
@@ -137,19 +121,14 @@ export const MapGrid: FC<MapGridProps> = ({
     setStartCell(null);
     setPreviewGrid(null);
     setPreviewSelection(null);
-    lastCell.current = null;
   };
 
   const handleMouseLeave = () => {
     if (isDrawing) {
-        if (tool === 'path') {
-          onDrawPathEnd();
-        }
         setIsDrawing(false);
         setStartCell(null);
         setPreviewGrid(null);
         setPreviewSelection(null);
-        lastCell.current = null;
     }
   };
   
@@ -157,14 +136,11 @@ export const MapGrid: FC<MapGridProps> = ({
     if (isPreviewMode) return 'cursor-none';
     switch (tool) {
       case 'brush':
-      case 'path':
         return 'cursor-cell';
       case 'eraser':
         return 'cursor-crosshair';
       case 'picker':
         return 'cursor-pointer';
-      case 'ai':
-        return 'cursor-help';
       case 'fill':
       case 'magic-wand':
         return 'cursor-copy';
@@ -266,3 +242,5 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
+
+    

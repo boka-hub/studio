@@ -29,7 +29,6 @@ const shortcuts = [
     { keys: ['M'], description: 'Select/Lasso Tool' },
     { keys: ['W'], description: 'Select Magic Wand Tool' },
     { keys: ['T'], description: 'Select Path Tool' },
-    { keys: ['I'], description: 'Select AI Place Tool' },
     { keys: ['Ctrl', 'Z'], description: 'Undo last action' },
     { keys: ['Ctrl', 'Y'], or: ['Ctrl', 'Shift', 'Z'], description: 'Redo last action' },
     { keys: ['Ctrl', 'C'], description: 'Copy selection' },
@@ -97,11 +96,6 @@ const features = [
         name: "Path Tool",
         short: "Draws intelligent paths that connect automatically.",
         long: "This AI-powered tool simplifies creating roads, walls, or rivers. To use it, import a set of path tiles with a common naming prefix (e.g., 'road_straight', 'road_corner'). Select any of these tiles in the palette and draw a path. The AI will analyze the connections and automatically swap in the correct straight, corner, or T-junction tiles to make the path seamless."
-    },
-    {
-        name: "AI Place Tool",
-        short: "Intelligently suggests a tile for an empty space.",
-        long: "This tool uses AI to analyze the tiles surrounding an empty cell and predicts the best tile to place there. Simply select the tool and click on an empty (white) cell. The AI will attempt to fill it in a way that logically matches the surrounding environment."
     },
     {
         name: "Selection Actions",

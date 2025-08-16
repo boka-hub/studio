@@ -1,26 +1,5 @@
 import {z} from 'genkit';
 
-// intelligent-tile-placement.ts
-export const IntelligentTilePlacementInputSchema = z.object({
-  surroundingTiles: z
-    .array(z.array(z.number()))
-    .describe('A 5x5 window of the grid centered on the target cell.'),
-  availableTiles: z.array(z.number()).describe('The list of available tile indices.'),
-});
-export type IntelligentTilePlacementInput = z.infer<
-  typeof IntelligentTilePlacementInputSchema
->;
-
-export const IntelligentTilePlacementOutputSchema = z.object({
-  suggestedTile: z
-    .number()
-    .describe('The index of the suggested tile for the given position.'),
-});
-export type IntelligentTilePlacementOutput = z.infer<
-  typeof IntelligentTilePlacementOutputSchema
->;
-
-
 // auto-tile.ts
 export const AutoTileInputSchema = z.object({
   surroundingTiles: z
