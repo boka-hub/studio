@@ -770,6 +770,17 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const handleToolSelect = (newTool: Tool) => {
+    setTool(newTool);
+    if (newTool !== 'select' && newTool !== 'magic-wand') {
+      setSelection(null);
+    }
+    const toolsWithSettings: Tool[] = ['spray', 'rectangle', 'gradient', 'noise'];
+    if (toolsWithSettings.includes(newTool)) {
+      setToolbarCollapsed(false);
+    }
+  };
+
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -833,33 +844,26 @@ export default function Home() {
             <aside
               className={cn(
                 'bg-card border-r border-border flex flex-col transition-all duration-300',
-                (isToolbarCollapsed || isPreviewMode) ? 'w-0 p-0 border-r-0' : 'w-60'
+                (isToolbarCollapsed || isPreviewMode) ? 'w-20' : 'w-60'
               )}
             >
              {!isPreviewMode && (
-              <>
-              <div className="flex-grow overflow-y-auto">
-                 <Toolbar<Tool>
-                  actions={toolbarActions}
-                  selectedAction={tool}
-                  onActionSelect={(t) => {
-                      setTool(t);
-                      if (t !== 'select' && t !== 'magic-wand') setSelection(null);
-                  }}
-                  gridSize={gridSize}
-                  onGridResize={handleGridResize}
-                  zoom={zoom}
-                  onZoomChange={setZoom}
-                  isCollapsed={isToolbarCollapsed}
-                  selection={selection}
-                  selectionActions={selectionActions}
-                  sprayRadius={sprayRadius}
-                  onSprayRadiusChange={setSprayRadius}
-                  sprayDensity={sprayDensity}
-                  onSprayDensityChange={setSprayDensity}
-                />
-              </div>
-              </>
+              <Toolbar<Tool>
+                actions={toolbarActions}
+                selectedAction={tool}
+                onActionSelect={handleToolSelect}
+                gridSize={gridSize}
+                onGridResize={handleGridResize}
+                zoom={zoom}
+                onZoomChange={setZoom}
+                isCollapsed={isToolbarCollapsed}
+                selection={selection}
+                selectionActions={selectionActions}
+                sprayRadius={sprayRadius}
+                onSprayRadiusChange={setSprayRadius}
+                sprayDensity={sprayDensity}
+                onSprayDensityChange={setSprayDensity}
+              />
              )}
             </aside>
             {!isPreviewMode && (

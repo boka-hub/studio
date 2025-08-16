@@ -74,10 +74,10 @@ export function Toolbar<T extends Tool>({
   
   return (
     <ScrollArea className="flex-grow">
-      <div className={cn("flex flex-col gap-4 p-2", isCollapsed && "items-center")}>
+      <div className="flex flex-col gap-4 p-2">
         <div>
           <h3 className={cn("text-sm font-semibold mb-2 px-2 text-muted-foreground", isCollapsed && "hidden")}>Tools</h3>
-          <div className={cn("grid gap-1", isCollapsed ? 'grid-cols-2' : 'grid-cols-2')}>
+          <div className={cn("grid gap-1 grid-cols-2")}>
             {(Object.keys(actions) as T[]).map((key) => {
               const action = actions[key];
               const Icon = action.icon;
@@ -87,8 +87,8 @@ export function Toolbar<T extends Tool>({
                     <Button
                       variant={selectedAction === key ? 'secondary' : 'ghost'}
                       className={cn(
-                        'w-full flex h-auto py-2 gap-2 items-center justify-start',
-                        isCollapsed ? 'flex-col px-1 h-auto text-xs' : 'flex-row pl-3',
+                        'w-full flex h-auto py-2 gap-2 items-center',
+                        isCollapsed ? 'justify-center' : 'justify-start pl-3'
                       )}
                       onClick={() => onActionSelect(key)}
                       disabled={action.disabled}
