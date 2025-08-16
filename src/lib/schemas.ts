@@ -16,29 +16,3 @@ export const AutoTileOutputSchema = z.object({
     .describe('The index of the suggested tile for the given position to make the path connect. This must be one of the availableTiles.'),
 });
 export type AutoTileOutput = z.infer<typeof AutoTileOutputSchema>;
-
-
-// generate-terrain.ts
-const TerrainConfigSchema = z.object({
-  type: z.enum(['forest', 'desert', 'beach', 'volcanic', 'alien', 'grassland', 'jungle', 'mountains', 'swamp', 'crystal_caves', 'tundra', 'wasteland', 'farmland', 'ruins', 'simple_village', 'basic_dungeon']).describe('The type of terrain to generate.'),
-  tileMapping: z
-    .record(z.string(), z.number())
-    .describe(
-      'A mapping from terrain element (e.g., "ground", "tree") to tile ID.'
-    ),
-});
-
-export const GenerateTerrainInputSchema = z.object({
-  grid: z
-    .array(z.array(z.number()))
-    .describe('The current state of the grid.'),
-  config: TerrainConfigSchema,
-});
-export type GenerateTerrainInput = z.infer<typeof GenerateTerrainInputSchema>;
-
-export const GenerateTerrainOutputSchema = z.object({
-  grid: z
-    .array(z.array(z.number()))
-    .describe('The new grid state with the generated terrain.'),
-});
-export type GenerateTerrainOutput = z.infer<typeof GenerateTerrainOutputSchema>;

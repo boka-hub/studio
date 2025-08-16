@@ -8,7 +8,6 @@ import {
   Pipette,
   Scissors,
   Download,
-  Loader,
   Package,
   PaintBucket,
   PanelLeftClose,
@@ -28,7 +27,6 @@ import {
   Wand2,
   FlipHorizontal,
   FlipVertical,
-  Mountain,
   Play,
   StopCircle,
   ToyBrick,
@@ -39,7 +37,6 @@ import { TilePalette } from '@/components/tile-palette';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
-import { TerrainGeneratorModal } from '@/components/terrain-generator-modal';
 import type { Tool, Tile, GridState, Selection } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -83,8 +80,6 @@ export default function Home() {
   const [slicerInitialFiles, setSlicerInitialFiles] = useState<File[]>([]);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
-  const [isTerrainGeneratorOpen, setTerrainGeneratorOpen] = useState(false);
-  const [isProcessingAI, setProcessingAI] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
@@ -637,7 +632,6 @@ export default function Home() {
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
-    { icon: Mountain, label: 'Generate Terrain', onClick: () => setTerrainGeneratorOpen(true) },
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
   ];
   
@@ -807,18 +801,6 @@ export default function Home() {
           onClose={() => setSettingsOpen(false)}
         />
 
-        <TerrainGeneratorModal
-            isOpen={isTerrainGeneratorOpen}
-            onClose={() => setTerrainGeneratorOpen(false)}
-            tiles={tiles.filter(t => t.id !== 0)}
-            grid={grid}
-            onGenerate={(newGrid) => {
-                updateGridState(newGrid);
-                toast({ title: 'Terrain Generated', description: 'The new terrain has been applied to your map.'});
-            }}
-            onProcessingChange={setProcessingAI}
-        />
-        
         <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -834,15 +816,7 @@ export default function Home() {
           </AlertDialogContent>
         </AlertDialog>
         
-        {isProcessingAI && (
-          <div className="absolute bottom-4 right-4 bg-background/80 p-3 rounded-lg shadow-lg flex items-center gap-2 border border-primary">
-              <Loader className="animate-spin text-primary" />
-              <p className="text-sm text-primary-foreground">AI is thinking...</p>
-          </div>
-        )}
       </div>
     </TooltipProvider>
   );
 }
-
-    
