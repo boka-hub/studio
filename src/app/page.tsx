@@ -29,6 +29,8 @@ import {
   ToyBrick,
   Upload,
   Download,
+  Import,
+  Export,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -84,7 +86,7 @@ export default function Home() {
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isPreviewMode, setPreviewMode] = useState(false);
-  const [playerPos, setPlayerPos] = useState({ row: 1, col: 1 });
+  const [playerPos, setPlayerPos] = useState({ row: 0, col: 0 });
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
@@ -611,6 +613,35 @@ export default function Home() {
     }
   };
 
+  const togglePreviewMode = () => {
+    const newPreviewState = !isPreviewMode;
+    if (newPreviewState) {
+      // Find first non-solid tile to start
+      let startPos = { row: 0, col: 0 };
+      let found = false;
+      for (let r = 0; r < grid.length; r++) {
+        for (let c = 0; c < grid[0].length; c++) {
+          const tileId = grid[r][c];
+          const tile = tiles.find(t => t.id === tileId);
+          if (!tile?.solid) {
+            startPos = { row: r, col: c };
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (!found) {
+        toast({
+          variant: 'destructive',
+          title: 'No Valid Start Position',
+          description: 'The entire map is solid. Player placed at (0,0).'
+        });
+      }
+      setPlayerPos(startPos);
+    }
+    setPreviewMode(newPreviewState);
+  };
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -630,7 +661,7 @@ export default function Home() {
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
-    { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: () => setPreviewMode(!isPreviewMode), isActive: isPreviewMode },
+    { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: togglePreviewMode, isActive: isPreviewMode },
   ];
   
   const selectionActions = {
@@ -779,7 +810,7 @@ export default function Home() {
           type="file"
           ref={tileImportRef}
           onChange={handleImportTiles}
-          accept="image/png"
+          accept="image/png,image/jpeg"
           multiple
           className="hidden"
         />

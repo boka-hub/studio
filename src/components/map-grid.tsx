@@ -4,6 +4,7 @@ import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { GridState, Tile, Tool, Selection } from '@/lib/types';
+import { PersonStanding } from 'lucide-react';
 
 interface MapGridProps {
   grid: GridState;
@@ -214,16 +215,16 @@ export const MapGrid: FC<MapGridProps> = ({
 
          {isPreviewMode && (
           <div 
-            className="absolute rounded-full shadow-lg pointer-events-none bg-white/80 ring-2 ring-white"
+            className="absolute flex items-center justify-center text-white pointer-events-none"
             style={{
-              left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.15}px`,
-              top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth + TILE_SIZE * 0.15}px`,
-              width: `${TILE_SIZE * 0.7}px`,
-              height: `${TILE_SIZE * 0.7}px`,
+              left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
+              top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
+              width: `${TILE_SIZE}px`,
+              height: `${TILE_SIZE}px`,
               transition: 'left 150ms ease-out, top 150ms ease-out',
             }}
           >
-            <div className="w-full h-full rounded-full shadow-inner" />
+            <PersonStanding style={{ width: `${TILE_SIZE * 0.8}px`, height: `${TILE_SIZE * 0.8}px` }} className="drop-shadow-lg" />
           </div>
         )}
       </div>
@@ -242,5 +243,3 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
-
-    
