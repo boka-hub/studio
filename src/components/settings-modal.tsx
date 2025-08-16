@@ -28,9 +28,6 @@ const shortcuts = [
     { keys: ['N'], description: 'Select Noise Tool' },
     { keys: ['M'], description: 'Select/Lasso Tool' },
     { keys: ['W'], description: 'Select Magic Wand Tool' },
-    { keys: ['T'], description: 'Select Path Tool' },
-    { keys: ['Ctrl', 'Z'], description: 'Undo last action' },
-    { keys: ['Ctrl', 'Y'], or: ['Ctrl', 'Shift', 'Z'], description: 'Redo last action' },
     { keys: ['Ctrl', 'C'], description: 'Copy selection' },
     { keys: ['Ctrl', 'V'], description: 'Paste selection' },
     { keys: ['Delete'], description: 'Delete selection' },
@@ -91,11 +88,6 @@ const features = [
         name: "Magic Wand Tool",
         short: "Selects a connected area of identical tiles.",
         long: "A powerful selection tool. Click on any tile, and the magic wand will automatically select all adjacent tiles of the same type, no matter how complex the shape. You can then use the Selection Actions on this precise selection."
-    },
-    {
-        name: "Path Tool",
-        short: "Draws intelligent paths that connect automatically.",
-        long: "This AI-powered tool simplifies creating roads, walls, or rivers. To use it, import a set of path tiles with a common naming prefix (e.g., 'road_straight', 'road_corner'). Select any of these tiles in the palette and draw a path. The AI will analyze the connections and automatically swap in the correct straight, corner, or T-junction tiles to make the path seamless."
     },
     {
         name: "Selection Actions",
@@ -167,28 +159,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <TabsContent value="about" className="flex-grow overflow-auto p-4">
              <div className="space-y-6 text-sm">
                 <div className="space-y-2">
-                    <h3 className="font-semibold text-lg">About TileForge</h3>
+                    <h3 className="font-semibold text-lg">Getting Started with TileForge</h3>
                     <p className="text-muted-foreground">
-                        TileForge is an intelligent, AI-powered tile map editor built with modern web technologies. 
-                        It's designed to make map creation faster, more intuitive, and more creative.
+                        Welcome to TileForge! Here's a quick guide to creating your first map.
                     </p>
                 </div>
-                 <div className="space-y-2">
-                    <h4 className="font-semibold">Core Technologies</h4>
-                    <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                        <li><span className="font-semibold text-foreground">Next.js & React:</span> For a fast and responsive user interface.</li>
-                        <li><span className="font-semibold text-foreground">Genkit (Gemini AI):</span> Powers the intelligent tools like AI Tile Placement and Path generation.</li>
-                        <li><span className="font-semibold text-foreground">ShadCN/UI & TailwindCSS:</span> For the clean, modern, and accessible component library.</li>
-                        <li><span className="font-semibold text-foreground">Lucide React:</span> For the beautiful and consistent icon set.</li>
+                 <div className="space-y-3">
+                    <h4 className="font-semibold">Step 1: Importing Your Tiles</h4>
+                    <p className="text-muted-foreground">
+                        Every map starts with tiles. You have two primary ways to add them to your palette on the right:
+                    </p>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
+                        <li><span className="font-semibold text-foreground">Import Individual Tiles:</span> Use the <span className="italic">Import Tiles</span> button in the header to select one or more image files from your computer.</li>
+                        <li><span className="font-semibold text-foreground">Slice a Spritesheet:</span> If you have a single image containing multiple tiles (a spritesheet), use the <span className="italic">Slice Sheet</span> button. This will open a tool where you can specify the dimensions of your tiles (e.g., 16x16) and automatically slice them into individual tiles for your palette. You can also drag-and-drop a spritesheet directly onto the canvas to open this tool.</li>
                     </ul>
                 </div>
-                 <div className="space-y-2">
-                    <h4 className="font-semibold">Version</h4>
-                    <p className="text-muted-foreground">
-                        Version 1.0.0
+                <div className="space-y-3">
+                    <h4 className="font-semibold">Step 2: Building Your Map</h4>
+                     <p className="text-muted-foreground">
+                        With your tiles in the palette, you can start building. Select a tile by left-clicking it in the palette to make it your primary "brush" color. Select a secondary tile with a right-click for use with advanced tools.
                     </p>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
+                       <li>Use the <span className="font-semibold text-foreground">Brush</span> to paint tiles and the <span className="font-semibold text-foreground">Eraser</span> to remove them.</li>
+                       <li>The <span className="font-semibold text-foreground">Fill</span> tool will flood-fill an area of identical tiles with your selected tile.</li>
+                       <li>The <span className="font-semibold text-foreground">Picker</span> lets you select a tile that's already on the map.</li>
+                    </ul>
                 </div>
-                <div className="space-y-2">
+                 <div className="space-y-3">
+                    <h4 className="font-semibold">Step 3: Advanced Tools & Selections</h4>
+                     <p className="text-muted-foreground">
+                        For more complex patterns, use the shape and selection tools.
+                    </p>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
+                        <li>The <span className="font-semibold text-foreground">Rectangle</span> tool draws filled rectangles. <span className="font-semibold text-foreground">Gradient</span> and <span className="font-semibold text-foreground">Noise</span> use your primary and secondary tiles to create interesting textures.</li>
+                        <li>Use <span className="font-semibold text-foreground">Select</span> or the <span className="font-semibold text-foreground">Magic Wand</span> to select areas of your map. Once selected, you can use the selection-specific actions in the toolbar to Fill, Delete, Copy, or Paste parts of your map.</li>
+                    </ul>
+                </div>
+                <div className="space-y-3">
+                    <h4 className="font-semibold">Step 4: Exporting Your Work</h4>
+                     <p className="text-muted-foreground">
+                        Once you're done, you can export your creation.
+                    </p>
+                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
+                        <li><span className="font-semibold text-foreground">Export Map:</span> Saves the grid data as a simple text file, easy to parse in any game engine.</li>
+                        <li><span className="font-semibold text-foreground">Export Spritesheet:</span> Compiles all the tiles used in your palette back into a single, optimized spritesheet image and provides a metadata file that maps tile names and properties to their coordinates on the sheet.</li>
+                    </ul>
+                </div>
+                <div className="space-y-2 mt-6">
                     <h4 className="font-semibold">Created With</h4>
                     <p className="text-muted-foreground">
                        Firebase Studio
