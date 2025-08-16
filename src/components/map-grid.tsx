@@ -4,7 +4,6 @@ import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { GridState, Tile, Tool, Selection } from '@/lib/types';
-import { PersonStanding } from 'lucide-react';
 
 interface MapGridProps {
   grid: GridState;
@@ -215,7 +214,7 @@ export const MapGrid: FC<MapGridProps> = ({
 
          {isPreviewMode && (
           <div 
-            className="absolute flex items-center justify-center text-white pointer-events-none"
+            className="absolute flex items-center justify-center pointer-events-none"
             style={{
               left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
               top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
@@ -224,7 +223,14 @@ export const MapGrid: FC<MapGridProps> = ({
               transition: 'left 150ms ease-out, top 150ms ease-out',
             }}
           >
-            <PersonStanding style={{ width: `${TILE_SIZE * 0.8}px`, height: `${TILE_SIZE * 0.8}px` }} className="drop-shadow-lg" />
+            <div 
+              className="bg-white rounded-md animate-pulse-small"
+              style={{
+                width: `${TILE_SIZE * 0.7}px`,
+                height: `${TILE_SIZE * 0.7}px`,
+                boxShadow: '0 0 8px rgba(255,255,255,0.7)'
+              }}
+            />
           </div>
         )}
       </div>
