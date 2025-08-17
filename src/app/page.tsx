@@ -799,7 +799,8 @@ export default function Home() {
               collapsible={true}
               collapsedSize={4}
               minSize={10}
-              onCollapse={(collapsed) => setToolbarCollapsed(collapsed)}
+              onCollapse={() => setToolbarCollapsed(true)}
+              onExpand={() => setToolbarCollapsed(false)}
             >
               <div className="bg-card border-r border-border flex flex-col h-full">
                 <div className='flex-grow overflow-hidden'>
@@ -870,7 +871,8 @@ export default function Home() {
                 collapsible={true}
                 collapsedSize={4}
                 minSize={10}
-                onCollapse={(collapsed) => setPaletteCollapsed(collapsed)}
+                onCollapse={() => setPaletteCollapsed(true)}
+                onExpand={() => setPaletteCollapsed(false)}
             >
               <div className="bg-card border-l border-border flex flex-col h-full">
                 <div className="flex-grow overflow-hidden">
