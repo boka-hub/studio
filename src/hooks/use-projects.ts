@@ -41,23 +41,27 @@ export const useProjects = () => {
 
   useEffect(() => {
     setIsLoading(true);
+    let savedState: ProjectsState | null = null;
     try {
       const savedData = window.localStorage.getItem(STORAGE_KEY);
       if (savedData) {
-        const savedState = JSON.parse(savedData) as ProjectsState;
-        if (Array.isArray(savedState.projects) && savedState.projects.length > 0 && savedState.currentProjectId) {
-           const projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId) || savedState.projects.sort((a,b) => b.lastModified - a.lastModified)[0];
-           resetHistory({
-             projects: savedState.projects,
-             currentProjectId: projectToLoad.id,
-           });
-        } else {
-           const defaultProject = createNewProject('New Project');
-           resetHistory({ projects: [defaultProject], currentProjectId: defaultProject.id });
+        try {
+            savedState = JSON.parse(savedData) as ProjectsState;
+        } catch (e) {
+            console.error("Could not parse projects from localStorage", e);
+            toast({ variant: 'destructive', title: 'Load Error', description: 'Could not load saved projects due to corrupted data. Starting fresh.'});
         }
+      }
+
+      if (savedState && Array.isArray(savedState.projects) && savedState.projects.length > 0 && savedState.currentProjectId) {
+         const projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId) || savedState.projects.sort((a,b) => b.lastModified - a.lastModified)[0];
+         resetHistory({
+           projects: savedState.projects,
+           currentProjectId: projectToLoad.id,
+         });
       } else {
-        const defaultProject = createNewProject('New Project');
-        resetHistory({ projects: [defaultProject], currentProjectId: defaultProject.id });
+         const defaultProject = createNewProject('New Project');
+         resetHistory({ projects: [defaultProject], currentProjectId: defaultProject.id });
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
