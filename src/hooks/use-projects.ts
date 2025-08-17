@@ -45,29 +45,35 @@ export const useProjects = () => {
 
   // Load projects from localStorage on initial mount
   useEffect(() => {
+    setIsLoading(true);
     try {
       const savedData = window.localStorage.getItem(STORAGE_KEY);
+      let activeProjectId: string;
+      let projectsToLoad: Project[];
+
       if (savedData) {
         const { projects: savedProjects, last_active_project_id: lastActiveId } = JSON.parse(savedData);
         if (Array.isArray(savedProjects) && savedProjects.length > 0) {
-          setProjects(savedProjects);
+          projectsToLoad = savedProjects;
           const projectToLoad = savedProjects.find(p => p.id === lastActiveId) || savedProjects[0];
-          setCurrentProjectId(projectToLoad.id);
+          activeProjectId = projectToLoad.id;
           resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
         } else {
-           // No projects, create a default one
           const defaultProject = createNewProject('New Project');
-          setProjects([defaultProject]);
-          setCurrentProjectId(defaultProject.id);
+          projectsToLoad = [defaultProject];
+          activeProjectId = defaultProject.id;
           resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
         }
       } else {
-        // No saved data at all, create a default project
         const defaultProject = createNewProject('New Project');
-        setProjects([defaultProject]);
-        setCurrentProjectId(defaultProject.id);
+        projectsToLoad = [defaultProject];
+        activeProjectId = defaultProject.id;
         resetHistory(createInitialState());
       }
+      
+      setProjects(projectsToLoad);
+      setCurrentProjectId(activeProjectId);
+
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
       toast({ variant: 'destructive', title: 'Load Error', description: 'Could not load your saved projects.' });
@@ -79,16 +85,19 @@ export const useProjects = () => {
       setIsLoading(false);
     }
   }, [toast, resetHistory]);
-  
-  const currentProjectDetails = projects.find(p => p.id === currentProjectId);
 
   // Auto-save the current project state into the projects list
   useEffect(() => {
     if (isLoading || !currentProjectId) return;
     
-    setProjects(projs => projs.map(p => 
-      p.id === currentProjectId ? { ...p, ...projectState, lastModified: Date.now() } : p
-    ));
+    setProjects(projs => {
+        const currentProjectExists = projs.some(p => p.id === currentProjectId);
+        if (!currentProjectExists) return projs;
+        
+        return projs.map(p =>
+            p.id === currentProjectId ? { ...p, ...projectState, lastModified: Date.now() } : p
+        );
+    });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectState, currentProjectId]);
@@ -193,53 +202,44 @@ export const useProjects = () => {
 
   const deleteProject = useCallback((id: string) => {
     const isDeletingCurrent = id === currentProjectId;
-    let nextProjectIdToLoad: string | null = null;
     
     setProjects(projs => {
       const remainingProjects = projs.filter(p => p.id !== id);
       
       if (remainingProjects.length === 0) {
         const defaultProject = createNewProject('New Project');
-        nextProjectIdToLoad = defaultProject.id;
+        if(isDeletingCurrent) {
+            setCurrentProjectId(defaultProject.id);
+            resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
+        }
         return [defaultProject];
       }
       
       if (isDeletingCurrent) {
-        nextProjectIdToLoad = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
+        const nextProjectToLoad = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0];
+        setCurrentProjectId(nextProjectToLoad.id);
+        resetHistory({ grid: nextProjectToLoad.grid, tiles: nextProjectToLoad.tiles });
       }
       
       return remainingProjects;
     });
 
-    if (nextProjectIdToLoad) {
-        // This state update will trigger the useEffect to load the project
-        setCurrentProjectId(nextProjectIdToLoad);
-    }
-    
     toast({ title: 'Project Deleted'});
 
-  }, [currentProjectId, toast]);
+  }, [currentProjectId, toast, resetHistory]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     setProjects(projs => projs.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p));
   }, []);
-
-  useEffect(() => {
-    if (isLoading || !currentProjectId) return;
-    const projectToLoad = projects.find(p => p.id === currentProjectId);
-    if(projectToLoad) {
-        resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
-    }
-  // This should only run when the currentProjectId changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProjectId, isLoading]);
+  
+  const currentProject = projects.find(p => p.id === currentProjectId);
 
   return {
     projects,
     currentProject: {
-      id: currentProjectDetails?.id || '',
-      name: currentProjectDetails?.name || 'Untitled',
-      lastModified: currentProjectDetails?.lastModified || 0,
+      id: currentProject?.id || '',
+      name: currentProject?.name || 'Untitled',
+      lastModified: currentProject?.lastModified || 0,
       grid: projectState.grid,
       tiles: projectState.tiles,
     },
