@@ -23,11 +23,10 @@ export function useHistoryState<T>(initialState: T) {
       }
 
       if (batch) {
-        // When batching, we just update the present state.
-        // The history entry will be created by a subsequent non-batched call.
         return {
           ...currentState,
           present: newPresent,
+          future: [], // Clear future on batched partial update
         };
       }
       

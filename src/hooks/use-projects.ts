@@ -37,7 +37,7 @@ export const useProjects = () => {
 
   const { projects, currentProjectId } = state;
 
-  const currentProject = projects.find(p => p.id === currentProjectId) || createNewProject("Loading...");
+  const currentProject = projects.find(p => p.id === currentProjectId) || createNewProject("New Project");
 
   useEffect(() => {
     setIsLoading(true);
@@ -45,8 +45,8 @@ export const useProjects = () => {
       const savedData = window.localStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const savedState = JSON.parse(savedData) as ProjectsState;
-        if (Array.isArray(savedState.projects) && savedState.projects.length > 0) {
-           const projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId) || savedState.projects[0];
+        if (Array.isArray(savedState.projects) && savedState.projects.length > 0 && savedState.currentProjectId) {
+           const projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId) || savedState.projects.sort((a,b) => b.lastModified - a.lastModified)[0];
            resetHistory({
              projects: savedState.projects,
              currentProjectId: projectToLoad.id,
@@ -68,18 +68,18 @@ export const useProjects = () => {
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // This effect should only run once on initial mount.
+  }, []);
 
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
         try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ projects, currentProjectId }));
         } catch (error) {
             console.error("Failed to save projects to localStorage", error);
             toast({ variant: 'destructive', title: 'Save Error', description: 'Could not save your changes.' });
         }
     }
-  }, [state, isLoading, toast]);
+  }, [state, isLoading, toast, projects, currentProjectId]);
 
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     setProjectState(currentState => {
@@ -159,24 +159,17 @@ export const useProjects = () => {
   }, [setProjectState, toast]);
 
   const loadProject = useCallback((id: string) => {
-    setProjectState(currentState => {
-      const projectToLoad = currentState.projects.find(p => p.id === id);
-      if(projectToLoad) {
-          toast({ title: 'Project Loaded', description: `Switched to "${projectToLoad.name}".`});
-          // Resetting history effectively loads the project's state
-          resetHistory({
-              projects: currentState.projects,
-              currentProjectId: id,
-          });
-          // This return is just to satisfy typescript, resetHistory does the work
-          return { ...currentState, currentProjectId: id }; 
-      } else {
-          toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
+      setProjectState(currentState => {
+          if (currentState.projects.some(p => p.id === id)) {
+              resetHistory({
+                  projects: currentState.projects,
+                  currentProjectId: id,
+              });
+              return { ...currentState, currentProjectId: id };
+          }
           return currentState;
-      }
-    });
-  }, [setProjectState, toast, resetHistory]);
-
+      });
+  }, [setProjectState, resetHistory]);
 
   const saveProject = useCallback((name: string) => {
     setProjectState(currentState => {
@@ -205,24 +198,27 @@ export const useProjects = () => {
         
         if (remainingProjects.length === 0) {
             const newDefault = createNewProject('New Project');
+            resetHistory({ projects: [newDefault], currentProjectId: newDefault.id });
             return { projects: [newDefault], currentProjectId: newDefault.id };
         }
         
         let newCurrentId = currentState.currentProjectId;
-        // If the deleted project was the active one, find a new one to activate.
         if (currentState.currentProjectId === id) {
-            // Sort by last modified to pick the most recent one as the new active project.
             newCurrentId = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
         }
-
+        
+        resetHistory({ projects: remainingProjects, currentProjectId: newCurrentId });
         return { projects: remainingProjects, currentProjectId: newCurrentId };
     });
     toast({ title: 'Project Deleted'});
-  }, [setProjectState, toast]);
+  }, [setProjectState, toast, resetHistory]);
 
   const renameProject = useCallback((id: string, newName: string) => {
-    modifyCurrentProject(() => ({ name: newName }));
-  }, [modifyCurrentProject]);
+    setProjectState(currentState => ({
+        ...currentState,
+        projects: currentState.projects.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p),
+    }));
+  }, [setProjectState]);
 
   return {
     projects,
