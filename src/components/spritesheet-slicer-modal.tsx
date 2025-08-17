@@ -1,3 +1,4 @@
+
 import type { FC } from 'react';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -58,11 +59,11 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     const fileList = Array.from(incomingFiles);
 
     const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
-    const jsonFiles = fileList.filter(f => f.name.endsWith('.json'));
+    const textFiles = fileList.filter(f => f.name.endsWith('.txt'));
 
     for (const file of imageFiles) {
       const baseName = file.name.replace(FILENAME_REGEX, '');
-      const companionJson = jsonFiles.find(jf => jf.name.replace('.json', '') === baseName);
+      const companionText = textFiles.find(jf => jf.name.replace('.txt', '') === baseName);
 
       let tileWidth = 16, tileHeight = 16, metadata = null;
 
@@ -74,15 +75,15 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
       }
       
       // Override with data from companion JSON if it exists
-      if (companionJson) {
+      if (companionText) {
         try {
-          const jsonContent = await companionJson.text();
+          const jsonContent = await companionText.text();
           metadata = JSON.parse(jsonContent);
           tileWidth = metadata.tileWidth || tileWidth;
           tileHeight = metadata.tileHeight || tileHeight;
         } catch (e) {
-          console.error("Failed to parse companion JSON", e);
-          toast({ variant: 'destructive', title: 'Metadata Error', description: `Could not parse ${companionJson.name}.` });
+          console.error("Failed to parse companion .txt file", e);
+          toast({ variant: 'destructive', title: 'Metadata Error', description: `Could not parse ${companionText.name}.` });
         }
       }
 
@@ -278,7 +279,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         <DialogHeader>
           <DialogTitle>Batch Spritesheet Slicer</DialogTitle>
           <DialogDescription>
-            Import spritesheets to slice them. If you provide a companion `.json` file, names and dimensions will be loaded automatically.
+            Import spritesheets to slice them. If you provide a companion `.txt` file, names and dimensions will be loaded automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -333,7 +334,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                     <FileJson2 className="h-4 w-4" />
                     <AlertTitle>Metadata Detected!</AlertTitle>
                     <AlertDescription>
-                      Tile names and dimensions have been automatically configured from the companion JSON file.
+                      Tile names and dimensions have been automatically configured from the companion .txt file.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -373,7 +374,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
             Slice All & Add ({files.length})
           </Button>
         </DialogFooter>
-        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,.json" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,.txt" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
       </DialogContent>
     </Dialog>
   );

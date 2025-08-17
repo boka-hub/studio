@@ -35,8 +35,8 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
   const { toast } = useToast();
 
   const processFile = (file: File) => {
-    if (!file || (!file.type.startsWith('text/') && !file.name.endsWith('.json') && !file.name.endsWith('.txt'))) {
-        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop a valid .txt or .json metadata file.' });
+    if (!file || (!file.type.startsWith('text/') && !file.name.endsWith('.txt'))) {
+        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop a valid .txt metadata file.' });
         return;
     }
 
@@ -73,13 +73,13 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
                     if (currentTile.id !== newId) {
                         idRemap[currentTile.id] = newId;
                     }
-                    newTiles.push({ ...currentTile, id: newId });
+                    newTiles.push({ ...currentTile, id: newId, solid: metaTile.solid ?? currentTile.solid });
                     processedNewIds.add(newId);
                 }
             });
 
             // Handle tiles that are in the current project but not in the metadata
-            let nextAvailableId = Math.max(...Array.from(processedNewIds)) + 1;
+            let nextAvailableId = Math.max(...Array.from(processedNewIds), 0) + 1;
             tiles.forEach(currentTile => {
                 if (currentTile.id !== 0 && !newTiles.some(nt => nt.name === currentTile.name)) {
                     while (processedNewIds.has(nextAvailableId)) {
@@ -166,7 +166,7 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
              ) : (
                 <>
                     <FileJson2 className="h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground mt-4">Drag & drop your metadata file here</p>
+                    <p className="text-muted-foreground mt-4">Drag & drop your metadata .txt file here</p>
                     <p className="text-sm text-muted-foreground/80">or</p>
                     <Button variant="outline" size="sm" className="mt-2" onClick={() => fileInputRef.current?.click()}>
                         <Upload className="mr-2 h-4 w-4" />
@@ -181,7 +181,7 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
         <input 
           ref={fileInputRef} 
           type="file" 
-          accept=".txt,.json" 
+          accept=".txt" 
           className="hidden" 
           onChange={handleFileSelect} 
         />

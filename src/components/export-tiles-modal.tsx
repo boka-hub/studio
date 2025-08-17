@@ -124,7 +124,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   }, [tiles, columns, downloadFile, tileWidth, tileHeight, gap]);
 
   const handleDownloadMetadata = useCallback(() => {
-    const filename = `${getBaseFilename()}.json`;
+    const filename = `${getBaseFilename()}.txt`;
     downloadMetadata(filename);
     toast({ title: 'Metadata Downloaded', description: `${filename} has been downloaded.` });
   }, [downloadMetadata, toast]);
@@ -135,7 +135,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     
     const baseFilename = getBaseFilename();
     const sheetFilename = `${baseFilename}.png`;
-    const metadataFilename = `${baseFilename}.json`;
+    const metadataFilename = `${baseFilename}.txt`;
 
     // Export Spritesheet
     canvas.toBlob((blob) => {
@@ -149,7 +149,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     // Export Metadata
     downloadMetadata(metadataFilename);
 
-    toast({ title: 'Export Complete', description: 'Spritesheet and metadata JSON have been downloaded.' });
+    toast({ title: 'Export Complete', description: 'Spritesheet and metadata file have been downloaded.' });
     onClose();
   }, [downloadMetadata, onClose, toast, downloadFile]);
   
@@ -216,7 +216,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
               </Button>
                <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tiles.length === 0} className="col-span-1">
                   <FileText className="mr-2 h-4 w-4" />
-                  JSON
+                  .txt
               </Button>
               <Button type="button" variant="secondary" onClick={onClose} className="col-span-1">Cancel</Button>
               <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0} className="col-span-1">
