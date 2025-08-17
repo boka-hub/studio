@@ -641,9 +641,10 @@ export default function Home() {
     e.preventDefault();
     e.stopPropagation();
     // Use a timeout to prevent flickering when dragging over child elements
+    const currentTarget = e.currentTarget;
     setTimeout(() => {
       const relatedTarget = e.relatedTarget as Node | null;
-      if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      if (currentTarget && (!relatedTarget || !currentTarget.contains(relatedTarget))) {
         setIsDragging(false);
         setDragFileType(null);
       }
