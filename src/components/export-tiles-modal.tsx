@@ -31,8 +31,8 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isOpen || !canvasRef.current) return;
-
+    if (!isOpen) return;
+    
     const draw = async () => {
       const canvas = canvasRef.current;
       if (!canvas || tiles.length === 0) return;
@@ -41,13 +41,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = tile.src;
-        img.onload = () => {
-            if (!tileWidth || !tileHeight) {
-                setTileWidth(img.naturalWidth);
-                setTileHeight(img.naturalHeight);
-            }
-            resolve(img)
-        };
+        img.onload = () => resolve(img);
         img.onerror = () => reject(new Error(`Failed to load image: ${tile.name}`));
       }));
 
@@ -87,7 +81,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     
     requestAnimationFrame(draw);
 
-  }, [isOpen, tiles, columns, gap, toast, tileWidth, tileHeight]);
+  }, [isOpen, tiles, columns, gap, toast]);
   
   const getBaseFilename = () => {
     return `tileforge_sheet_${tileWidth}x${tileHeight}_${columns}c_${gap}g`;
