@@ -799,9 +799,9 @@ export default function Home() {
               ref={leftPanelRef}
               defaultSize={defaultLayout[0]}
               collapsible={true}
+              collapsedSize={0}
               minSize={10}
-              onCollapse={setToolbarCollapsed}
-              onExpand={() => setToolbarCollapsed(false)}
+              onCollapse={(collapsed) => setToolbarCollapsed(collapsed)}
             >
               <div className="bg-card border-r border-border flex flex-col h-full">
                 <aside className='flex-grow overflow-hidden'>
@@ -824,7 +824,6 @@ export default function Home() {
                     />
                   )}
                 </aside>
-                {!isPreviewMode && (
                 <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -842,7 +841,6 @@ export default function Home() {
                         </TooltipContent>
                     </Tooltip>
                 </div>
-                )}
               </div>
             </Panel>
             <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center">
@@ -872,9 +870,9 @@ export default function Home() {
                 ref={rightPanelRef}
                 defaultSize={defaultLayout[2]}
                 collapsible={true}
+                collapsedSize={0}
                 minSize={10}
-                onCollapse={setPaletteCollapsed}
-                onExpand={() => setPaletteCollapsed(false)}
+                onCollapse={(collapsed) => setPaletteCollapsed(collapsed)}
             >
               <div className="bg-card border-l border-border flex flex-col h-full">
                 <aside className="flex-grow overflow-hidden">
@@ -898,25 +896,23 @@ export default function Home() {
                           />
                       )}
                 </aside>
-                {!isPreviewMode && (
-                    <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={togglePalette}
-                                className="w-full h-8 rounded-none"
-                                >
-                                {isPaletteCollapsed ? <PanelLeft /> : <PanelRight />}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="left">
-                                <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </div>
-                )}
+                  <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
+                      <Tooltip>
+                          <TooltipTrigger asChild>
+                              <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={togglePalette}
+                              className="w-full h-8 rounded-none"
+                              >
+                              {isPaletteCollapsed ? <PanelLeft /> : <PanelRight />}
+                              </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                              <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
+                          </TooltipContent>
+                      </Tooltip>
+                  </div>
               </div>
             </Panel>
           </PanelGroup>
@@ -967,5 +963,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
