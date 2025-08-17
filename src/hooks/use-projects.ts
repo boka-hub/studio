@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import type { Project, GridState, Tile, ProjectsState } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
@@ -45,11 +46,10 @@ export const useProjects = () => {
       if (savedData) {
         const savedState = JSON.parse(savedData) as ProjectsState;
         if (Array.isArray(savedState.projects) && savedState.projects.length > 0) {
-           const projectExists = savedState.projects.some(p => p.id === savedState.currentProjectId);
-           const activeId = projectExists ? savedState.currentProjectId : savedState.projects[0].id;
+           const projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId) || savedState.projects[0];
            resetHistory({
              projects: savedState.projects,
-             currentProjectId: activeId,
+             currentProjectId: projectToLoad.id,
            });
         } else {
            const defaultProject = createNewProject('New Project');
@@ -159,14 +159,24 @@ export const useProjects = () => {
   }, [setProjectState, toast]);
 
   const loadProject = useCallback((id: string) => {
-    const projectToLoad = projects.find(p => p.id === id);
-    if(projectToLoad) {
-        setProjectState(currentState => ({...currentState, currentProjectId: id}));
-        toast({ title: 'Project Loaded', description: `Switched to "${projectToLoad.name}".`});
-    } else {
-        toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
-    }
-  }, [projects, setProjectState, toast]);
+    setProjectState(currentState => {
+      const projectToLoad = currentState.projects.find(p => p.id === id);
+      if(projectToLoad) {
+          toast({ title: 'Project Loaded', description: `Switched to "${projectToLoad.name}".`});
+          // Resetting history effectively loads the project's state
+          resetHistory({
+              projects: currentState.projects,
+              currentProjectId: id,
+          });
+          // This return is just to satisfy typescript, resetHistory does the work
+          return { ...currentState, currentProjectId: id }; 
+      } else {
+          toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
+          return currentState;
+      }
+    });
+  }, [setProjectState, toast, resetHistory]);
+
 
   const saveProject = useCallback((name: string) => {
     setProjectState(currentState => {
@@ -176,7 +186,6 @@ export const useProjects = () => {
         const newProject: Project = {
           id: `proj_${new Date().getTime()}_${Math.random()}`,
           name,
-          // Deep copy grid and tiles to prevent reference sharing
           grid: JSON.parse(JSON.stringify(current.grid)),
           tiles: JSON.parse(JSON.stringify(current.tiles)),
           lastModified: Date.now(),
@@ -200,7 +209,9 @@ export const useProjects = () => {
         }
         
         let newCurrentId = currentState.currentProjectId;
+        // If the deleted project was the active one, find a new one to activate.
         if (currentState.currentProjectId === id) {
+            // Sort by last modified to pick the most recent one as the new active project.
             newCurrentId = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
         }
 
