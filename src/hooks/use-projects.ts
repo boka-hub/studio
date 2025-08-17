@@ -80,7 +80,7 @@ export const useProjects = () => {
     }
   }, [toast, resetHistory]);
   
-  const currentProject = projects.find(p => p.id === currentProjectId);
+  const currentProjectDetails = projects.find(p => p.id === currentProjectId);
 
   // Auto-save the current project state into the projects list
   useEffect(() => {
@@ -197,9 +197,9 @@ export const useProjects = () => {
   return {
     projects,
     currentProject: {
-      id: currentProject?.id || '',
-      name: currentProject?.name || 'Untitled',
-      lastModified: currentProject?.lastModified || 0,
+      id: currentProjectDetails?.id || '',
+      name: currentProjectDetails?.name || 'Untitled',
+      lastModified: currentProjectDetails?.lastModified || 0,
       grid: projectState.grid,
       tiles: projectState.tiles,
     },
