@@ -11,14 +11,15 @@ const createEmptyGrid = (width: number, height: number): GridState =>
     .fill(null)
     .map(() => Array(width).fill(0));
 
-const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
-const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
+const createInitialState = (): ProjectState => ({
+  grid: createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE),
+  tiles: [{ id: 0, name: 'Empty', src: '', solid: false }],
+});
 
 const createNewProject = (name: string): Project => ({
   id: `proj_${new Date().getTime()}_${Math.random()}`,
   name,
-  grid: initialGrid,
-  tiles: initialTiles,
+  ...createInitialState(),
   lastModified: Date.now(),
 });
 
@@ -37,7 +38,7 @@ export const useProjects = () => {
     canUndo,
     canRedo,
     reset: resetHistory
-  } = useHistoryState<ProjectState>({ grid: initialGrid, tiles: initialTiles });
+  } = useHistoryState<ProjectState>(createInitialState());
 
 
   // Load projects from localStorage on initial mount
@@ -140,7 +141,7 @@ export const useProjects = () => {
       if (newProjects.length === 0) {
         const defaultProject = createNewProject('TileForge');
         setCurrentProjectId(defaultProject.id);
-        resetHistory({grid: defaultProject.grid, tiles: defaultProject.tiles});
+        resetHistory(createInitialState());
         return [defaultProject];
       }
       if (id === currentProjectId) {
@@ -179,3 +180,5 @@ export const useProjects = () => {
     canRedo,
   };
 };
+
+    
