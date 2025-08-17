@@ -882,7 +882,7 @@ export default function Home() {
       >
        {isDragging && renderDragOverlay()}
         <Header 
-            title={currentProject.name}
+            title="TileForge"
             icon={ToyBrick} 
             actionGroups={[headerActions, projectActions, gameplayActions]}
             onTitleClick={() => setSettingsOpen(true)}
