@@ -701,31 +701,28 @@ export default function Home() {
       return;
     }
     
-    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-' || e.key === 'c' || e.key === 'v')) {
-       e.preventDefault();
-    }
-    
     const target = e.target as HTMLElement;
     if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.role === 'slider') return;
 
-    if (e.ctrlKey || e.metaKey) {
-      if (e.key === 's') {
-        handleExportMap();
-      } else if (e.key === 'z') {
-        undo();
-      } else if (e.key === 'y') {
-        redo();
-      } else if (e.key === '=') {
-        setZoom(z => Math.min(z + 0.1, 2));
-      } else if (e.key === '-') {
-        setZoom(z => Math.max(z - 0.1, 0.1));
-      } else if (e.key === '0') {
-        setZoom(1);
-      } else if (e.key === 'c' && selection) {
-        handleCopySelection();
-      } else if (e.key === 'v' && selection && clipboard) {
-        handlePasteSelection();
-      }
+    if ((e.ctrlKey || e.metaKey)) {
+        if (e.key === 'c' || e.key === 'v' || e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-') {
+            e.preventDefault();
+        }
+      if (e.key === 'c' && selection) handleCopySelection();
+      else if (e.key === 'v' && selection && clipboard) handlePasteSelection();
+      else if (e.key === 'z') undo();
+      else if (e.key === 'y') redo();
+      else if (e.key === 's') handleExportMap();
+      else if (e.key === '=') setZoom(z => Math.min(z + 0.1, 2));
+      else if (e.key === '-') setZoom(z => Math.max(z - 0.1, 0.1));
+      else if (e.key === '0') setZoom(1);
+
+    } else if (e.key === 'Delete' && selection) {
+        e.preventDefault();
+        handleDeleteSelection();
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        if (selection) setSelection(null);
     } else {
        const keyMap: { [key: string]: Tool } = {
         'b': 'brush', 'e': 'eraser', 'p': 'picker', 'g': 'fill',
@@ -735,10 +732,6 @@ export default function Home() {
 
       if (keyMap[e.key]) {
         setTool(keyMap[e.key]);
-      } else if (e.key === 'Escape') {
-          if (selection) setSelection(null);
-      } else if (e.key === 'Delete' && selection) {
-         handleDeleteSelection();
       }
     }
   }, [clipboard, grid, handleCopySelection, handleExportMap, handleDeleteSelection, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast, undo, redo]);
@@ -796,8 +789,12 @@ export default function Home() {
   };
   
   const handleClearPalette = () => {
-    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }], true);
-    updateGrid(createEmptyGrid(gridSize.width, gridSize.height));
+    const newGrid = createEmptyGrid(gridSize.width, gridSize.height);
+    const newTiles = [{ id: 0, name: 'Empty', src: '', solid: false }];
+    
+    updateTiles(newTiles, true);
+    updateGrid(newGrid, false);
+
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
     setScatterSet([]);
@@ -1139,3 +1136,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
