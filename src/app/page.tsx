@@ -45,6 +45,7 @@ import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
 import { TilePalette } from '@/components/tile-palette';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
+import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
@@ -103,6 +104,7 @@ export default function Home() {
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isStorageOpen, setStorageOpen] = useState(false);
+  const [isMetadataModalOpen, setMetadataModalOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isConfirmClearMapOpen, setConfirmClearMapOpen] = useState(false);
@@ -121,7 +123,6 @@ export default function Home() {
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
-  const metadataImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<any>(null);
   const rightPanelRef = useRef<any>(null);
 
@@ -332,52 +333,6 @@ export default function Home() {
             }
         };
         reader.readAsText(file);
-    };
-
-    const handleImportMetadata = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const content = e.target?.result as string;
-          const metadata = JSON.parse(content);
-
-          if (!metadata.tiles || !Array.isArray(metadata.tiles)) {
-            throw new Error('Invalid metadata format: "tiles" array not found.');
-          }
-
-          const orderedTileNames: string[] = metadata.tiles
-            .sort((a: any, b: any) => (a.index || 0) - (b.index || 0))
-            .map((t: any) => t.name);
-          
-          const currentTiles = [...tiles];
-          const sortedTiles = currentTiles.sort((a, b) => {
-            const indexA = orderedTileNames.indexOf(a.name);
-            const indexB = orderedTileNames.indexOf(b.name);
-
-            if (a.id === 0) return -1; // Keep Empty tile first
-            if (b.id === 0) return 1;
-
-            if (indexA !== -1 && indexB !== -1) {
-              return indexA - indexB; // Both in metadata, sort by metadata index
-            }
-            if (indexA !== -1) return -1; // A is in metadata, B is not
-            if (indexB !== -1) return 1;  // B is in metadata, A is not
-            return 0; // Neither in metadata, keep original order
-          });
-          
-          updateTiles(sortedTiles);
-          toast({ title: 'Palette Sorted', description: 'Tiles have been reordered based on the metadata file.' });
-
-        } catch (error: any) {
-          console.error("Failed to parse metadata file", error);
-          toast({ variant: 'destructive', title: 'Import Failed', description: error.message || 'Could not parse the metadata file.' });
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = ''; // Reset file input
     };
 
   const handleCellAction = useCallback(
@@ -855,7 +810,7 @@ export default function Home() {
   const headerActions = [
     { icon: Upload, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
-    { icon: FileJson2, label: 'Import Metadata', onClick: () => metadataImportRef.current?.click() },
+    { icon: FileJson2, label: 'Import Metadata', onClick: () => setMetadataModalOpen(true) },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Database, label: 'Manage Projects', onClick: () => setStorageOpen(true) },
@@ -1080,14 +1035,6 @@ export default function Home() {
           className="hidden"
         />
         
-        <input
-          type="file"
-          ref={metadataImportRef}
-          onChange={handleImportMetadata}
-          accept=".txt,.json"
-          className="hidden"
-        />
-        
         <SpritesheetSlicerModal
           isOpen={isSlicerOpen}
           onClose={() => setSlicerOpen(false)}
@@ -1114,6 +1061,13 @@ export default function Home() {
           onSaveProject={saveProject}
           onDeleteProject={deleteProject}
           onRenameProject={renameProject}
+        />
+
+        <MetadataImportModal
+          isOpen={isMetadataModalOpen}
+          onClose={() => setMetadataModalOpen(false)}
+          tiles={tiles}
+          onImport={updateTiles}
         />
 
         <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>
@@ -1165,5 +1119,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
