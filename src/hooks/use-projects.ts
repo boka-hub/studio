@@ -26,12 +26,12 @@ export const useProjects = () => {
 
   const {
     state,
-    set,
+    set: setProjectState,
     undo,
     redo,
     canUndo,
     canRedo,
-    reset,
+    reset: resetHistory,
   } = useHistoryState<ProjectsState>({ projects: [], currentProjectId: null });
 
   const { projects, currentProjectId } = state;
@@ -47,23 +47,23 @@ export const useProjects = () => {
         if (Array.isArray(savedState.projects) && savedState.projects.length > 0) {
            const projectExists = savedState.projects.some(p => p.id === savedState.currentProjectId);
            const activeId = projectExists ? savedState.currentProjectId : savedState.projects[0].id;
-           reset({
+           resetHistory({
              projects: savedState.projects,
              currentProjectId: activeId,
            });
         } else {
            const defaultProject = createNewProject('New Project');
-           reset({ projects: [defaultProject], currentProjectId: defaultProject.id });
+           resetHistory({ projects: [defaultProject], currentProjectId: defaultProject.id });
         }
       } else {
         const defaultProject = createNewProject('New Project');
-        reset({ projects: [defaultProject], currentProjectId: defaultProject.id });
+        resetHistory({ projects: [defaultProject], currentProjectId: defaultProject.id });
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
       toast({ variant: 'destructive', title: 'Load Error', description: 'Could not load your saved projects.' });
       const defaultProject = createNewProject('New Project');
-      reset({ projects: [defaultProject], currentProjectId: defaultProject.id });
+      resetHistory({ projects: [defaultProject], currentProjectId: defaultProject.id });
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +82,7 @@ export const useProjects = () => {
   }, [state, isLoading, toast]);
 
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
-    set(currentState => {
+    setProjectState(currentState => {
         if (!currentState.currentProjectId) return currentState;
         return {
             ...currentState,
@@ -93,7 +93,7 @@ export const useProjects = () => {
             ),
         }
     }, batch)
-  }, [set]);
+  }, [setProjectState]);
 
   const updateGrid = useCallback((grid: GridState, batch = false) => {
       modifyCurrentProject(() => ({ grid }), batch);
@@ -134,7 +134,7 @@ export const useProjects = () => {
           }
 
           if (newTilesData.length > 0) {
-              set(currentState => {
+              setProjectState(currentState => {
                 const currentProject = currentState.projects.find(p => p.id === currentState.currentProjectId);
                 if (!currentProject) return currentState;
 
@@ -156,42 +156,42 @@ export const useProjects = () => {
               });
           }
       });
-  }, [set, toast]);
+  }, [setProjectState, toast]);
 
   const loadProject = useCallback((id: string) => {
     const projectToLoad = projects.find(p => p.id === id);
     if(projectToLoad) {
-        reset({ projects, currentProjectId: id});
+        setProjectState(currentState => ({...currentState, currentProjectId: id}));
         toast({ title: 'Project Loaded', description: `Switched to "${projectToLoad.name}".`});
     } else {
         toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
     }
-  }, [projects, reset, toast]);
+  }, [projects, setProjectState, toast]);
 
   const saveProject = useCallback((name: string) => {
-    set(currentState => {
+    setProjectState(currentState => {
         const current = currentState.projects.find(p => p.id === currentState.currentProjectId);
         if (!current) return currentState;
 
         const newProject: Project = {
           id: `proj_${new Date().getTime()}_${Math.random()}`,
           name,
-          grid: current.grid,
-          tiles: current.tiles,
+          // Deep copy grid and tiles to prevent reference sharing
+          grid: JSON.parse(JSON.stringify(current.grid)),
+          tiles: JSON.parse(JSON.stringify(current.tiles)),
           lastModified: Date.now(),
         };
 
         return {
             ...currentState,
             projects: [...currentState.projects, newProject],
-            currentProjectId: newProject.id,
         }
     });
     toast({ title: 'Project Saved!', description: `"${name}" has been saved.`});
-  }, [set, toast]);
+  }, [setProjectState, toast]);
 
   const deleteProject = useCallback((id: string) => {
-    set(currentState => {
+    setProjectState(currentState => {
         const remainingProjects = currentState.projects.filter(p => p.id !== id);
         
         if (remainingProjects.length === 0) {
@@ -207,7 +207,7 @@ export const useProjects = () => {
         return { projects: remainingProjects, currentProjectId: newCurrentId };
     });
     toast({ title: 'Project Deleted'});
-  }, [set, toast]);
+  }, [setProjectState, toast]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     modifyCurrentProject(() => ({ name: newName }));
