@@ -207,12 +207,14 @@ export const useProjects = () => {
         
         if (remainingProjects.length === 0) {
             const newDefault = createNewProject('New Project');
+            resetHistory({ projects: [newDefault], currentProjectId: newDefault.id });
             return { projects: [newDefault], currentProjectId: newDefault.id };
         }
         
         let newCurrentId = currentState.currentProjectId;
         if (currentState.currentProjectId === id) {
-            newCurrentId = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
+            const sortedProjects = [...remainingProjects].sort((a,b) => b.lastModified - a.lastModified);
+            newCurrentId = sortedProjects[0].id;
         }
         
         resetHistory({ projects: remainingProjects, currentProjectId: newCurrentId });
