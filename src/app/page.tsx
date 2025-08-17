@@ -597,6 +597,13 @@ export default function Home() {
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // This is the crucial check: if we're not dragging a file, we do nothing.
+    // This prevents the overlay from appearing for internal drags (like tile reordering).
+    if (!e.dataTransfer.types.includes('Files')) {
+        return;
+    }
+
     if (!isDragging) setIsDragging(true);
 
     const items = e.dataTransfer.items;
