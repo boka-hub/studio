@@ -214,7 +214,7 @@ export default function Home() {
     // Remove tile from grid and update history
     const newGrid = grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
     
-    updateTiles(newTiles, true); // Batch update
+    updateTiles(newTiles, true);
     updateGrid(newGrid);
     
     // If deleted tile was selected, select empty tile
@@ -1109,4 +1109,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-

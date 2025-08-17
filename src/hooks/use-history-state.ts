@@ -18,6 +18,8 @@ export function useHistoryState<T>(initialState: T) {
       const newPresent = typeof newState === 'function' ? (newState as (prevState: T) => T)(currentState.present) : newState;
 
       if (batch) {
+        // When batching, we just update the present state without touching the history.
+        // The history will be updated on the final, non-batched call.
         return {
           ...currentState,
           present: newPresent,

@@ -56,14 +56,14 @@ export const useProjects = () => {
           resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
         } else {
            // No projects, create a default one
-          const defaultProject = createNewProject('TileForge');
+          const defaultProject = createNewProject('New Project');
           setProjects([defaultProject]);
           setCurrentProjectId(defaultProject.id);
           resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
         }
       } else {
         // No saved data at all, create a default project
-        const defaultProject = createNewProject('TileForge');
+        const defaultProject = createNewProject('New Project');
         setProjects([defaultProject]);
         setCurrentProjectId(defaultProject.id);
         resetHistory(createInitialState());
@@ -71,7 +71,7 @@ export const useProjects = () => {
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
       toast({ variant: 'destructive', title: 'Load Error', description: 'Could not load your saved projects.' });
-      const defaultProject = createNewProject('TileForge');
+      const defaultProject = createNewProject('New Project');
       setProjects([defaultProject]);
       setCurrentProjectId(defaultProject.id);
       resetHistory(createInitialState());
@@ -82,7 +82,7 @@ export const useProjects = () => {
   
   const currentProject = projects.find(p => p.id === currentProjectId);
 
-  // Save projects to localStorage whenever the project state changes
+  // Auto-save the current project state into the projects list
   useEffect(() => {
     if (isLoading || !currentProjectId) return;
     
@@ -135,8 +135,7 @@ export const useProjects = () => {
 
     if (filteredNewTiles.length > 0) {
         setProjectState(currentState => {
-            const currentTiles = currentState.tiles;
-            let nextId = currentTiles.length > 0 ? Math.max(...currentTiles.map(t => t.id)) + 1 : 1;
+            let nextId = currentState.tiles.length > 0 ? Math.max(...currentState.tiles.map(t => t.id)) + 1 : 1;
             
             const tilesWithIds: Tile[] = filteredNewTiles.map((tile) => ({
                 ...tile,
@@ -146,7 +145,7 @@ export const useProjects = () => {
             
             return {
                 ...currentState,
-                tiles: [...currentTiles, ...tilesWithIds],
+                tiles: [...currentState.tiles, ...tilesWithIds],
             };
         });
     }
@@ -176,7 +175,7 @@ export const useProjects = () => {
     setProjects(projs => {
       const newProjects = projs.filter(p => p.id !== id);
       if (newProjects.length === 0) {
-        const defaultProject = createNewProject('TileForge');
+        const defaultProject = createNewProject('New Project');
         setCurrentProjectId(defaultProject.id);
         resetHistory(createInitialState());
         return [defaultProject];
