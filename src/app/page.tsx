@@ -66,28 +66,32 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
 const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
 
-const usePersistentState = <T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState(() => {
+const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
+  const [state, setState] = useState<T>(defaultValue);
+
+  // Load from localStorage on initial client-side render
+  useEffect(() => {
     try {
-      if (typeof window !== 'undefined') {
-        const item = window.localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
+      const item = window.localStorage.getItem(key);
+      if (item) {
+        setState(JSON.parse(item));
       }
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
     }
-    return defaultValue;
-  });
+  }, [key]);
 
+  // Save to localStorage whenever state changes
   useEffect(() => {
     try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(state));
+      // Don't save the default value
+      if (JSON.stringify(state) !== JSON.stringify(defaultValue)) {
+          window.localStorage.setItem(key, JSON.stringify(state));
       }
     } catch (error) {
       console.error(`Error setting localStorage key "${key}":`, error);
     }
-  }, [key, state]);
+  }, [key, state, defaultValue]);
 
   return [state, setState];
 };
