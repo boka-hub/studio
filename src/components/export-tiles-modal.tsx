@@ -31,7 +31,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !canvasRef.current) return;
 
     const draw = async () => {
       const canvas = canvasRef.current;
@@ -127,7 +127,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     const filename = `${getBaseFilename()}.txt`;
     downloadMetadata(filename);
     toast({ title: 'Metadata Downloaded', description: `${filename} has been downloaded.` });
-  }, [downloadMetadata, toast]);
+  }, [downloadMetadata, toast, getBaseFilename]);
 
   const handleExportSpritesheet = useCallback(() => {
     const canvas = canvasRef.current;
@@ -151,7 +151,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
     toast({ title: 'Export Complete', description: 'Spritesheet and metadata file have been downloaded.' });
     onClose();
-  }, [downloadMetadata, onClose, toast, downloadFile]);
+  }, [downloadMetadata, onClose, toast, downloadFile, getBaseFilename]);
   
   const handleExportIndividual = useCallback(() => {
     if (tiles.length === 0) {

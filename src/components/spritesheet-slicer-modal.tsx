@@ -36,7 +36,7 @@ interface FileData {
 }
 
 // Regex to parse filenames like: tileforge_sheet_16x16_8c_0g.png
-const FILENAME_REGEX = /_(\d+)x(\d+)_(\d+)c_(\d+)g\.(png|jpg|jpeg)$/i;
+const FILENAME_REGEX = /_(\d+)x(\d+)_(\d+)c_(\d+)g$/i;
 const EXTENSION_REGEX = /\.(png|jpg|jpeg|txt)$/i;
 
 
@@ -70,7 +70,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
       let tileWidth = 16, tileHeight = 16, metadata = null;
 
       // Try parsing from filename
-      const match = file.name.match(FILENAME_REGEX);
+      const match = baseName.match(FILENAME_REGEX);
       if (match) {
         tileWidth = parseInt(match[1], 10);
         tileHeight = parseInt(match[2], 10);
@@ -227,7 +227,8 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                            sliceCanvas.toBlob(blob => {
                                if(blob) {
                                    const index = y * cols + x;
-                                   const tileName = tilesFromMetadata?.[index]?.name || `${fileData.name}_${y}_${x}`;
+                                   const tileInfo = tilesFromMetadata?.find((t: any) => t.index === index);
+                                   const tileName = tileInfo?.name || `${fileData.name}_${index}`;
                                    const newFile = new File([blob], `${tileName}.png`, { type: 'image/png' });
                                    allSlicedFiles.push(newFile);
                                }
