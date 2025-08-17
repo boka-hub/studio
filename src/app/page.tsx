@@ -35,6 +35,8 @@ import {
   Upload,
   Download,
   Database,
+  Grid,
+  ArchiveX,
   Dices,
 } from 'lucide-react';
 import { Header } from '@/components/header';
@@ -59,8 +61,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
-import { cn, isTileTransparent } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
+import { isTileTransparent } from '@/lib/utils';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -100,6 +103,8 @@ export default function Home() {
   const [isStorageOpen, setStorageOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
+  const [isConfirmClearMapOpen, setConfirmClearMapOpen] = useState(false);
+  const [isConfirmClearPaletteOpen, setConfirmClearPaletteOpen] = useState(false);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -694,6 +699,24 @@ export default function Home() {
     }
     setPreviewMode(newPreviewState);
   };
+  
+  const handleClearMap = () => {
+    updateGrid(createEmptyGrid(gridSize.width, gridSize.height));
+    setConfirmClearMapOpen(false);
+    toast({ title: "Map Cleared", description: "The grid has been reset."});
+  };
+  
+  const handleClearPalette = () => {
+    const defaultTile = tiles.find(t => t.id === 0);
+    const newTiles = defaultTile ? [defaultTile] : [];
+    updateTiles(newTiles);
+    updateGrid(createEmptyGrid(gridSize.width, gridSize.height));
+    setSelectedTileId(0);
+    setSecondarySelectedTileId(0);
+    setScatterSet([]);
+    setConfirmClearPaletteOpen(false);
+    toast({ title: "Palette Cleared", description: "All tiles have been removed."});
+  }
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -715,6 +738,8 @@ export default function Home() {
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
     { icon: Database, label: 'Manage Projects', onClick: () => setStorageOpen(true) },
+    { icon: Grid, label: 'Clear Map', onClick: () => setConfirmClearMapOpen(true) },
+    { icon: ArchiveX, label: 'Clear Palette', onClick: () => setConfirmClearPaletteOpen(true) },
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: togglePreviewMode, isActive: isPreviewMode },
   ];
   
@@ -948,6 +973,36 @@ export default function Home() {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setTileToDelete(null)}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={confirmDeleteTile}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        
+        <AlertDialog open={isConfirmClearMapOpen} onOpenChange={setConfirmClearMapOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will clear the entire map grid, replacing all tiles with empty space. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearMap}>Clear Map</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isConfirmClearPaletteOpen} onOpenChange={setConfirmClearPaletteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently delete all tiles from your palette and clear the map. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearPalette}>Clear Palette</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
