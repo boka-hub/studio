@@ -42,20 +42,20 @@ export const useProjects = () => {
           setCurrentProjectId(projectToLoad.id);
         } else {
            // No projects, create a default one
-          const defaultProject = createNewProject('My First Project');
+          const defaultProject = createNewProject('TileForge');
           setProjects([defaultProject]);
           setCurrentProjectId(defaultProject.id);
         }
       } else {
         // No saved data at all, create a default project
-        const defaultProject = createNewProject('My First Project');
+        const defaultProject = createNewProject('TileForge');
         setProjects([defaultProject]);
         setCurrentProjectId(defaultProject.id);
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
       toast({ variant: 'destructive', title: 'Load Error', description: 'Could not load your saved projects.' });
-      const defaultProject = createNewProject('My First Project');
+      const defaultProject = createNewProject('TileForge');
       setProjects([defaultProject]);
       setCurrentProjectId(defaultProject.id);
     } finally {
@@ -119,7 +119,7 @@ export const useProjects = () => {
     setProjects(projs => {
       const newProjects = projs.filter(p => p.id !== id);
       if (newProjects.length === 0) {
-        const defaultProject = createNewProject('My First Project');
+        const defaultProject = createNewProject('TileForge');
         setCurrentProjectId(defaultProject.id);
         return [defaultProject];
       }
