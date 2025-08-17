@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -5,12 +6,25 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Keyboard, Info, ToyBrick } from 'lucide-react';
+import { Keyboard, Info, ToyBrick, RefreshCw } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Button } from './ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -96,6 +110,14 @@ const features = [
     }
 ];
 
+const handleReset = () => {
+    if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('tileforge-grid');
+        window.localStorage.removeItem('tileforge-tiles');
+        window.localStorage.removeItem('tileforge-zoom');
+        window.location.reload();
+    }
+}
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   return (
@@ -142,26 +164,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       {shortcut.keys.map((key, i) => (
                         <Badge key={i} variant="secondary" className="text-xs">{key}</Badge>
                       ))}
-                      {shortcut.or && (
-                          <>
-                            <span className='text-xs text-muted-foreground mx-1'>or</span>
-                            {shortcut.or.map((key, i) => (
-                                <Badge key={i} variant="secondary" className="text-xs">{key}</Badge>
-                            ))}
-                          </>
-                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </ScrollArea>
           </TabsContent>
-          <TabsContent value="about" className="flex-grow overflow-auto p-4">
+          <TabsContent value="about" className="flex-grow overflow-auto p-4 space-y-6">
              <div className="space-y-6 text-sm">
                 <div className="space-y-2">
                     <h3 className="font-semibold text-lg">Getting Started with TileForge</h3>
                     <p className="text-muted-foreground">
-                        Welcome to TileForge! Here's a quick guide to creating your first map.
+                        Welcome to TileForge! Your work is automatically saved to your browser&apos;s local storage. Here&apos;s a quick guide to creating your first map.
                     </p>
                 </div>
                  <div className="space-y-3">
@@ -198,7 +212,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <div className="space-y-3">
                     <h4 className="font-semibold">Step 4: Exporting Your Work</h4>
                      <p className="text-muted-foreground">
-                        Once you're done, you can export your creation.
+                        Once you&apos;re done, you can export your creation.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
                         <li><span className="font-semibold text-foreground">Export Map:</span> Saves the grid data as a simple text file, easy to parse in any game engine.</li>
@@ -212,9 +226,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </p>
                 </div>
             </div>
+             <DialogFooter className="pt-4 border-t">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive">
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Reset Project
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to reset?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete all saved map data, tiles, and settings from your browser&apos;s local storage. This action cannot be undone.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleReset}>Reset</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </DialogFooter>
           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
   );
 };
+
+    

@@ -66,11 +66,37 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
 const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
 
+const usePersistentState = <T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
+  const [state, setState] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const item = window.localStorage.getItem(key);
+        return item ? JSON.parse(item) : defaultValue;
+      }
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error);
+    }
+    return defaultValue;
+  });
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(state));
+      }
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, state]);
+
+  return [state, setState];
+};
+
 export default function Home() {
-  const [gridSize, setGridSize] = useState({ width: INITIAL_GRID_SIZE, height: INITIAL_GRID_SIZE });
-  const [grid, setGrid] = useState<GridState>(initialGrid);
-  const [tiles, setTiles] = useState<Tile[]>(initialTiles);
-  
+  const [grid, setGrid] = usePersistentState<GridState>('tileforge-grid', initialGrid);
+  const [tiles, setTiles] = usePersistentState<Tile[]>( 'tileforge-tiles', initialTiles);
+  const [gridSize, setGridSize] = useState({ width: grid[0]?.length || INITIAL_GRID_SIZE, height: grid.length || INITIAL_GRID_SIZE });
+
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
   const [secondarySelectedTileId, setSecondarySelectedTileId] = useState<number>(0);
   const [tool, setTool] = useState<Tool>('brush');
@@ -80,7 +106,7 @@ export default function Home() {
   const [slicerInitialFiles, setSlicerInitialFiles] = useState<File[]>([]);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = usePersistentState('tileforge-zoom', 1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
@@ -344,7 +370,7 @@ export default function Home() {
       }
       updateGridState(newGrid);
     },
-    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity]
+    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGridState]
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
@@ -399,7 +425,7 @@ export default function Home() {
         }
     }
     updateGridState(newGrid);
-  }, [grid, selectedTileId, secondarySelectedTileId, tool]);
+  }, [grid, selectedTileId, secondarySelectedTileId, tool, updateGridState]);
 
   const applyToSelection = (callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection) return;
@@ -502,7 +528,7 @@ export default function Home() {
     }
     updateGridState(newGrid);
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-  }, [grid, selection, clipboard, toast]);
+  }, [grid, selection, clipboard, toast, updateGridState]);
   
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -595,7 +621,7 @@ export default function Home() {
          handleDeleteSelection();
       }
     }
-  }, [clipboard, grid, handleCopySelection, handleExportMap, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast]);
+  }, [clipboard, grid, handleCopySelection, handleExportMap, handlePasteSelection, isPreviewMode, playerPos, selection, setZoom, tiles, toast]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -701,7 +727,7 @@ export default function Home() {
           <div className="bg-card border-r border-border flex flex-col">
             <aside
               className={cn(
-                'flex flex-col transition-all duration-300 flex-grow',
+                'flex flex-col transition-all duration-300',
                 (isToolbarCollapsed || isPreviewMode) ? 'w-20' : 'w-60'
               )}
             >
@@ -851,3 +877,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
