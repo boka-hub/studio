@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, X, FileJson2 } from 'lucide-react';
+import { Upload, X, FileJson2, FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -33,10 +33,9 @@ interface FileData {
   tileWidth: number;
   tileHeight: number;
   metadata?: any; // To store parsed metadata
+  companionName?: string;
 }
 
-// Regex to parse filenames like: tileforge_sheet_16x16_8c_0g.png
-const FILENAME_REGEX = /_(\d+)x(\d+)_(\d+)c_(\d+)g$/i;
 const EXTENSION_REGEX = /\.(png|jpg|jpeg|txt)$/i;
 
 
@@ -52,7 +51,23 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const manualMetaInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const parseMetadata = async (fileData: FileData, textFile: File): Promise<FileData> => {
+    try {
+      const jsonContent = await textFile.text();
+      const metadata = JSON.parse(jsonContent);
+      const tileWidth = metadata.tileWidth || fileData.tileWidth;
+      const tileHeight = metadata.tileHeight || fileData.tileHeight;
+      toast({ title: 'Metadata Applied', description: `Loaded settings from ${textFile.name}.` });
+      return { ...fileData, tileWidth, tileHeight, metadata, companionName: textFile.name };
+    } catch (e) {
+      console.error("Failed to parse companion .txt file", e);
+      toast({ variant: 'destructive', title: 'Metadata Error', description: `Could not parse ${textFile.name}.` });
+      return fileData; // Return original data on error
+    }
+  }
 
   const handleFiles = useCallback(async (incomingFiles: FileList | null) => {
     if (!incomingFiles) return;
@@ -63,47 +78,28 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
     const textFiles = fileList.filter(f => f.name.endsWith('.txt'));
 
-    for (const file of imageFiles) {
-       const baseName = file.name.replace(EXTENSION_REGEX, '');
-       const companionText = textFiles.find(txtFile => txtFile.name.replace(EXTENSION_REGEX, '') === baseName);
+    for (const imageFile of imageFiles) {
+      const baseName = imageFile.name.replace(EXTENSION_REGEX, '');
+      const companionText = textFiles.find(txtFile => txtFile.name.replace(EXTENSION_REGEX, '') === baseName);
 
-      let tileWidth = 16, tileHeight = 16, metadata = null;
-
-      // Try parsing from filename
-      const match = baseName.match(FILENAME_REGEX);
-      if (match) {
-        tileWidth = parseInt(match[1], 10);
-        tileHeight = parseInt(match[2], 10);
+      let fileData: FileData = {
+        id: `${imageFile.name}-${imageFile.lastModified}-${Math.random()}`,
+        file: imageFile,
+        src: await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
+            reader.readAsDataURL(imageFile);
+        }),
+        name: imageFile.name.split('.')[0],
+        tileWidth: 16,
+        tileHeight: 16,
+      };
+      
+      if (companionText) {
+        fileData = await parseMetadata(fileData, companionText);
       }
       
-      // Override with data from companion .txt if it exists
-      if (companionText) {
-        try {
-          const jsonContent = await companionText.text();
-          metadata = JSON.parse(jsonContent);
-          tileWidth = metadata.tileWidth || tileWidth;
-          tileHeight = metadata.tileHeight || tileHeight;
-        } catch (e) {
-          console.error("Failed to parse companion .txt file", e);
-          toast({ variant: 'destructive', title: 'Metadata Error', description: `Could not parse ${companionText.name}.` });
-        }
-      }
-
-      const src = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      });
-
-      newFiles.push({
-        id: `${file.name}-${file.lastModified}-${Math.random()}`,
-        file,
-        src,
-        name: file.name.split('.')[0],
-        tileWidth,
-        tileHeight,
-        metadata,
-      });
+      newFiles.push(fileData);
     }
 
     if (newFiles.length > 0) {
@@ -251,6 +247,18 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
 
     handleClose();
   };
+  
+  const handleManualMetadataSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const metaFile = e.target.files?.[0];
+    if (!metaFile || !selectedFile) {
+        return;
+    }
+    const updatedFileData = await parseMetadata(selectedFile, metaFile);
+    setFiles(currentFiles => currentFiles.map(f => f.id === selectedFile.id ? updatedFileData : f));
+    if (manualMetaInputRef.current) {
+        manualMetaInputRef.current.value = '';
+    }
+  }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -282,7 +290,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         <DialogHeader>
           <DialogTitle>Batch Spritesheet Slicer</DialogTitle>
           <DialogDescription>
-            Import spritesheets to slice them. If you provide a companion `.txt` file, names and dimensions will be loaded automatically.
+            Import one or more spritesheets. Add a companion .txt file (with the same name) to automatically load settings, or add it manually.
           </DialogDescription>
         </DialogHeader>
 
@@ -300,24 +308,41 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                 <div className="p-2 space-y-1">
                     {files.map(file => (
                         <div key={file.id} 
-                            className={cn("flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-muted", selectedFileId === file.id && "bg-muted")}
+                            className={cn("p-2 rounded-md cursor-pointer hover:bg-muted", selectedFileId === file.id && "bg-muted")}
                             onClick={() => setSelectedFileId(file.id)}
                         >
-                            <p className="text-sm truncate flex-grow">{file.file.name}</p>
-                            <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const newFiles = files.filter(f => f.id !== file.id);
-                                    setFiles(newFiles);
-                                    if (selectedFileId === file.id) {
-                                        setSelectedFileId(newFiles.length > 0 ? newFiles[0].id : null);
-                                    }
-                                }}>
-                                <X className="h-4 w-4"/>
-                            </Button>
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm truncate flex-grow mr-2">{file.file.name}</p>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="h-6 w-6 flex-shrink-0"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const newFiles = files.filter(f => f.id !== file.id);
+                                        setFiles(newFiles);
+                                        if (selectedFileId === file.id) {
+                                            setSelectedFileId(newFiles.length > 0 ? newFiles[0].id : null);
+                                        }
+                                    }}>
+                                    <X className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                            {file.id === selectedFileId && (
+                                <div className="mt-2">
+                                  {file.metadata ? (
+                                    <div className="text-xs text-green-600 flex items-center gap-2 p-2 bg-green-500/10 rounded-md">
+                                      <FileJson2 className="h-4 w-4" />
+                                      <span className="truncate">Loaded: {file.companionName}</span>
+                                    </div>
+                                  ) : (
+                                    <Button size="sm" variant="outline" className="w-full h-8" onClick={() => manualMetaInputRef.current?.click()}>
+                                        <FilePlus2 className="h-4 w-4 mr-2" />
+                                        Add .txt Metadata
+                                    </Button>
+                                  )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -333,11 +358,11 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
              {selectedFile ? (
                 <>
                 {selectedFile.metadata && (
-                  <Alert variant="default">
-                    <FileJson2 className="h-4 w-4" />
-                    <AlertTitle>Metadata Detected!</AlertTitle>
+                  <Alert variant="default" className="border-green-500/50 text-green-700 dark:text-green-400">
+                    <FileJson2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                    <AlertTitle className="text-green-800 dark:text-green-500">Metadata Detected!</AlertTitle>
                     <AlertDescription>
-                      Tile names and dimensions have been automatically configured from the companion .txt file.
+                      Tile names and dimensions have been automatically configured.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -378,6 +403,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           </Button>
         </DialogFooter>
         <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,.txt" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
+        <input ref={manualMetaInputRef} type="file" accept=".txt" className="hidden" onChange={handleManualMetadataSelect} />
       </DialogContent>
     </Dialog>
   );
