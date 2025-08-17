@@ -633,15 +633,16 @@ export default function Home() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // This check is to prevent the drag leave event from firing when moving over a child element.
     const currentTarget = e.currentTarget;
     setTimeout(() => {
-      if (currentTarget) {
-          const relatedTarget = e.relatedTarget as Node | null;
-          if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-            setIsDragging(false);
-            setDragFileType(null);
-          }
-      }
+        if (currentTarget) {
+            const relatedTarget = e.relatedTarget as Node | null;
+            if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+                setIsDragging(false);
+                setDragFileType(null);
+            }
+        }
     }, 50);
   };
 

@@ -66,7 +66,7 @@ export const useProjects = () => {
         const defaultProject = createNewProject('TileForge');
         setProjects([defaultProject]);
         setCurrentProjectId(defaultProject.id);
-        resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
+        resetHistory(createInitialState());
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
@@ -212,3 +212,4 @@ export const useProjects = () => {
     canRedo,
   };
 };
+
