@@ -732,7 +732,7 @@ export default function Home() {
           <div className="bg-card border-r border-border flex flex-col">
             <aside
               className={cn(
-                'flex flex-col transition-all duration-300',
+                'flex flex-col flex-grow transition-all duration-300 overflow-hidden',
                 (isToolbarCollapsed || isPreviewMode) ? 'w-20' : 'w-60'
               )}
             >
@@ -756,7 +756,7 @@ export default function Home() {
               )}
             </aside>
             {!isPreviewMode && (
-              <div className="flex items-center justify-center border-t border-border">
+              <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
                   <Tooltip>
                       <TooltipTrigger asChild>
                       <Button
@@ -794,7 +794,7 @@ export default function Home() {
           
           <div className="bg-card border-l border-border flex flex-col">
             <aside className={cn(
-                "flex flex-col transition-all duration-300",
+                "flex-grow flex flex-col transition-all duration-300 overflow-hidden",
                 (isPaletteCollapsed || isPreviewMode) ? 'w-20' : 'w-80'
                 )}>
                   {!isPreviewMode && (
@@ -812,7 +812,7 @@ export default function Home() {
                   )}
             </aside>
              {!isPreviewMode && (
-                <div className="flex items-center justify-center border-t border-border">
+                <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -878,3 +878,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
