@@ -1,3 +1,4 @@
+
 import type { FC } from 'react';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -27,52 +28,55 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  const drawSpritesheet = useCallback(async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || tiles.length === 0) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    try {
-      const imagePromises = tiles.map(tile => new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = tile.src;
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-      }));
-      const images = await Promise.all(imagePromises);
-
-      const tileWidth = images[0]?.naturalWidth || 32;
-      const tileHeight = images[0]?.naturalHeight || 32;
-      
-      const numCols = Math.min(columns > 0 ? columns : 1, tiles.length);
-      const numRows = Math.ceil(tiles.length / numCols);
-
-      canvas.width = numCols * tileWidth + Math.max(0, numCols - 1) * gap;
-      canvas.height = numRows * tileHeight + Math.max(0, numRows - 1) * gap;
-      
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      images.forEach((img, index) => {
-        const col = index % numCols;
-        const row = Math.floor(index / numCols);
-        const x = col * (tileWidth + gap);
-        const y = row * (tileHeight + gap);
-        ctx.drawImage(img, x, y, tileWidth, tileHeight);
-      });
-
-    } catch (error) {
-      console.error("Failed to load tile images for export", error);
-      toast({ variant: 'destructive', title: 'ExportError', description: 'Could not load tile images for spritesheet.' });
-    }
-  }, [tiles, columns, gap, toast]);
-
   useEffect(() => {
-    if (isOpen) {
-      drawSpritesheet();
-    }
-  }, [isOpen, drawSpritesheet]);
+    if (!isOpen) return;
+
+    const drawSpritesheet = async () => {
+      const canvas = canvasRef.current;
+      if (!canvas || tiles.length === 0) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      try {
+        const imagePromises = tiles.map(tile => new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = tile.src;
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+        }));
+        const images = await Promise.all(imagePromises);
+
+        if (images.length === 0 || !images[0]) return;
+
+        const tileWidth = images[0].naturalWidth || 32;
+        const tileHeight = images[0].naturalHeight || 32;
+        
+        const numCols = Math.max(1, Math.min(columns, tiles.length));
+        const numRows = Math.ceil(tiles.length / numCols);
+
+        canvas.width = numCols * tileWidth + Math.max(0, numCols - 1) * gap;
+        canvas.height = numRows * tileHeight + Math.max(0, numRows - 1) * gap;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        images.forEach((img, index) => {
+          const col = index % numCols;
+          const row = Math.floor(index / numCols);
+          const x = col * (tileWidth + gap);
+          const y = row * (tileHeight + gap);
+          ctx.drawImage(img, x, y, tileWidth, tileHeight);
+        });
+
+      } catch (error) {
+        console.error("Failed to load tile images for export", error);
+        toast({ variant: 'destructive', title: 'Export Error', description: 'Could not load tile images for spritesheet.' });
+      }
+    };
+    
+    drawSpritesheet();
+
+  }, [isOpen, tiles, columns, gap, toast]);
   
   const downloadFile = useCallback((blobOrDataUrl: Blob | string, filename: string) => {
     const url = typeof blobOrDataUrl === 'string' ? blobOrDataUrl : URL.createObjectURL(blobOrDataUrl);
