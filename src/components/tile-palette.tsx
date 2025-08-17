@@ -7,7 +7,7 @@ import type { Tile, Tool } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search, Brush, Dices } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Dices } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 
@@ -135,10 +135,10 @@ export const TilePalette: FC<TilePaletteProps> = ({
       <ScrollArea className="flex-grow">
         <div className={cn(
             "grid gap-2 p-4 pt-2",
-            isCollapsed ? "grid-cols-1" : "grid-cols-3"
+            isCollapsed ? "grid-cols-1 place-items-center" : "grid-cols-3"
           )}>
           {filteredTiles.map((tile) => (
-              <div key={tile.id} className="group flex flex-col items-center gap-1.5">
+              <div key={tile.id} className={cn("group flex flex-col items-center gap-1.5", isCollapsed ? "w-10" : "w-full")}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
