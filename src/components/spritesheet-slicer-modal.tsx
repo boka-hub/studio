@@ -11,9 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Tile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { isTileTransparent } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -21,7 +19,7 @@ import { cn } from '@/lib/utils';
 interface SpritesheetSlicerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSlice: (tiles: Omit<Tile, 'id'>[]) => void;
+  onSlice: (files: File[]) => void;
   initialFiles?: File[];
 }
 
@@ -44,7 +42,6 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const sliceCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -161,14 +158,17 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   };
 
   const handleSlice = async () => {
-    if (files.length === 0 || !sliceCanvasRef.current) return;
-    const canvas = sliceCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (files.length === 0) return;
     
-    let allNewTiles: Omit<Tile, 'id'>[] = [];
-    let totalSlicedCount = 0;
-    let totalSkippedCount = 0;
+    let allSlicedFiles: File[] = [];
+
+    // Create a temporary canvas for slicing
+    const sliceCanvas = document.createElement('canvas');
+    const ctx = sliceCanvas.getContext('2d');
+    if (!ctx) {
+        toast({ variant: 'destructive', title: 'Slicing Error', description: 'Could not create a canvas for slicing.' });
+        return;
+    }
 
     for (const fileData of files) {
         const img = new Image();
@@ -179,19 +179,24 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                 const cols = Math.floor(img.width / fileData.tileWidth);
                 const rows = Math.floor(img.height / fileData.tileHeight);
                 
+                sliceCanvas.width = fileData.tileWidth;
+                sliceCanvas.height = fileData.tileHeight;
+                
                 for (let y = 0; y < rows; y++) {
                     for (let x = 0; x < cols; x++) {
-                        canvas.width = fileData.tileWidth;
-                        canvas.height = fileData.tileHeight;
+                        ctx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
                         ctx.drawImage(img, x * fileData.tileWidth, y * fileData.tileHeight, fileData.tileWidth, fileData.tileHeight, 0, 0, fileData.tileWidth, fileData.tileHeight);
-                        const dataUrl = canvas.toDataURL();
                         
-                        if (await isTileTransparent(dataUrl)) {
-                            totalSkippedCount++;
-                        } else {
-                            allNewTiles.push({ name: `${fileData.name}_${x}_${y}`, src: dataUrl });
-                            totalSlicedCount++;
-                        }
+                        // Convert canvas to blob, then to file
+                        await new Promise<void>(resolveBlob => {
+                           sliceCanvas.toBlob(blob => {
+                               if(blob) {
+                                   const newFile = new File([blob], `${fileData.name}_${x}_${y}.png`, { type: 'image/png' });
+                                   allSlicedFiles.push(newFile);
+                               }
+                               resolveBlob();
+                           }, 'image/png');
+                        });
                     }
                 }
                 resolve();
@@ -200,15 +205,10 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         });
     }
 
-    if (allNewTiles.length > 0) {
-      onSlice(allNewTiles);
-      toast({ title: 'Slicing Complete', description: `${totalSlicedCount} tiles added from ${files.length} spritesheet(s).` });
-    }
-    if (totalSkippedCount > 0) {
-        toast({ title: 'Transparent Tiles Skipped', description: `${totalSkippedCount} tile(s) were transparent and ignored.` });
-    }
-    if (totalSlicedCount === 0 && files.length > 0) {
-        toast({ variant: 'destructive', title: 'Slicing Error', description: 'Could not slice any tiles. Check tile dimensions.' });
+    if (allSlicedFiles.length > 0) {
+      onSlice(allSlicedFiles);
+    } else {
+       toast({ variant: 'destructive', title: 'Slicing Error', description: 'Could not slice any tiles. Check tile dimensions.' });
     }
 
     handleClose();
@@ -332,7 +332,6 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
             Slice All & Add ({files.length})
           </Button>
         </DialogFooter>
-        <canvas ref={sliceCanvasRef} className="hidden" />
         <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
       </DialogContent>
     </Dialog>

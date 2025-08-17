@@ -210,11 +210,10 @@ export default function Home() {
     
     // Remove tile from palette
     const newTiles = tiles.filter(t => t.id !== tileId);
+    updateTiles(newTiles, true);
     
     // Remove tile from grid and update history
     const newGrid = grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
-    
-    updateTiles(newTiles, true);
     updateGrid(newGrid);
     
     // If deleted tile was selected, select empty tile
@@ -245,20 +244,7 @@ export default function Home() {
     if (!files) return;
 
     const fileList = Array.from(files);
-    const newTiles: Omit<Tile, 'id' | 'solid'>[] = [];
-    let processedCount = 0;
-
-    fileList.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        newTiles.push({ name: file.name.replace(/\.[^/.]+$/, ""), src: e.target?.result as string });
-        processedCount++;
-        if (processedCount === fileList.length) {
-          addTiles(newTiles);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    addTiles(fileList);
     event.target.value = '';
   };
   
@@ -763,10 +749,10 @@ export default function Home() {
   
   const handleClearPalette = () => {
     const newGrid = createEmptyGrid(gridSize.width, gridSize.height);
+    updateGrid(newGrid, true);
+
     const newTiles = [{ id: 0, name: 'Empty', src: '', solid: false }];
-    
-    updateTiles(newTiles, true);
-    updateGrid(newGrid, false);
+    updateTiles(newTiles);
 
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
@@ -1028,7 +1014,7 @@ export default function Home() {
         <SpritesheetSlicerModal
           isOpen={isSlicerOpen}
           onClose={() => setSlicerOpen(false)}
-          onSlice={addTiles}
+          onSlice={(files) => addTiles(files)}
           initialFiles={slicerInitialFiles}
         />
         <ExportTilesModal
@@ -1057,7 +1043,7 @@ export default function Home() {
           isOpen={isMetadataModalOpen}
           onClose={() => setMetadataModalOpen(false)}
           tiles={tiles}
-          onImport={(sortedTiles) => updateTiles(sortedTiles)}
+          onImport={(sortedTiles) => updateTiles(sortedTiles, false)}
         />
 
         <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>

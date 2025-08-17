@@ -116,39 +116,58 @@ export const useProjects = () => {
   const updateTiles = useCallback((tiles: Tile[], batch = false) => {
       setProjectState(currentState => ({ ...currentState, tiles }), batch);
   }, [setProjectState]);
+  
+  const addTiles = useCallback((files: File[]) => {
+      if (files.length === 0) return;
+      
+      const readFiles = files.map(file => {
+          return new Promise<{name: string, src: string} | null>((resolve) => {
+             const reader = new FileReader();
+             reader.onload = async (e) => {
+                const src = e.target?.result as string;
+                if (await isTileTransparent(src)) {
+                   resolve(null);
+                } else {
+                   resolve({ name: file.name.replace(/\.[^/.]+$/, ""), src });
+                }
+             };
+             reader.onerror = () => resolve(null);
+             reader.readAsDataURL(file);
+          });
+      });
 
-  const addTiles = useCallback(async (newTilesData: Omit<Tile, 'id' | 'solid'>[]) => {
-    const filteredNewTiles = [];
-    for (const tileData of newTilesData) {
-        if (!(await isTileTransparent(tileData.src))) {
-            filteredNewTiles.push(tileData);
-        }
-    }
+      Promise.all(readFiles).then(results => {
+          const newTilesData = results.filter((r): r is {name: string, src: string} => r !== null);
+          
+          const skippedCount = files.length - newTilesData.length;
+          if (skippedCount > 0) {
+            toast({
+                title: 'Transparent Tiles Skipped',
+                description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
+            });
+          }
 
-    if (filteredNewTiles.length < newTilesData.length) {
-        const skippedCount = newTilesData.length - filteredNewTiles.length;
-        toast({
-            title: 'Transparent Tiles Skipped',
-            description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
-        });
-    }
-
-    if (filteredNewTiles.length > 0) {
-        setProjectState(currentState => {
-            let nextId = currentState.tiles.length > 0 ? Math.max(...currentState.tiles.map(t => t.id)) + 1 : 1;
-            
-            const tilesWithIds: Tile[] = filteredNewTiles.map((tile) => ({
-                ...tile,
-                id: nextId++,
-                solid: false,
-            }));
-            
-            return {
-                ...currentState,
-                tiles: [...currentState.tiles, ...tilesWithIds],
-            };
-        });
-    }
+          if (newTilesData.length > 0) {
+              setProjectState(currentState => {
+                  let nextId = currentState.tiles.length > 0 ? Math.max(...currentState.tiles.map(t => t.id)) + 1 : 1;
+                  
+                  const tilesWithIds: Tile[] = newTilesData.map((tile) => ({
+                      ...tile,
+                      id: nextId++,
+                      solid: false,
+                  }));
+                  
+                  return {
+                      ...currentState,
+                      tiles: [...currentState.tiles, ...tilesWithIds],
+                  };
+              });
+              toast({
+                  title: 'Tiles Added',
+                  description: `${newTilesData.length} new tile(s) have been added to the palette.`,
+              });
+          }
+      });
   }, [setProjectState, toast]);
 
 
