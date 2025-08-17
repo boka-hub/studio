@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 
 const MAX_HISTORY_SIZE = 50;
@@ -15,13 +14,17 @@ export function useHistoryState<T>(initialState: T) {
 
   const set = useCallback((newState: T | ((prevState: T) => T), batch = false) => {
     setState(currentState => {
-      const newPresent = typeof newState === 'function' ? (newState as (prevState: T) => T)(currentState.present) : newState;
+      const newPresent = typeof newState === 'function' 
+        ? (newState as (prevState: T) => T)(currentState.present) 
+        : newState;
 
       if (JSON.stringify(currentState.present) === JSON.stringify(newPresent)) {
           return currentState;
       }
 
       if (batch) {
+        // When batching, we just update the present state.
+        // The history entry will be created by a subsequent non-batched call.
         return {
           ...currentState,
           present: newPresent,
