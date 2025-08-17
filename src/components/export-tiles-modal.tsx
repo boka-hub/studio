@@ -43,11 +43,14 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
           img.crossOrigin = "anonymous";
           img.src = tile.src;
           img.onload = () => resolve(img);
-          img.onerror = reject;
+          img.onerror = () => reject(new Error(`Failed to load image: ${tile.name}`));
         }));
         const images = await Promise.all(imagePromises);
 
-        if (images.length === 0 || !images[0]) return;
+        if (images.length === 0 || !images[0]) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas if no images
+            return;
+        };
 
         const tileWidth = images[0].naturalWidth || 32;
         const tileHeight = images[0].naturalHeight || 32;
