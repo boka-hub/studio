@@ -206,10 +206,11 @@ export const useProjects = () => {
             newCurrentId = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
         }
         
+        resetHistory({ projects: remainingProjects, currentProjectId: newCurrentId });
         return { projects: remainingProjects, currentProjectId: newCurrentId };
     });
     toast({ title: 'Project Deleted'});
-  }, [setProjectState, toast]);
+  }, [setProjectState, toast, resetHistory]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     setProjectState(currentState => ({
@@ -235,4 +236,3 @@ export const useProjects = () => {
     canRedo,
   };
 };
-

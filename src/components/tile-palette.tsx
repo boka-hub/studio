@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ interface TilePaletteProps {
   onRenameTile: (id: number, newName: string) => void;
   onDeleteTile: (id: number) => void;
   onToggleSolid: (id: number) => void;
+  onReorderTiles: (reorderedTiles: Tile[]) => void;
   isCollapsed: boolean;
 }
 
@@ -40,11 +41,15 @@ export const TilePalette: FC<TilePaletteProps> = ({
   onRenameTile,
   onDeleteTile,
   onToggleSolid,
+  onReorderTiles,
   isCollapsed,
 }) => {
   const [editingTileId, setEditingTileId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [draggedTileId, setDraggedTileId] = useState<number | null>(null);
+  
+  const dragTargetRef = useRef<HTMLDivElement | null>(null);
 
   const handleStartEditing = (tile: Tile) => {
     if (isCollapsed || tile.id === 0) return;
@@ -106,6 +111,72 @@ export const TilePalette: FC<TilePaletteProps> = ({
     .filter(t => t.id !== 0)
     .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, tileId: number) => {
+    if (searchQuery) {
+        e.preventDefault();
+        return;
+    }
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedTileId(tileId);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, targetTileId: number) => {
+    e.preventDefault();
+    if(draggedTileId === null || draggedTileId === targetTileId) return;
+
+    if (dragTargetRef.current) {
+      dragTargetRef.current.style.borderBottom = '';
+    }
+
+    const targetElement = e.currentTarget.closest('.tile-container');
+    if (targetElement) {
+        dragTargetRef.current = targetElement as HTMLDivElement;
+        dragTargetRef.current.style.borderBottom = '2px solid hsl(var(--primary))';
+    }
+  };
+  
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (dragTargetRef.current) {
+        dragTargetRef.current.style.borderBottom = '';
+        dragTargetRef.current = null;
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropTileId: number) => {
+    e.preventDefault();
+    if (draggedTileId === null || draggedTileId === dropTileId || searchQuery) {
+      return;
+    }
+    
+    handleDragLeave(e);
+
+    const emptyTile = tiles.find(t => t.id === 0);
+    const currentTiles = tiles.filter(t => t.id !== 0);
+
+    const draggedIndex = currentTiles.findIndex(t => t.id === draggedTileId);
+    const dropIndex = currentTiles.findIndex(t => t.id === dropTileId);
+
+    if (draggedIndex === -1 || dropIndex === -1) return;
+
+    const reordered = Array.from(currentTiles);
+    const [draggedItem] = reordered.splice(draggedIndex, 1);
+    reordered.splice(dropIndex, 0, draggedItem);
+    
+    onReorderTiles([emptyTile!, ...reordered]);
+    setDraggedTileId(null);
+  };
+
+  const handleDragEnd = () => {
+    if (dragTargetRef.current) {
+        dragTargetRef.current.style.borderBottom = '';
+        dragTargetRef.current = null;
+    }
+    setDraggedTileId(null);
+  };
+
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className={cn("p-4 pb-2 flex-shrink-0 space-y-2", isCollapsed && "hidden")}>
@@ -138,7 +209,16 @@ export const TilePalette: FC<TilePaletteProps> = ({
             isCollapsed ? "grid-cols-1 place-items-center" : "grid-cols-3"
           )}>
           {filteredTiles.map((tile) => (
-              <div key={tile.id} className={cn("group flex flex-col items-center gap-1.5", isCollapsed ? "w-10" : "w-full")}>
+              <div 
+                key={tile.id} 
+                className={cn("group flex flex-col items-center gap-1.5 tile-container", isCollapsed ? "w-10" : "w-full", draggedTileId === tile.id && "opacity-50")}
+                draggable={!isCollapsed && !searchQuery}
+                onDragStart={(e) => handleDragStart(e, tile.id)}
+                onDragOver={(e) => handleDragOver(e, tile.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, tile.id)}
+                onDragEnd={handleDragEnd}
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
@@ -149,6 +229,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       onClick={(e) => handleTileClick(e, tile.id)}
                       className={cn(
                         'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                         searchQuery ? 'cursor-not-allowed' : 'cursor-grab',
                         getBorderStyle(tile.id)
                       )}
                       aria-label={`Select tile ${tile.name}`}
@@ -204,8 +285,9 @@ export const TilePalette: FC<TilePaletteProps> = ({
                   </TooltipTrigger>
                   <TooltipContent side="left">
                      {isCollapsed ? <p>{tile.name}</p> : 
+                     searchQuery ? <p>{tile.name}</p> :
                      tool === 'scatter' ? <p>Toggle in Scatter Set</p> :
-                     <div><p>Left-click: Set Primary</p><p>Right-click: Set Secondary</p></div>}
+                     <div><p>Left-click: Set Primary</p><p>Right-click: Set Secondary</p><p>Drag to Reorder</p></div>}
                   </TooltipContent>
                 </Tooltip>
 

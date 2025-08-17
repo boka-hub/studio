@@ -232,6 +232,10 @@ export default function Home() {
       setTileToDelete(tile);
     }
   }, [tiles]);
+  
+  const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
+    updateTiles(reorderedTiles, false);
+  }, [updateTiles]);
 
   const handleImportTiles = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -970,6 +974,7 @@ export default function Home() {
                           onRenameTile={handleRenameTile}
                           onDeleteTile={handleDeleteTile}
                           onToggleSolid={handleToggleSolid}
+                          onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
                           />
                       )}
@@ -1091,4 +1096,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
