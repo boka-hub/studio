@@ -7,7 +7,7 @@ import type { Tile, Tool } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search, Brush } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Brush, Dices } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 
@@ -72,7 +72,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   const handleTileClick = (e: React.MouseEvent, tileId: number) => {
     if (tool === 'scatter') {
-        onToggleScatterTile(tileId);
+        if (tileId !== 0) onToggleScatterTile(tileId);
         return;
     }
     if (e.button === 2) { // Right-click
@@ -122,6 +122,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
         {tool === 'scatter' && (
             <div className="p-2 rounded-md bg-muted/50 text-center space-y-2">
                 <div className="flex items-center justify-center gap-2">
+                    <Dices className="h-4 w-4 text-muted-foreground"/>
                     <p className="text-sm text-muted-foreground">Scatter Set:</p>
                     <Badge variant="secondary">{scatterSet.length} tiles</Badge>
                 </div>
@@ -133,8 +134,8 @@ export const TilePalette: FC<TilePaletteProps> = ({
       </div>
       <ScrollArea className="flex-1">
         <div className={cn(
-            "grid gap-4 p-4 pt-2",
-            isCollapsed ? "grid-cols-1" : "grid-cols-3"
+            "grid gap-2 p-4 pt-2",
+            isCollapsed ? "grid-cols-1" : "grid-cols-4"
           )}>
           {filteredTiles.map((tile) => (
               <div key={tile.id} className="group flex flex-col items-center gap-1.5">
