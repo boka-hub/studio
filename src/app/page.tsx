@@ -37,9 +37,10 @@ import {
   Database,
   Grid,
   ArchiveX,
-  Dices,
-  FileText,
   FileJson2,
+  Undo2,
+  Redo2,
+  Dices,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -67,6 +68,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
 import { isTileTransparent } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -85,7 +87,11 @@ export default function Home() {
     projects,
     isLoading,
     updateGrid,
-    updateTiles
+    updateTiles,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useProjects();
   
   const grid = currentProject.grid;
@@ -231,10 +237,11 @@ export default function Home() {
     
     // Remove tile from palette
     const newTiles = tiles.filter(t => t.id !== tileId);
-    updateTiles(newTiles);
     
     // Remove tile from grid and update history
     const newGrid = grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
+    
+    updateTiles(newTiles, true); // Batch update
     updateGrid(newGrid);
     
     // If deleted tile was selected, select empty tile
@@ -703,6 +710,10 @@ export default function Home() {
     if (e.ctrlKey || e.metaKey) {
       if (e.key === 's') {
         handleExportMap();
+      } else if (e.key === 'z') {
+        undo();
+      } else if (e.key === 'y') {
+        redo();
       } else if (e.key === '=') {
         setZoom(z => Math.min(z + 0.1, 2));
       } else if (e.key === '-') {
@@ -729,7 +740,7 @@ export default function Home() {
          handleDeleteSelection();
       }
     }
-  }, [clipboard, grid, handleCopySelection, handleExportMap, handleDeleteSelection, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast]);
+  }, [clipboard, grid, handleCopySelection, handleExportMap, handleDeleteSelection, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast, undo, redo]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -784,7 +795,7 @@ export default function Home() {
   };
   
   const handleClearPalette = () => {
-    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
+    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }], true);
     updateGrid(createEmptyGrid(gridSize.width, gridSize.height));
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
@@ -813,9 +824,17 @@ export default function Home() {
     { icon: FileJson2, label: 'Import Metadata', onClick: () => setMetadataModalOpen(true) },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
-    { icon: Database, label: 'Manage Projects', onClick: () => setStorageOpen(true) },
-    { icon: Grid, label: 'Clear Map', onClick: () => setConfirmClearMapOpen(true) },
-    { icon: ArchiveX, label: 'Clear Palette', onClick: () => setConfirmClearPaletteOpen(true) },
+  ];
+  
+  const projectActions = [
+      { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
+      { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
+      { icon: Database, label: 'Manage Projects', onClick: () => setStorageOpen(true) },
+      { icon: Grid, label: 'Clear Map', onClick: () => setConfirmClearMapOpen(true) },
+      { icon: ArchiveX, label: 'Clear Palette', onClick: () => setConfirmClearPaletteOpen(true) },
+  ]
+  
+  const gameplayActions = [
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: togglePreviewMode, isActive: isPreviewMode },
   ];
   
@@ -896,7 +915,7 @@ export default function Home() {
         <Header 
             title="TileForge"
             icon={ToyBrick} 
-            actions={headerActions}
+            actionGroups={[headerActions, projectActions, gameplayActions]}
             onTitleClick={() => setSettingsOpen(true)}
         />
         <div className="flex flex-1 overflow-hidden">
@@ -1067,7 +1086,7 @@ export default function Home() {
           isOpen={isMetadataModalOpen}
           onClose={() => setMetadataModalOpen(false)}
           tiles={tiles}
-          onImport={updateTiles}
+          onImport={(sortedTiles) => updateTiles(sortedTiles)}
         />
 
         <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>
@@ -1075,7 +1094,7 @@ export default function Home() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove the tile &quot;{tileToDelete?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action cannot be undone.
+                This will remove the tile &quot;{tileToDelete?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1090,7 +1109,7 @@ export default function Home() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will clear the entire map grid, replacing all tiles with empty space. This cannot be undone.
+                This action will clear the entire map grid, replacing all tiles with empty space. This can be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1105,7 +1124,7 @@ export default function Home() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete all tiles from your palette and clear the map. This cannot be undone.
+                This action will permanently delete all tiles from your palette and clear the map. This action can be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1119,3 +1138,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    

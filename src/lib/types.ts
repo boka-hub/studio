@@ -18,10 +18,13 @@ export interface Selection {
   selectedCells?: GridState; // For non-rectangular selections like magic wand
 }
 
-export interface Project {
-    id: string;
-    name: string;
+export interface ProjectState {
     grid: GridState;
     tiles: Tile[];
+}
+
+export interface Project extends ProjectState {
+    id: string;
+    name: string;
     lastModified: number;
 }

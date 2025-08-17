@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { Project, GridState, Tile } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import type { Project, GridState, Tile, ProjectState } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import { useHistoryState } from './use-history-state';
 
 const STORAGE_KEY = 'tileforge-projects';
 const INITIAL_GRID_SIZE = 32;
@@ -13,11 +14,11 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
 const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
 
-const createNewProject = (name: string, grid?: GridState, tiles?: Tile[]): Project => ({
+const createNewProject = (name: string): Project => ({
   id: `proj_${new Date().getTime()}_${Math.random()}`,
   name,
-  grid: grid || initialGrid,
-  tiles: tiles || initialTiles,
+  grid: initialGrid,
+  tiles: initialTiles,
   lastModified: Date.now(),
 });
 
@@ -28,7 +29,16 @@ export const useProjects = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const isMounted = useRef(false);
+  const {
+    state: projectState,
+    set: setProjectState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    reset: resetHistory
+  } = useHistoryState<ProjectState>({ grid: initialGrid, tiles: initialTiles });
+
 
   // Load projects from localStorage on initial mount
   useEffect(() => {
@@ -40,17 +50,20 @@ export const useProjects = () => {
           setProjects(savedProjects);
           const projectToLoad = savedProjects.find(p => p.id === lastActiveId) || savedProjects[0];
           setCurrentProjectId(projectToLoad.id);
+          resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
         } else {
            // No projects, create a default one
           const defaultProject = createNewProject('TileForge');
           setProjects([defaultProject]);
           setCurrentProjectId(defaultProject.id);
+          resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
         }
       } else {
         // No saved data at all, create a default project
         const defaultProject = createNewProject('TileForge');
         setProjects([defaultProject]);
         setCurrentProjectId(defaultProject.id);
+        resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
@@ -58,18 +71,28 @@ export const useProjects = () => {
       const defaultProject = createNewProject('TileForge');
       setProjects([defaultProject]);
       setCurrentProjectId(defaultProject.id);
+      resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
     } finally {
       setIsLoading(false);
-      isMounted.current = true;
     }
-  }, [toast]);
+  }, [toast, resetHistory]);
   
+  const currentProject = projects.find(p => p.id === currentProjectId);
 
-  // Save projects to localStorage whenever they change
+  // Save projects to localStorage whenever the project state changes
   useEffect(() => {
-    // Prevent saving on the initial, empty render
-    if (!isMounted.current || isLoading) return;
+    if (isLoading || !currentProjectId) return;
+    
+    setProjects(projs => projs.map(p => 
+      p.id === currentProjectId ? { ...p, ...projectState, lastModified: Date.now() } : p
+    ));
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectState, currentProjectId]);
+
+   // Persist the full project list to localStorage when it changes
+  useEffect(() => {
+    if (isLoading) return;
     try {
       const dataToSave = {
         projects,
@@ -81,39 +104,35 @@ export const useProjects = () => {
       toast({ variant: 'destructive', title: 'Save Error', description: 'Could not save your changes.' });
     }
   }, [projects, currentProjectId, isLoading, toast]);
-  
-  const currentProject = projects.find(p => p.id === currentProjectId) || createNewProject("Untitled");
 
-  const updateCurrentProject = useCallback((updates: Partial<Omit<Project, 'id'>>) => {
-    if (!currentProjectId) return;
-    setProjects(projs => projs.map(p => 
-      p.id === currentProjectId ? { ...p, ...updates, lastModified: Date.now() } : p
-    ));
-  }, [currentProjectId]);
 
-  const updateGrid = useCallback((grid: GridState) => {
-      updateCurrentProject({ grid });
-  }, [updateCurrentProject]);
+  const updateGrid = useCallback((grid: GridState, batch = false) => {
+      setProjectState({ ...projectState, grid }, batch);
+  }, [projectState, setProjectState]);
 
-  const updateTiles = useCallback((tiles: Tile[]) => {
-      updateCurrentProject({ tiles });
-  }, [updateCurrentProject]);
+  const updateTiles = useCallback((tiles: Tile[], batch = false) => {
+      setProjectState({ ...projectState, tiles }, batch);
+  }, [projectState, setProjectState]);
 
 
   const loadProject = useCallback((id: string) => {
     const projectToLoad = projects.find(p => p.id === id);
     if (projectToLoad) {
       setCurrentProjectId(id);
+      resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
     } else {
       toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
     }
-  }, [projects, toast]);
+  }, [projects, toast, resetHistory]);
 
   const saveProject = useCallback((name: string) => {
-    const newProject = createNewProject(name, currentProject.grid, currentProject.tiles);
+    const newProject: Project = {
+        ...createNewProject(name),
+        ...projectState,
+    };
     setProjects(projs => [...projs, newProject]);
     setCurrentProjectId(newProject.id); // Switch to the new project
-  }, [currentProject]);
+  }, [projectState]);
 
   const deleteProject = useCallback((id: string) => {
     setProjects(projs => {
@@ -121,17 +140,18 @@ export const useProjects = () => {
       if (newProjects.length === 0) {
         const defaultProject = createNewProject('TileForge');
         setCurrentProjectId(defaultProject.id);
+        resetHistory({grid: defaultProject.grid, tiles: defaultProject.tiles});
         return [defaultProject];
       }
       if (id === currentProjectId) {
         // If we deleted the current project, switch to the most recently modified one
         const nextProject = newProjects.sort((a,b) => b.lastModified - a.lastModified)[0];
-        setCurrentProjectId(nextProject.id);
+        loadProject(nextProject.id);
       }
       return newProjects;
     });
     toast({ title: 'Project Deleted'});
-  }, [currentProjectId, toast]);
+  }, [currentProjectId, toast, loadProject, resetHistory]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     setProjects(projs => projs.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p));
@@ -139,7 +159,13 @@ export const useProjects = () => {
 
   return {
     projects,
-    currentProject,
+    currentProject: {
+      id: currentProject?.id || '',
+      name: currentProject?.name || 'Untitled',
+      lastModified: currentProject?.lastModified || 0,
+      grid: projectState.grid,
+      tiles: projectState.tiles,
+    },
     isLoading,
     loadProject,
     saveProject,
@@ -147,5 +173,9 @@ export const useProjects = () => {
     renameProject,
     updateGrid,
     updateTiles,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   };
 };
