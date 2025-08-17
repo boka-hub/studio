@@ -209,12 +209,10 @@ export default function Home() {
     const tileId = tileToDelete.id;
     
     // Remove tile from palette
-    const newTiles = tiles.filter(t => t.id !== tileId);
-    updateTiles(newTiles, true);
+    updateTiles(tiles.filter(t => t.id !== tileId), true);
     
     // Remove tile from grid and update history
-    const newGrid = grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
-    updateGrid(newGrid);
+    updateGrid(grid.map(row => row.map(cell => (cell === tileId ? 0 : cell))));
     
     // If deleted tile was selected, select empty tile
     if (selectedTileId === tileId) {
@@ -748,11 +746,8 @@ export default function Home() {
   };
   
   const handleClearPalette = () => {
-    const newGrid = createEmptyGrid(gridSize.width, gridSize.height);
-    updateGrid(newGrid, true);
-
-    const newTiles = [{ id: 0, name: 'Empty', src: '', solid: false }];
-    updateTiles(newTiles);
+    updateGrid(createEmptyGrid(gridSize.width, gridSize.height), true);
+    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
 
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
@@ -870,7 +865,7 @@ export default function Home() {
       >
        {isDragging && renderDragOverlay()}
         <Header 
-            title="TileForge"
+            title={currentProject.name}
             icon={ToyBrick} 
             actionGroups={[headerActions, projectActions, gameplayActions]}
             onTitleClick={() => setSettingsOpen(true)}

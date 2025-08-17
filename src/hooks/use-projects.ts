@@ -13,117 +13,102 @@ const createEmptyGrid = (width: number, height: number): GridState =>
     .fill(null)
     .map(() => Array(width).fill(0));
 
-const createInitialState = (): ProjectState => ({
-  grid: createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE),
-  tiles: [{ id: 0, name: 'Empty', src: '', solid: false }],
-});
-
-const createNewProject = (name: string): Project => ({
+const createNewProject = (name: string, state?: ProjectState): Project => ({
   id: `proj_${new Date().getTime()}_${Math.random()}`,
   name,
-  ...createInitialState(),
+  grid: state?.grid || createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE),
+  tiles: state?.tiles || [{ id: 0, name: 'Empty', src: '', solid: false }],
   lastModified: Date.now(),
 });
 
+interface ProjectsState {
+    projects: Project[];
+    currentProjectId: string | null;
+}
 
 export const useProjects = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   const {
-    state: projectState,
-    set: setProjectState,
+    state,
+    set,
     undo,
     redo,
     canUndo,
     canRedo,
-    reset: resetHistory
-  } = useHistoryState<ProjectState>(createInitialState());
+    reset
+  } = useHistoryState<ProjectsState>({ projects: [], currentProjectId: null });
 
+  const { projects, currentProjectId } = state;
 
-  // Load projects from localStorage on initial mount
   useEffect(() => {
     setIsLoading(true);
     try {
       const savedData = window.localStorage.getItem(STORAGE_KEY);
-      let activeProjectId: string;
       let projectsToLoad: Project[];
+      let activeProjectId: string | null;
 
       if (savedData) {
-        const { projects: savedProjects, last_active_project_id: lastActiveId } = JSON.parse(savedData);
-        if (Array.isArray(savedProjects) && savedProjects.length > 0) {
-          projectsToLoad = savedProjects;
-          const projectToLoad = savedProjects.find(p => p.id === lastActiveId) || savedProjects[0];
-          activeProjectId = projectToLoad.id;
-          resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
+        const savedState = JSON.parse(savedData);
+        if (Array.isArray(savedState.projects) && savedState.projects.length > 0) {
+            projectsToLoad = savedState.projects;
+            const projectToLoad = projectsToLoad.find(p => p.id === savedState.currentProjectId) || projectsToLoad[0];
+            activeProjectId = projectToLoad.id;
         } else {
           const defaultProject = createNewProject('New Project');
           projectsToLoad = [defaultProject];
           activeProjectId = defaultProject.id;
-          resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
         }
       } else {
         const defaultProject = createNewProject('New Project');
         projectsToLoad = [defaultProject];
         activeProjectId = defaultProject.id;
-        resetHistory(createInitialState());
       }
       
-      setProjects(projectsToLoad);
-      setCurrentProjectId(activeProjectId);
+      reset({ projects: projectsToLoad, currentProjectId: activeProjectId });
 
     } catch (error) {
       console.error("Failed to load projects from localStorage", error);
       toast({ variant: 'destructive', title: 'Load Error', description: 'Could not load your saved projects.' });
       const defaultProject = createNewProject('New Project');
-      setProjects([defaultProject]);
-      setCurrentProjectId(defaultProject.id);
-      resetHistory(createInitialState());
+      reset({ projects: [defaultProject], currentProjectId: defaultProject.id });
     } finally {
       setIsLoading(false);
     }
-  }, [toast, resetHistory]);
+  }, [toast, reset]);
 
-  // Auto-save the current project state into the projects list
   useEffect(() => {
     if (isLoading || !currentProjectId) return;
-    
-    setProjects(projs => {
-        const currentProjectExists = projs.some(p => p.id === currentProjectId);
-        if (!currentProjectExists) return projs;
-        
-        return projs.map(p =>
-            p.id === currentProjectId ? { ...p, ...projectState, lastModified: Date.now() } : p
-        );
-    });
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState, currentProjectId]);
-
-   // Persist the full project list to localStorage when it changes
-  useEffect(() => {
-    if (isLoading) return;
     try {
-      const dataToSave = {
-        projects,
-        last_active_project_id: currentProjectId,
-      };
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (error) {
       console.error("Failed to save projects to localStorage", error);
       toast({ variant: 'destructive', title: 'Save Error', description: 'Could not save your changes.' });
     }
-  }, [projects, currentProjectId, isLoading, toast]);
+  }, [state, isLoading, toast, currentProjectId]);
+  
+  const modifyCurrentProject = useCallback((modifier: (project: Project) => Project, batch = false) => {
+    set(currentState => {
+        if (!currentState.currentProjectId) return currentState;
+        return {
+            ...currentState,
+            projects: currentState.projects.map(p => 
+                p.id === currentState.currentProjectId 
+                ? { ...modifier(p), lastModified: Date.now() } 
+                : p
+            ),
+        }
+    }, batch)
+  }, [set]);
 
   const updateGrid = useCallback((grid: GridState, batch = false) => {
-      setProjectState(currentState => ({ ...currentState, grid }), batch);
-  }, [setProjectState]);
+      modifyCurrentProject(proj => ({ ...proj, grid }), batch);
+  }, [modifyCurrentProject]);
 
   const updateTiles = useCallback((tiles: Tile[], batch = false) => {
-      setProjectState(currentState => ({ ...currentState, tiles }), batch);
-  }, [setProjectState]);
+      modifyCurrentProject(proj => ({ ...proj, tiles }), batch);
+  }, [modifyCurrentProject]);
   
   const addTiles = useCallback((files: File[]) => {
       if (files.length === 0) return;
@@ -156,19 +141,14 @@ export const useProjects = () => {
           }
 
           if (newTilesData.length > 0) {
-              setProjectState(currentState => {
-                  let nextId = currentState.tiles.length > 0 ? Math.max(...currentState.tiles.map(t => t.id)) + 1 : 1;
-                  
+              modifyCurrentProject(proj => {
+                  let nextId = proj.tiles.length > 0 ? Math.max(...proj.tiles.map(t => t.id)) + 1 : 1;
                   const tilesWithIds: Tile[] = newTilesData.map((tile) => ({
                       ...tile,
                       id: nextId++,
                       solid: false,
                   }));
-                  
-                  return {
-                      ...currentState,
-                      tiles: [...currentState.tiles, ...tilesWithIds],
-                  };
+                  return { ...proj, tiles: [...proj.tiles, ...tilesWithIds] };
               });
               toast({
                   title: 'Tiles Added',
@@ -176,73 +156,61 @@ export const useProjects = () => {
               });
           }
       });
-  }, [setProjectState, toast]);
+  }, [modifyCurrentProject, toast]);
 
   const loadProject = useCallback((id: string) => {
-      setProjects(projs => {
-          const projectToLoad = projs.find(p => p.id === id);
-          if (projectToLoad) {
-              setCurrentProjectId(id);
-              resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
-          } else {
-              toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
-          }
-          return projs;
-      });
-  }, [toast, resetHistory]);
+    set(currentState => {
+        if (currentState.projects.some(p => p.id === id)) {
+             return { ...currentState, currentProjectId: id };
+        }
+        toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
+        return currentState;
+    });
+  }, [set, toast]);
 
   const saveProject = useCallback((name: string) => {
-    const newProject: Project = {
-        ...createNewProject(name),
-        ...projectState,
-    };
-    setProjects(projs => [...projs, newProject]);
-    setCurrentProjectId(newProject.id); // Switch to the new project
-  }, [projectState]);
+    set(currentState => {
+        const current = currentState.projects.find(p => p.id === currentState.currentProjectId);
+        const newProject = createNewProject(name, current);
+        return {
+            ...currentState,
+            projects: [...currentState.projects, newProject],
+            currentProjectId: newProject.id,
+        }
+    });
+  }, [set]);
 
   const deleteProject = useCallback((id: string) => {
-    const isDeletingCurrent = id === currentProjectId;
-    
-    setProjects(projs => {
-      const remainingProjects = projs.filter(p => p.id !== id);
-      
-      if (remainingProjects.length === 0) {
-        const defaultProject = createNewProject('New Project');
-        if(isDeletingCurrent) {
-            setCurrentProjectId(defaultProject.id);
-            resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
+    set(currentState => {
+        const remainingProjects = currentState.projects.filter(p => p.id !== id);
+        
+        if (remainingProjects.length === 0) {
+            const newDefault = createNewProject('New Project');
+            return { projects: [newDefault], currentProjectId: newDefault.id };
         }
-        return [defaultProject];
-      }
-      
-      if (isDeletingCurrent) {
-        const nextProjectToLoad = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0];
-        setCurrentProjectId(nextProjectToLoad.id);
-        resetHistory({ grid: nextProjectToLoad.grid, tiles: nextProjectToLoad.tiles });
-      }
-      
-      return remainingProjects;
+        
+        let newCurrentId = currentState.currentProjectId;
+        if (currentState.currentProjectId === id) {
+            newCurrentId = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
+        }
+
+        return { projects: remainingProjects, currentProjectId: newCurrentId };
     });
-
     toast({ title: 'Project Deleted'});
-
-  }, [currentProjectId, toast, resetHistory]);
+  }, [set, toast]);
 
   const renameProject = useCallback((id: string, newName: string) => {
-    setProjects(projs => projs.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p));
-  }, []);
+    set(currentState => ({
+        ...currentState,
+        projects: currentState.projects.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p)
+    }));
+  }, [set]);
   
   const currentProject = projects.find(p => p.id === currentProjectId);
 
   return {
     projects,
-    currentProject: {
-      id: currentProject?.id || '',
-      name: currentProject?.name || 'Untitled',
-      lastModified: currentProject?.lastModified || 0,
-      grid: projectState.grid,
-      tiles: projectState.tiles,
-    },
+    currentProject: currentProject || createNewProject('Loading...'),
     isLoading,
     loadProject,
     saveProject,
