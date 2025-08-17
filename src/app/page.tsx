@@ -793,7 +793,7 @@ export default function Home() {
           
           <div className="bg-card border-l border-border flex flex-col">
             <aside className={cn(
-                "flex flex-col transition-all duration-300",
+                "flex flex-col transition-all duration-300 flex-grow",
                 (isPaletteCollapsed || isPreviewMode) ? 'w-20' : 'w-80'
                 )}>
                   {!isPreviewMode && (

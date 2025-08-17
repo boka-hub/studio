@@ -103,7 +103,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
           />
         </div>
       </div>
-      <ScrollArea className="flex-grow">
+      <ScrollArea className="flex-1">
         <div className={cn(
             "grid gap-4 p-4 pt-2",
             isCollapsed ? "grid-cols-1" : "grid-cols-3"
@@ -218,5 +218,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    
