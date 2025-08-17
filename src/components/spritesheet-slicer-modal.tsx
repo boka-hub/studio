@@ -333,10 +333,8 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           </Button>
         </DialogFooter>
         <canvas ref={sliceCanvasRef} className="hidden" />
-        <input ref={fileInputRef} type="file" accept="image/png" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
       </DialogContent>
     </Dialog>
   );
 };
-
-    
