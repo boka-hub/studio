@@ -110,12 +110,12 @@ export const useProjects = () => {
 
 
   const updateGrid = useCallback((grid: GridState, batch = false) => {
-      setProjectState({ ...projectState, grid }, batch);
-  }, [projectState, setProjectState]);
+      setProjectState(currentState => ({ ...currentState, grid }), batch);
+  }, [setProjectState]);
 
   const updateTiles = useCallback((tiles: Tile[], batch = false) => {
-      setProjectState({ ...projectState, tiles }, batch);
-  }, [projectState, setProjectState]);
+      setProjectState(currentState => ({ ...currentState, tiles }), batch);
+  }, [setProjectState]);
 
   const addTiles = useCallback(async (newTilesData: Omit<Tile, 'id' | 'solid'>[]) => {
     const filteredNewTiles = [];

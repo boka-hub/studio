@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 
 const MAX_HISTORY_SIZE = 50;
@@ -12,18 +13,17 @@ export function useHistoryState<T>(initialState: T) {
   const canUndo = state.past.length > 0;
   const canRedo = state.future.length > 0;
 
-  const set = useCallback((newState: T, batch = false) => {
+  const set = useCallback((newState: T | ((prevState: T) => T), batch = false) => {
     setState(currentState => {
-      // If batching, we just update the present without adding to history.
-      // The final update in the sequence should have batch=false.
+      const newPresent = typeof newState === 'function' ? (newState as (prevState: T) => T)(currentState.present) : newState;
+
       if (batch) {
         return {
           ...currentState,
-          present: newState,
+          present: newPresent,
         };
       }
-
-      // If this is not a batch update, we create a new history entry.
+      
       const newPast = [...currentState.past, currentState.present];
       if (newPast.length > MAX_HISTORY_SIZE) {
         newPast.shift();
@@ -31,12 +31,11 @@ export function useHistoryState<T>(initialState: T) {
 
       return {
         past: newPast,
-        present: newState,
-        future: [], // Clear future on new action
+        present: newPresent,
+        future: [],
       };
     });
   }, []);
-
 
   const undo = useCallback(() => {
     setState(currentState => {
