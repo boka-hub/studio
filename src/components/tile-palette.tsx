@@ -117,12 +117,14 @@ export const TilePalette: FC<TilePaletteProps> = ({
         e.preventDefault();
         return;
     }
+    e.stopPropagation(); // Prevent parent drag handlers
     e.dataTransfer.effectAllowed = 'move';
     setDraggedTileId(tileId);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, targetTileId: number) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent parent drag handlers
     if(draggedTileId === null || draggedTileId === targetTileId) return;
 
     if (dragTargetRef.current) {
@@ -138,6 +140,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
   
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent parent drag handlers
     if (dragTargetRef.current) {
         dragTargetRef.current.style.borderBottom = '';
         dragTargetRef.current = null;
@@ -146,6 +149,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropTileId: number) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent parent drag handlers
     if (draggedTileId === null || draggedTileId === dropTileId || searchQuery) {
       return;
     }
@@ -168,7 +172,8 @@ export const TilePalette: FC<TilePaletteProps> = ({
     setDraggedTileId(null);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    e.stopPropagation(); // Prevent parent drag handlers
     if (dragTargetRef.current) {
         dragTargetRef.current.style.borderBottom = '';
         dragTargetRef.current = null;
