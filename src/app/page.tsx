@@ -34,9 +34,7 @@ import {
   ToyBrick,
   Upload,
   Download,
-  Import,
-  Export,
-  PersonStanding,
+  Database,
   Dices,
 } from 'lucide-react';
 import { Header } from '@/components/header';
@@ -45,10 +43,11 @@ import { TilePalette } from '@/components/tile-palette';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
+import { StorageModal } from '@/components/storage-modal';
 import type { Tool, Tile, GridState, Selection } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
+import { useProjects } from '@/hooks/use-projects';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { isTileTransparent } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,42 +69,22 @@ const createEmptyGrid = (width: number, height: number): GridState =>
     .fill(null)
     .map(() => Array(width).fill(0));
 
-const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
-const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
-
-const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState<T>(() => {
-    // This function runs only on the client, avoiding server/client mismatch
-    if (typeof window === 'undefined') {
-      return defaultValue;
-    }
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return defaultValue;
-    }
-  });
-
-  useEffect(() => {
-    // This effect runs only on the client
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(state));
-      } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error);
-      }
-    }
-  }, [key, state]);
-
-  return [state, setState];
-};
-
-
 export default function Home() {
-  const [grid, setGrid] = usePersistentState<GridState>('tileforge-grid', initialGrid);
-  const [tiles, setTiles] = usePersistentState<Tile[]>( 'tileforge-tiles', initialTiles);
+  const {
+    currentProject,
+    loadProject,
+    saveProject,
+    deleteProject,
+    renameProject,
+    projects,
+    isLoading,
+    updateGrid,
+    updateTiles
+  } = useProjects();
+  
+  const grid = currentProject.grid;
+  const tiles = currentProject.tiles;
+
   const [gridSize, setGridSize] = useState({ width: grid[0]?.length || INITIAL_GRID_SIZE, height: grid.length || INITIAL_GRID_SIZE });
 
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
@@ -118,7 +97,8 @@ export default function Home() {
   const [slicerInitialFiles, setSlicerInitialFiles] = useState<File[]>([]);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
-  const [zoom, setZoom] = usePersistentState('tileforge-zoom', 1);
+  const [isStorageOpen, setStorageOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
@@ -128,17 +108,17 @@ export default function Home() {
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<any>(null);
   const rightPanelRef = useRef<any>(null);
+
+  // Sync grid size state when grid changes from project load
+  useEffect(() => {
+    setGridSize({ width: grid[0]?.length || INITIAL_GRID_SIZE, height: grid.length || INITIAL_GRID_SIZE });
+  }, [grid]);
   
   const toggleToolbar = () => {
     const panel = leftPanelRef.current;
@@ -160,16 +140,6 @@ export default function Home() {
     }
   }
 
-
-  const updateGridState = (newGrid: GridState) => {
-    setGrid(newGrid);
-    setGridSize({ width: newGrid[0]?.length || 0, height: newGrid.length || 0 });
-  };
-  
-  const updateTilesState = (newTiles: Tile[]) => {
-    setTiles(newTiles);
-  };
-
   const handleGridResize = (newWidth: number, newHeight: number) => {
     const oldGrid = grid;
     const oldHeight = oldGrid.length;
@@ -181,7 +151,8 @@ export default function Home() {
         newGrid[r][c] = oldGrid[r][c];
       }
     }
-    updateGridState(newGrid);
+    updateGrid(newGrid);
+    setGridSize({ width: newGrid[0]?.length || 0, height: newGrid.length || 0 });
     setSelection(null);
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   };
@@ -209,7 +180,7 @@ export default function Home() {
         id: nextId++,
         solid: false,
       }));
-      updateTilesState([...tiles, ...tilesWithIds]);
+      updateTiles([...tiles, ...tilesWithIds]);
     }
   };
 
@@ -222,7 +193,7 @@ export default function Home() {
     const newTiles = tiles.map((tile) =>
       tile.id === tileId ? { ...tile, name: newName } : tile
     );
-    updateTilesState(newTiles);
+    updateTiles(newTiles);
     toast({ title: 'Tile Renamed', description: `Tile has been renamed to "${newName}".` });
   };
 
@@ -230,7 +201,7 @@ export default function Home() {
     const newTiles = tiles.map(t =>
       t.id === tileId ? { ...t, solid: !t.solid } : t
     );
-    updateTilesState(newTiles);
+    updateTiles(newTiles);
   };
 
   const confirmDeleteTile = () => {
@@ -240,11 +211,11 @@ export default function Home() {
     
     // Remove tile from palette
     const newTiles = tiles.filter(t => t.id !== tileId);
-    updateTilesState(newTiles);
+    updateTiles(newTiles);
     
     // Remove tile from grid and update history
     const newGrid = grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
-    updateGridState(newGrid);
+    updateGrid(newGrid);
     
     // If deleted tile was selected, select empty tile
     if (selectedTileId === tileId) {
@@ -410,9 +381,9 @@ export default function Home() {
         toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
         return; 
       }
-      updateGridState(newGrid);
+      updateGrid(newGrid);
     },
-    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGridState]
+    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid]
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
@@ -479,8 +450,8 @@ export default function Home() {
           }
         }
     }
-    updateGridState(newGrid);
-  }, [grid, selectedTileId, secondarySelectedTileId, tool, scatterSet, toast, updateGridState]);
+    updateGrid(newGrid);
+  }, [grid, selectedTileId, secondarySelectedTileId, tool, scatterSet, toast, updateGrid]);
 
   const applyToSelection = (callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection) return;
@@ -500,7 +471,7 @@ export default function Home() {
         });
     });
 
-    updateGridState(newGrid);
+    updateGrid(newGrid);
   }
 
   const handleFillSelection = () => {
@@ -581,9 +552,9 @@ export default function Home() {
             }
         }
     }
-    updateGridState(newGrid);
+    updateGrid(newGrid);
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-  }, [grid, selection, clipboard, toast, updateGridState]);
+  }, [grid, selection, clipboard, toast, updateGrid]);
   
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -676,7 +647,7 @@ export default function Home() {
          handleDeleteSelection();
       }
     }
-  }, [clipboard, grid, handleCopySelection, handleExportMap, handlePasteSelection, isPreviewMode, playerPos, selection, setZoom, tiles, toast]);
+  }, [clipboard, grid, handleCopySelection, handleExportMap, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -743,6 +714,7 @@ export default function Home() {
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
+    { icon: Database, label: 'Manage Projects', onClick: () => setStorageOpen(true) },
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: togglePreviewMode, isActive: isPreviewMode },
   ];
   
@@ -762,10 +734,20 @@ export default function Home() {
       }
   }
   
-  const defaultLayout = isClient && typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('tileforge-panel-layout') || '[15, 70, 15]')) : [15, 70, 15];
+  const getInitialLayout = () => {
+    if (typeof window === 'undefined') {
+        return [15, 70, 15];
+    }
+    const savedLayout = localStorage.getItem('tileforge-panel-layout');
+    return savedLayout ? JSON.parse(savedLayout) : [15, 70, 15];
+  }
 
-  if (!isClient) {
-    return null; // Or a loading spinner
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <ToyBrick className="h-12 w-12 text-primary animate-pulse" />
+      </div>
+    );
   }
 
   return (
@@ -786,7 +768,7 @@ export default function Home() {
           </div>
         )}
         <Header 
-            title="TileForge" 
+            title={currentProject.name}
             icon={ToyBrick} 
             actions={headerActions}
             onTitleClick={() => setSettingsOpen(true)}
@@ -795,7 +777,7 @@ export default function Home() {
           <PanelGroup direction="horizontal" onLayout={handleLayout} autoSaveId="tileforge-panels">
             <Panel
               ref={leftPanelRef}
-              defaultSize={defaultLayout[0]}
+              defaultSize={getInitialLayout()[0]}
               collapsible={true}
               collapsedSize={4}
               minSize={10}
@@ -845,7 +827,7 @@ export default function Home() {
             <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center">
               <div className="w-1 h-8 bg-primary/20 rounded-full" />
             </PanelResizeHandle>
-            <Panel defaultSize={defaultLayout[1]} minSize={30}>
+            <Panel defaultSize={getInitialLayout()[1]} minSize={30}>
               <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full">
                 <MapGrid
                   grid={grid}
@@ -867,7 +849,7 @@ export default function Home() {
             </PanelResizeHandle>
             <Panel
                 ref={rightPanelRef}
-                defaultSize={defaultLayout[2]}
+                defaultSize={getInitialLayout()[2]}
                 collapsible={true}
                 collapsedSize={4}
                 minSize={10}
@@ -944,6 +926,17 @@ export default function Home() {
           onClose={() => setSettingsOpen(false)}
         />
 
+        <StorageModal
+          isOpen={isStorageOpen}
+          onClose={() => setStorageOpen(false)}
+          projects={projects}
+          currentProjectId={currentProject.id}
+          onLoadProject={loadProject}
+          onSaveProject={saveProject}
+          onDeleteProject={deleteProject}
+          onRenameProject={renameProject}
+        />
+
         <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -963,3 +956,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    

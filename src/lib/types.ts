@@ -17,3 +17,11 @@ export interface Selection {
   maxCol: number;
   selectedCells?: GridState; // For non-rectangular selections like magic wand
 }
+
+export interface Project {
+    id: string;
+    name: string;
+    grid: GridState;
+    tiles: Tile[];
+    lastModified: number;
+}
