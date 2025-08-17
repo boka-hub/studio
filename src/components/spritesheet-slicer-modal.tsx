@@ -229,7 +229,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                            sliceCanvas.toBlob(blob => {
                                if(blob) {
                                    const index = y * cols + x;
-                                   const tileName = tilesFromMetadata?.[index]?.name || `${fileData.name}_${x}_${y}`;
+                                   const tileName = tilesFromMetadata?.[index]?.name || `${fileData.name}_${y}_${x}`;
                                    const newFile = new File([blob], `${tileName}.png`, { type: 'image/png' });
                                    allSlicedFiles.push(newFile);
                                }
