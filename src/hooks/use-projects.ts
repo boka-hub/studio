@@ -99,6 +99,15 @@ export const useProjects = () => {
       modifyCurrentProject(() => ({ grid }), batch);
   }, [modifyCurrentProject]);
 
+  const remapGrid = useCallback((remap: { [oldId: number]: number }) => {
+    modifyCurrentProject(project => {
+        const newGrid = project.grid.map(row => 
+            row.map(cell => remap[cell] ?? cell)
+        );
+        return { grid: newGrid };
+    });
+  }, [modifyCurrentProject]);
+
   const updateTiles = useCallback((tiles: Tile[], batch = false) => {
       modifyCurrentProject(() => ({ tiles }), batch);
   }, [modifyCurrentProject]);
@@ -228,6 +237,7 @@ export const useProjects = () => {
     deleteProject,
     renameProject,
     updateGrid,
+    remapGrid,
     updateTiles,
     addTiles,
     undo,

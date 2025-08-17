@@ -14,12 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 import type { Tile } from '@/lib/types';
 import { Upload, FileJson2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ShieldAlert } from 'lucide-react';
 
 interface MetadataImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   tiles: Tile[];
-  onImport: (sortedTiles: Tile[]) => void;
+  onImport: (remap: { [oldId: number]: number }, newTiles: Tile[]) => void;
 }
 
 export const MetadataImportModal: FC<MetadataImportModalProps> = ({
@@ -53,31 +55,45 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
               throw new Error("Could not find the essential 'Empty' tile.");
             }
 
-            const orderedTileNames: string[] = metadata.tiles
-                .sort((a: any, b: any) => (a.index ?? 0) - (b.index ?? 0))
-                .map((t: any) => t.name);
+            const currentTilesByName = new Map(tiles.map(tile => [tile.name, tile]));
+            const idRemap: { [oldId: number]: number } = {};
+            const newTiles: Tile[] = [emptyTile];
+            const processedNewIds = new Set<number>([0]);
 
-            const tilesByName = new Map(tiles.filter(t => t.id !== 0).map(t => [t.name, t]));
-            const sortedTiles: Tile[] = [emptyTile];
-            const usedTiles = new Set<string>();
-
-            // Add tiles that are in the metadata file, in order
-            for (const name of orderedTileNames) {
-                if (tilesByName.has(name)) {
-                    sortedTiles.push(tilesByName.get(name)!);
-                    usedTiles.add(name);
+            // Process tiles from metadata, creating the remap and the new tile set
+            metadata.tiles.forEach((metaTile: any) => {
+                const currentTile = currentTilesByName.get(metaTile.name);
+                if (currentTile) {
+                    const newId = metaTile.id;
+                    if (processedNewIds.has(newId)) {
+                        // This would be a problem in the metadata file itself.
+                        console.warn(`Duplicate ID ${newId} found in metadata file for tile "${metaTile.name}". Skipping.`);
+                        return;
+                    }
+                    if (currentTile.id !== newId) {
+                        idRemap[currentTile.id] = newId;
+                    }
+                    newTiles.push({ ...currentTile, id: newId });
+                    processedNewIds.add(newId);
                 }
-            }
+            });
 
-            // Add any remaining tiles that weren't in the metadata
-            for (const tile of tiles) {
-                if (tile.id !== 0 && !usedTiles.has(tile.name)) {
-                    sortedTiles.push(tile);
+            // Handle tiles that are in the current project but not in the metadata
+            let nextAvailableId = Math.max(...Array.from(processedNewIds)) + 1;
+            tiles.forEach(currentTile => {
+                if (currentTile.id !== 0 && !newTiles.some(nt => nt.name === currentTile.name)) {
+                    while (processedNewIds.has(nextAvailableId)) {
+                        nextAvailableId++;
+                    }
+                    const newId = nextAvailableId;
+                    idRemap[currentTile.id] = newId;
+                    newTiles.push({ ...currentTile, id: newId });
+                    processedNewIds.add(newId);
                 }
-            }
+            });
             
-            onImport(sortedTiles);
-            toast({ title: 'Palette Sorted', description: 'Tiles have been reordered based on the metadata file.' });
+            onImport(idRemap, newTiles);
+            toast({ title: 'Palette & Map Remapped', description: 'Tiles have been re-identified and the map has been updated.' });
             onClose();
 
         } catch (error: any) {
@@ -127,11 +143,19 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
         onDragLeave={handleDragLeave}
       >
         <DialogHeader>
-          <DialogTitle>Import Palette Order</DialogTitle>
+          <DialogTitle>Import & Remap Palette</DialogTitle>
           <DialogDescription>
-            Import a `tileforge-metadata.txt` file to reorder your current palette.
+            Import a metadata file to re-ID your tiles and update the map grid accordingly.
           </DialogDescription>
         </DialogHeader>
+
+        <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+                This is a destructive action. It will change the IDs of your tiles and permanently alter your map grid to match the imported file. This cannot be undone easily.
+            </AlertDescription>
+        </Alert>
 
         <div className={cn(
             "relative flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg text-center p-4 transition-colors",

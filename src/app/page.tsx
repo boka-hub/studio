@@ -87,6 +87,7 @@ export default function Home() {
     isLoading,
     updateGrid,
     updateTiles,
+    remapGrid,
     addTiles,
     undo,
     redo,
@@ -650,7 +651,7 @@ export default function Home() {
           if (e.key === 'ArrowUp') row--;
           if (e.key === 'ArrowDown') row++;
           if (e.key === 'ArrowLeft') col--;
-          if (e.key === 'ArrowRight') col++;
+          if (e.key === 'ArrowRight') col--;
 
           row = Math.max(0, Math.min(grid.length - 1, row));
           col = Math.max(0, Math.min(grid[0].length - 1, col));
@@ -858,6 +859,11 @@ export default function Home() {
     );
   };
 
+  const handleMetadataImport = useCallback((remap: { [oldId: number]: number }, newTiles: Tile[]) => {
+    updateTiles(newTiles, true);
+    remapGrid(remap);
+  }, [updateTiles, remapGrid]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -1051,7 +1057,7 @@ export default function Home() {
           isOpen={isMetadataModalOpen}
           onClose={() => setMetadataModalOpen(false)}
           tiles={tiles}
-          onImport={(sortedTiles) => updateTiles(sortedTiles, false)}
+          onImport={handleMetadataImport}
         />
 
         <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>
