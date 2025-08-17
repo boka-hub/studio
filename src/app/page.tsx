@@ -115,6 +115,7 @@ export default function Home() {
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
+  const [panelLayout, setPanelLayout] = useState<number[]>([15, 70, 15]);
 
   const { toast } = useToast();
 
@@ -126,6 +127,15 @@ export default function Home() {
   useEffect(() => {
     setGridSize({ width: grid[0]?.length || INITIAL_GRID_SIZE, height: grid.length || INITIAL_GRID_SIZE });
   }, [grid]);
+
+  // Reset relevant state when project changes
+  useEffect(() => {
+    setSelection(null);
+    setClipboard(null);
+    setPreviewMode(false);
+    setPlayerPos({ row: 0, col: 0 });
+    setZoom(1);
+  }, [currentProject.id]);
   
   const toggleToolbar = () => {
     const panel = leftPanelRef.current;
@@ -640,13 +650,14 @@ export default function Home() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Use a timeout to prevent flickering when dragging over child elements
     const currentTarget = e.currentTarget;
     setTimeout(() => {
-      const relatedTarget = e.relatedTarget as Node | null;
-      if (currentTarget && (!relatedTarget || !currentTarget.contains(relatedTarget))) {
-        setIsDragging(false);
-        setDragFileType(null);
+      if (currentTarget) {
+          const relatedTarget = e.relatedTarget as Node | null;
+          if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+            setIsDragging(false);
+            setDragFileType(null);
+          }
       }
     }, 50);
   };
@@ -715,7 +726,7 @@ export default function Home() {
          handleDeleteSelection();
       }
     }
-  }, [clipboard, grid, handleCopySelection, handleExportMap, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast]);
+  }, [clipboard, grid, handleCopySelection, handleExportMap, handleDeleteSelection, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -770,9 +781,7 @@ export default function Home() {
   };
   
   const handleClearPalette = () => {
-    const defaultTile = tiles.find(t => t.id === 0);
-    const newTiles = defaultTile ? [defaultTile] : [];
-    updateTiles(newTiles);
+    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
     updateGrid(createEmptyGrid(gridSize.width, gridSize.height));
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
@@ -817,18 +826,27 @@ export default function Home() {
   };
   
   const handleLayout = (sizes: number[]) => {
-      if (typeof window !== 'undefined') {
-          localStorage.setItem('tileforge-panel-layout', JSON.stringify(sizes));
-      }
-  }
-  
-  const getInitialLayout = () => {
-    if (typeof window === 'undefined') {
-        return [15, 70, 15];
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('tileforge-panel-layout', JSON.stringify(sizes));
+        setPanelLayout(sizes);
     }
-    const savedLayout = localStorage.getItem('tileforge-panel-layout');
-    return savedLayout ? JSON.parse(savedLayout) : [15, 70, 15];
   }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLayout = localStorage.getItem('tileforge-panel-layout');
+      if (savedLayout) {
+          try {
+              const parsedLayout = JSON.parse(savedLayout);
+              if (Array.isArray(parsedLayout) && parsedLayout.length === 3) {
+                setPanelLayout(parsedLayout);
+              }
+          } catch(e) {
+              // ignore parse error
+          }
+      }
+    }
+  }, []);
 
   const renderDragOverlay = () => {
     if (!dragFileType || dragFileType === 'other') {
@@ -881,7 +899,7 @@ export default function Home() {
           <PanelGroup direction="horizontal" onLayout={handleLayout} autoSaveId="tileforge-panels">
             <Panel
               ref={leftPanelRef}
-              defaultSize={getInitialLayout()[0]}
+              defaultSize={panelLayout[0]}
               collapsible={true}
               collapsedSize={4}
               minSize={10}
@@ -931,7 +949,7 @@ export default function Home() {
             <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center">
               <div className="w-1 h-8 bg-primary/20 rounded-full" />
             </PanelResizeHandle>
-            <Panel defaultSize={getInitialLayout()[1]} minSize={30}>
+            <Panel defaultSize={panelLayout[1]} minSize={30}>
               <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full">
                 <MapGrid
                   grid={grid}
@@ -953,7 +971,7 @@ export default function Home() {
             </PanelResizeHandle>
             <Panel
                 ref={rightPanelRef}
-                defaultSize={getInitialLayout()[2]}
+                defaultSize={panelLayout[2]}
                 collapsible={true}
                 collapsedSize={4}
                 minSize={10}
