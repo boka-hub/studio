@@ -1,6 +1,6 @@
 
 import type { FC } from 'react';
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -47,26 +47,34 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
             if (!metadata.tiles || !Array.isArray(metadata.tiles)) {
                 throw new Error('Invalid metadata format: "tiles" array not found.');
             }
+            
+            const emptyTile = tiles.find(t => t.id === 0);
+            if (!emptyTile) {
+              throw new Error("Could not find the essential 'Empty' tile.");
+            }
 
             const orderedTileNames: string[] = metadata.tiles
-                .sort((a: any, b: any) => (a.index || 0) - (b.index || 0))
+                .sort((a: any, b: any) => (a.index ?? 0) - (b.index ?? 0))
                 .map((t: any) => t.name);
-            
-            const currentTiles = [...tiles];
-            const sortedTiles = currentTiles.sort((a, b) => {
-                const indexA = orderedTileNames.indexOf(a.name);
-                const indexB = orderedTileNames.indexOf(b.name);
 
-                if (a.id === 0) return -1; // Keep Empty tile first
-                if (b.id === 0) return 1;
+            const tilesByName = new Map(tiles.filter(t => t.id !== 0).map(t => [t.name, t]));
+            const sortedTiles: Tile[] = [emptyTile];
+            const usedTiles = new Set<string>();
 
-                if (indexA !== -1 && indexB !== -1) {
-                    return indexA - indexB; // Both in metadata, sort by metadata index
+            // Add tiles that are in the metadata file, in order
+            for (const name of orderedTileNames) {
+                if (tilesByName.has(name)) {
+                    sortedTiles.push(tilesByName.get(name)!);
+                    usedTiles.add(name);
                 }
-                if (indexA !== -1) return -1; // A is in metadata, B is not
-                if (indexB !== -1) return 1;  // B is in metadata, A is not
-                return 0; // Neither in metadata, keep original order
-            });
+            }
+
+            // Add any remaining tiles that weren't in the metadata
+            for (const tile of tiles) {
+                if (tile.id !== 0 && !usedTiles.has(tile.name)) {
+                    sortedTiles.push(tile);
+                }
+            }
             
             onImport(sortedTiles);
             toast({ title: 'Palette Sorted', description: 'Tiles have been reordered based on the metadata file.' });
