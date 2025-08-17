@@ -38,6 +38,7 @@ import {
   Grid,
   ArchiveX,
   Dices,
+  FileText,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -108,6 +109,7 @@ export default function Home() {
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragFileType, setDragFileType] = useState<'image' | 'map' | 'other' | null>(null);
   const [isPreviewMode, setPreviewMode] = useState(false);
   const [playerPos, setPlayerPos] = useState({ row: 0, col: 0 });
   
@@ -286,6 +288,40 @@ export default function Home() {
     toast({ title: 'Map Exported', description: 'Your map has been saved as tileforge-map.txt' });
   },[grid, toast]);
   
+    const handleImportMap = (file: File) => {
+        if (!file || !file.type.startsWith('text/')) {
+            toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop a valid .txt map file.' });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const content = e.target?.result as string;
+                const newGrid = content
+                    .split('\n')
+                    .map(row => row.trim())
+                    .filter(row => row)
+                    .map(row => row.split(',').map(cell => parseInt(cell, 10) || 0));
+
+                if (newGrid.length === 0 || newGrid[0].length === 0) {
+                    throw new Error('Map file is empty or invalid.');
+                }
+                const width = newGrid[0].length;
+                if (!newGrid.every(row => row.length === width)) {
+                    throw new Error('Map rows have inconsistent lengths.');
+                }
+
+                updateGrid(newGrid);
+                toast({ title: 'Map Imported', description: `Successfully loaded map from ${file.name}` });
+            } catch (error: any) {
+                console.error("Failed to parse map file", error);
+                toast({ variant: 'destructive', title: 'Import Failed', description: error.message || 'Could not parse the map file.' });
+            }
+        };
+        reader.readAsText(file);
+    };
+
   const handleCellAction = useCallback(
     async (row: number, col: number) => {
       if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
@@ -565,28 +601,54 @@ export default function Home() {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    setDragFileType(null);
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const imageFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-      if (imageFiles.length > 0) {
-        openSlicer(imageFiles);
+      if (dragFileType === 'image') {
+        const imageFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+        if (imageFiles.length > 0) openSlicer(imageFiles);
+      } else if (dragFileType === 'map') {
+        const mapFile = Array.from(e.dataTransfer.files).find(file => file.type === 'text/plain' || file.name.endsWith('.txt'));
+        if (mapFile) handleImportMap(mapFile);
       } else {
-        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Only image files can be dropped.' });
+        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Please drop an image or a .txt map file.' });
       }
       e.dataTransfer.clearData();
     }
-  }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
-  }
+    if (!isDragging) setIsDragging(true);
+
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+        const firstItem = items[0];
+        if (firstItem.kind === 'file') {
+            if (firstItem.type.startsWith('image/')) {
+                setDragFileType('image');
+            } else if (firstItem.type === 'text/plain' || firstItem.type === 'application/octet-stream') {
+                setDragFileType('map');
+            } else {
+                setDragFileType('other');
+            }
+        }
+    }
+  };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
-  }
+    // Use a timeout to prevent flickering when dragging over child elements
+    setTimeout(() => {
+      const relatedTarget = e.relatedTarget as Node | null;
+      if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+        setIsDragging(false);
+        setDragFileType(null);
+      }
+    }, 50);
+  };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
@@ -767,6 +829,30 @@ export default function Home() {
     return savedLayout ? JSON.parse(savedLayout) : [15, 70, 15];
   }
 
+  const renderDragOverlay = () => {
+    if (!dragFileType || dragFileType === 'other') {
+      return (
+        <div className="absolute inset-0 bg-destructive/20 border-4 border-dashed border-destructive z-50 flex items-center justify-center pointer-events-none">
+          <div className="text-center p-8 bg-background/80 rounded-lg">
+            <h2 className="text-2xl font-bold mt-4 text-destructive-foreground">Invalid File Type</h2>
+            <p className="text-muted-foreground">Only images (.png, .jpg) or map files (.txt) are supported.</p>
+          </div>
+        </div>
+      );
+    }
+    
+    const isImage = dragFileType === 'image';
+    return (
+       <div className="absolute inset-0 bg-primary/20 border-4 border-dashed border-primary z-50 flex items-center justify-center pointer-events-none">
+            <div className="text-center p-8 bg-background/80 rounded-lg">
+              {isImage ? <Upload className="h-16 w-16 mx-auto text-primary" /> : <FileText className="h-16 w-16 mx-auto text-primary" />}
+              <h2 className="text-2xl font-bold mt-4">Drop to {isImage ? 'Upload' : 'Import'}</h2>
+              <p className="text-muted-foreground">{isImage ? 'Drop image(s) to open in the Batch Slicer.' : 'Drop a .txt file to load a map.'}</p>
+            </div>
+        </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -783,15 +869,7 @@ export default function Home() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
       >
-       {isDragging && (
-          <div className="absolute inset-0 bg-primary/20 border-4 border-dashed border-primary z-50 flex items-center justify-center pointer-events-none">
-            <div className="text-center p-8 bg-background/80 rounded-lg">
-              <Upload className="h-16 w-16 mx-auto text-primary" />
-              <h2 className="text-2xl font-bold mt-4">Drop to Upload</h2>
-              <p className="text-muted-foreground">Drop image(s) to open in the Batch Slicer.</p>
-            </div>
-          </div>
-        )}
+       {isDragging && renderDragOverlay()}
         <Header 
             title="TileForge"
             icon={ToyBrick} 
