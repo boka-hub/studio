@@ -48,10 +48,10 @@ export const MapGrid: FC<MapGridProps> = ({
   const handleMouseDown = (row: number, col: number) => {
     if (isPreviewMode) return;
     setIsDrawing(true);
-    if (tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise') {
+    if (tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
         setStartCell({ row, col });
         setPreviewSelection(null);
-        if (tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
+        if (tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
             setPreviewGrid(grid); // Start preview from current grid state
         }
     } else {
@@ -114,7 +114,7 @@ export const MapGrid: FC<MapGridProps> = ({
 
   const handleMouseUp = (row: number, col: number) => {
     if (isPreviewMode) return;
-    if ((tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise') && startCell) {
+    if ((tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') && startCell) {
       onShapeDraw(startCell, { row, col });
     }
     setIsDrawing(false);
@@ -149,6 +149,7 @@ export const MapGrid: FC<MapGridProps> = ({
       case 'rectangle':
       case 'gradient':
       case 'noise':
+      case 'scatter':
       case 'select':
         return 'cursor-crosshair';
       default:

@@ -32,6 +32,7 @@ import {
   Import,
   Export,
   PersonStanding,
+  Dices,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -104,6 +105,7 @@ export default function Home() {
 
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
   const [secondarySelectedTileId, setSecondarySelectedTileId] = useState<number>(0);
+  const [scatterSet, setScatterSet] = useState<number[]>([]);
   const [tool, setTool] = useState<Tool>('brush');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
@@ -218,6 +220,8 @@ export default function Home() {
     if (secondarySelectedTileId === tileId) {
       setSecondarySelectedTileId(0);
     }
+    setScatterSet(s => s.filter(id => id !== tileId));
+
     toast({ 
       title: 'Tile Deleted', 
       description: `Tile "${tileToDelete.name}" has been removed.`,
@@ -275,7 +279,7 @@ export default function Home() {
   
   const handleCellAction = useCallback(
     async (row: number, col: number) => {
-      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise') {
+      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
         return;
       }
       setSelection(null);
@@ -428,9 +432,22 @@ export default function Home() {
             }
           }
         }
+    } else if (tool === 'scatter') {
+        if (scatterSet.length === 0) {
+            toast({ variant: 'destructive', title: 'Scatter Failed', description: 'Your scatter set is empty. Click tiles in the palette to add them.' });
+            return;
+        }
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                const randomIndex = Math.floor(Math.random() * scatterSet.length);
+                newGrid[r][c] = scatterSet[randomIndex];
+            }
+          }
+        }
     }
     updateGridState(newGrid);
-  }, [grid, selectedTileId, secondarySelectedTileId, tool, updateGridState]);
+  }, [grid, selectedTileId, secondarySelectedTileId, tool, scatterSet, toast, updateGridState]);
 
   const applyToSelection = (callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection) return;
@@ -615,7 +632,7 @@ export default function Home() {
        const keyMap: { [key: string]: Tool } = {
         'b': 'brush', 'e': 'eraser', 'p': 'picker', 'g': 'fill',
         'r': 'rectangle', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
-        'l': 'gradient', 'n': 'noise',
+        'l': 'gradient', 'n': 'noise', 'c': 'scatter',
       };
 
       if (keyMap[e.key]) {
@@ -638,7 +655,7 @@ export default function Home() {
     if (newTool !== 'select' && newTool !== 'magic-wand') {
       setSelection(null);
     }
-    const toolsWithSettings: Tool[] = ['spray', 'rectangle', 'gradient', 'noise'];
+    const toolsWithSettings: Tool[] = ['spray', 'rectangle', 'gradient', 'noise', 'scatter'];
     if (toolsWithSettings.includes(newTool)) {
       setToolbarCollapsed(false);
     }
@@ -683,6 +700,7 @@ export default function Home() {
     rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
     gradient: { icon: Layers, label: 'Gradient (L)' },
     noise: { icon: Waves, label: 'Noise (N)' },
+    scatter: { icon: Dices, label: 'Scatter (C)'},
     select: { icon: Lasso, label: 'Select (M)' },
     'magic-wand': { icon: Wand2, label: 'Wand (W)' },
   };
@@ -730,12 +748,7 @@ export default function Home() {
         />
         <div className="flex flex-1 overflow-hidden">
           <div className="bg-card border-r border-border flex flex-col">
-            <aside
-              className={cn(
-                'flex flex-col flex-grow transition-all duration-300 overflow-hidden',
-                (isToolbarCollapsed || isPreviewMode) ? 'w-20' : 'w-60'
-              )}
-            >
+             <aside className="flex-grow flex flex-col transition-all duration-300 overflow-hidden">
               {!isPreviewMode && (
               <Toolbar<Tool>
                 actions={toolbarActions}
@@ -793,17 +806,20 @@ export default function Home() {
           </main>
           
           <div className="bg-card border-l border-border flex flex-col">
-            <aside className={cn(
-                "flex-grow flex flex-col transition-all duration-300 overflow-hidden",
-                (isPaletteCollapsed || isPreviewMode) ? 'w-20' : 'w-80'
-                )}>
+            <aside className="flex-grow flex flex-col transition-all duration-300 overflow-hidden">
                   {!isPreviewMode && (
                       <TilePalette
                       tiles={tiles}
                       selectedTileId={selectedTileId}
                       secondarySelectedTileId={secondarySelectedTileId}
+                      scatterSet={scatterSet}
+                      tool={tool}
                       onSelectTile={setSelectedTileId}
                       onSelectSecondaryTile={setSecondarySelectedTileId}
+                      onToggleScatterTile={(id) => {
+                        setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
+                      }}
+                      onClearScatterSet={() => setScatterSet([])}
                       onRenameTile={handleRenameTile}
                       onDeleteTile={handleDeleteTile}
                       onToggleSolid={handleToggleSolid}
@@ -878,5 +894,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    

@@ -1,4 +1,5 @@
-export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'rectangle' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand';
+
+export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'rectangle' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter';
 
 export interface Tile {
   id: number;
@@ -16,5 +17,3 @@ export interface Selection {
   maxCol: number;
   selectedCells?: GridState; // For non-rectangular selections like magic wand
 }
-
-    

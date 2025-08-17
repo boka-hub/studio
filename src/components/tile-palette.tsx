@@ -1,20 +1,26 @@
+
 import React, { useState } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { Tile } from '@/lib/types';
+import type { Tile, Tool } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Brush } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from './ui/badge';
 
 interface TilePaletteProps {
   tiles: Tile[];
   selectedTileId: number;
   secondarySelectedTileId: number;
+  scatterSet: number[];
+  tool: Tool;
   onSelectTile: (id: number) => void;
   onSelectSecondaryTile: (id: number) => void;
+  onToggleScatterTile: (id: number) => void;
+  onClearScatterSet: () => void;
   onRenameTile: (id: number, newName: string) => void;
   onDeleteTile: (id: number) => void;
   onToggleSolid: (id: number) => void;
@@ -25,8 +31,12 @@ export const TilePalette: FC<TilePaletteProps> = ({
   tiles,
   selectedTileId,
   secondarySelectedTileId,
+  scatterSet,
+  tool,
   onSelectTile,
   onSelectSecondaryTile,
+  onToggleScatterTile,
+  onClearScatterSet,
   onRenameTile,
   onDeleteTile,
   onToggleSolid,
@@ -61,6 +71,10 @@ export const TilePalette: FC<TilePaletteProps> = ({
   }
 
   const handleTileClick = (e: React.MouseEvent, tileId: number) => {
+    if (tool === 'scatter') {
+        onToggleScatterTile(tileId);
+        return;
+    }
     if (e.button === 2) { // Right-click
       e.preventDefault();
       onSelectSecondaryTile(tileId);
@@ -70,6 +84,9 @@ export const TilePalette: FC<TilePaletteProps> = ({
   };
 
   const getBorderStyle = (tileId: number) => {
+    if (tool === 'scatter') {
+        return scatterSet.includes(tileId) ? 'border-blue-500 scale-105 shadow-lg' : 'border-card hover:border-accent';
+    }
     const isPrimary = selectedTileId === tileId;
     const isSecondary = secondarySelectedTileId === tileId;
 
@@ -102,6 +119,17 @@ export const TilePalette: FC<TilePaletteProps> = ({
             className="pl-9 h-9"
           />
         </div>
+        {tool === 'scatter' && (
+            <div className="p-2 rounded-md bg-muted/50 text-center space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                    <p className="text-sm text-muted-foreground">Scatter Set:</p>
+                    <Badge variant="secondary">{scatterSet.length} tiles</Badge>
+                </div>
+                {scatterSet.length > 0 && (
+                    <Button variant="outline" size="sm" className="h-7" onClick={onClearScatterSet}>Clear Set</Button>
+                )}
+            </div>
+        )}
       </div>
       <ScrollArea className="flex-1">
         <div className={cn(
@@ -116,7 +144,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       role="button"
                       tabIndex={0}
                       onContextMenu={(e) => handleTileClick(e, tile.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectTile(tile.id); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTileClick(e as any, tile.id); }}
                       onClick={(e) => handleTileClick(e, tile.id)}
                       className={cn(
                         'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
@@ -172,7 +200,9 @@ export const TilePalette: FC<TilePaletteProps> = ({
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="left">
-                     {isCollapsed ? <p>{tile.name}</p> : <div><p>Left-click: Set Primary</p><p>Right-click: Set Secondary</p></div>}
+                     {isCollapsed ? <p>{tile.name}</p> : 
+                     tool === 'scatter' ? <p>Toggle in Scatter Set</p> :
+                     <div><p>Left-click: Set Primary</p><p>Right-click: Set Secondary</p></div>}
                   </TooltipContent>
                 </Tooltip>
 
