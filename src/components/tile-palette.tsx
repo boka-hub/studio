@@ -164,40 +164,42 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         unoptimized
                         data-ai-hint="pixel art"
                       />
-                       <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Tooltip>
-                          <TooltipTrigger asChild>
-                             <Button 
-                              variant={tile.solid ? 'secondary' : 'ghost'}
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => handleToggleSolid(e, tile.id)}
-                              aria-label={`Toggle solid property for tile ${tile.name}`}
-                            >
-                              {tile.solid ? <Shield className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="left">
-                            <p>{tile.solid ? "Make Passable" : "Make Solid"}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="destructive"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={(e) => handleDelete(e, tile.id)}
-                              aria-label={`Delete tile ${tile.name}`}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                           <TooltipContent side="left">
-                            <p>Delete Tile</p>
-                          </TooltipContent>
-                        </Tooltip>
-                       </div>
+                       {!isCollapsed && (
+                          <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant={tile.solid ? 'secondary' : 'ghost'}
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={(e) => handleToggleSolid(e, tile.id)}
+                                  aria-label={`Toggle solid property for tile ${tile.name}`}
+                                >
+                                  {tile.solid ? <Shield className="h-4 w-4" /> : <ShieldOff className="h-4 w-4" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                <p>{tile.solid ? "Make Passable" : "Make Solid"}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="destructive"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={(e) => handleDelete(e, tile.id)}
+                                  aria-label={`Delete tile ${tile.name}`}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                <p>Delete Tile</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                       )}
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="left">
@@ -249,5 +251,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    
