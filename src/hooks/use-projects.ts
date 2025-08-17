@@ -1,16 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Project, GridState, Tile } from '@/lib/types';
+import type { Project, GridState, Tile, ProjectsState } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useHistoryState } from './use-history-state';
 import { isTileTransparent } from '@/lib/utils';
 
 const STORAGE_KEY = 'tileforge-projects';
 const INITIAL_GRID_SIZE = 32;
-
-const createEmptyGrid = (width: number, height: number): GridState =>
-  Array(height)
-    .fill(null)
-    .map(() => Array(width).fill(0));
 
 const createNewProject = (name: string): Project => ({
   id: `proj_${new Date().getTime()}_${Math.random()}`,
@@ -20,10 +15,10 @@ const createNewProject = (name: string): Project => ({
   lastModified: Date.now(),
 });
 
-interface ProjectsState {
-    projects: Project[];
-    currentProjectId: string | null;
-}
+const createEmptyGrid = (width: number, height: number): GridState =>
+  Array(height)
+    .fill(null)
+    .map(() => Array(width).fill(0));
 
 export const useProjects = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -36,10 +31,12 @@ export const useProjects = () => {
     redo,
     canUndo,
     canRedo,
-    reset
+    reset,
   } = useHistoryState<ProjectsState>({ projects: [], currentProjectId: null });
 
   const { projects, currentProjectId } = state;
+
+  const currentProject = projects.find(p => p.id === currentProjectId) || createNewProject("Loading...");
 
   useEffect(() => {
     setIsLoading(true);
@@ -71,18 +68,19 @@ export const useProjects = () => {
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on initial mount
+  }, []); // This effect should only run once on initial mount.
 
   useEffect(() => {
-    if (isLoading) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (error) {
-      console.error("Failed to save projects to localStorage", error);
-      toast({ variant: 'destructive', title: 'Save Error', description: 'Could not save your changes.' });
+    if (!isLoading && state.projects.length > 0) {
+        try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (error) {
+            console.error("Failed to save projects to localStorage", error);
+            toast({ variant: 'destructive', title: 'Save Error', description: 'Could not save your changes.' });
+        }
     }
   }, [state, isLoading, toast]);
-  
+
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     set(currentState => {
         if (!currentState.currentProjectId) return currentState;
@@ -161,14 +159,14 @@ export const useProjects = () => {
   }, [set, toast]);
 
   const loadProject = useCallback((id: string) => {
-    set(currentState => {
-        if (currentState.projects.some(p => p.id === id)) {
-             return { ...currentState, currentProjectId: id };
-        }
+    const projectToLoad = projects.find(p => p.id === id);
+    if(projectToLoad) {
+        reset({ projects, currentProjectId: id});
+        toast({ title: 'Project Loaded', description: `Switched to "${projectToLoad.name}".`});
+    } else {
         toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
-        return currentState;
-    });
-  }, [set, toast]);
+    }
+  }, [projects, reset, toast]);
 
   const saveProject = useCallback((name: string) => {
     set(currentState => {
@@ -189,7 +187,8 @@ export const useProjects = () => {
             currentProjectId: newProject.id,
         }
     });
-  }, [set]);
+    toast({ title: 'Project Saved!', description: `"${name}" has been saved.`});
+  }, [set, toast]);
 
   const deleteProject = useCallback((id: string) => {
     set(currentState => {
@@ -213,12 +212,10 @@ export const useProjects = () => {
   const renameProject = useCallback((id: string, newName: string) => {
     modifyCurrentProject(() => ({ name: newName }));
   }, [modifyCurrentProject]);
-  
-  const currentProject = projects.find(p => p.id === currentProjectId);
 
   return {
     projects,
-    currentProject: currentProject || createNewProject('Loading...'),
+    currentProject,
     isLoading,
     loadProject,
     saveProject,
