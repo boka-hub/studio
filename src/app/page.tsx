@@ -768,7 +768,7 @@ export default function Home() {
           </div>
         )}
         <Header 
-            title={currentProject.name}
+            title="TileForge"
             icon={ToyBrick} 
             actions={headerActions}
             onTitleClick={() => setSettingsOpen(true)}
