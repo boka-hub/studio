@@ -13,8 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, FileJson2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface SpritesheetSlicerModalProps {
   isOpen: boolean;
@@ -30,7 +31,11 @@ interface FileData {
   name: string;
   tileWidth: number;
   tileHeight: number;
+  metadata?: any; // To store parsed metadata
 }
+
+// Regex to parse filenames like: tileforge_sheet_16x16_8c_0g.png
+const FILENAME_REGEX = /_(\d+)x(\d+)_(\d+)c_(\d+)g\.(png|jpg|jpeg)$/;
 
 export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   isOpen,
@@ -46,40 +51,68 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleFiles = useCallback((incomingFiles: FileList | null) => {
+  const handleFiles = useCallback(async (incomingFiles: FileList | null) => {
     if (!incomingFiles) return;
 
     const newFiles: FileData[] = [];
     const fileList = Array.from(incomingFiles);
 
-    let processedCount = 0;
-    fileList.forEach((file) => {
-       const reader = new FileReader();
-       reader.onload = (e) => {
-         const newFile = {
-           id: `${file.name}-${file.lastModified}-${Math.random()}`,
-           file,
-           src: e.target?.result as string,
-           name: file.name.split('.')[0],
-           tileWidth: 16,
-           tileHeight: 16,
-         };
-         newFiles.push(newFile);
-         processedCount++;
-         if(processedCount === fileList.length) {
-            setFiles(f => {
-                const updatedFiles = [...f, ...newFiles];
-                 // If nothing was selected before, select the first of the new files
-                if (!selectedFileId) {
-                    setSelectedFileId(newFiles[0]?.id || null);
-                }
-                return updatedFiles;
-            });
-         }
-       };
-       reader.readAsDataURL(file);
-    });
-  }, [selectedFileId]);
+    const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
+    const jsonFiles = fileList.filter(f => f.name.endsWith('.json'));
+
+    for (const file of imageFiles) {
+      const baseName = file.name.replace(FILENAME_REGEX, '');
+      const companionJson = jsonFiles.find(jf => jf.name.replace('.json', '') === baseName);
+
+      let tileWidth = 16, tileHeight = 16, metadata = null;
+
+      // Try parsing from filename
+      const match = file.name.match(FILENAME_REGEX);
+      if (match) {
+        tileWidth = parseInt(match[1], 10);
+        tileHeight = parseInt(match[2], 10);
+      }
+      
+      // Override with data from companion JSON if it exists
+      if (companionJson) {
+        try {
+          const jsonContent = await companionJson.text();
+          metadata = JSON.parse(jsonContent);
+          tileWidth = metadata.tileWidth || tileWidth;
+          tileHeight = metadata.tileHeight || tileHeight;
+        } catch (e) {
+          console.error("Failed to parse companion JSON", e);
+          toast({ variant: 'destructive', title: 'Metadata Error', description: `Could not parse ${companionJson.name}.` });
+        }
+      }
+
+      const src = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      newFiles.push({
+        id: `${file.name}-${file.lastModified}-${Math.random()}`,
+        file,
+        src,
+        name: file.name.split('.')[0],
+        tileWidth,
+        tileHeight,
+        metadata,
+      });
+    }
+
+    if (newFiles.length > 0) {
+      setFiles(f => {
+        const updatedFiles = [...f, ...newFiles];
+        if (!selectedFileId) {
+          setSelectedFileId(newFiles[0]?.id || null);
+        }
+        return updatedFiles;
+      });
+    }
+  }, [selectedFileId, toast]);
   
   useEffect(() => {
     if(isOpen && initialFiles.length > 0) {
@@ -88,7 +121,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         handleFiles(dataTransfer.files);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialFiles]); // handleFiles is stable
+  }, [isOpen, initialFiles]);
 
 
   const selectedFile = files.find(f => f.id === selectedFileId);
@@ -162,7 +195,6 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     
     let allSlicedFiles: File[] = [];
 
-    // Create a temporary canvas for slicing
     const sliceCanvas = document.createElement('canvas');
     const ctx = sliceCanvas.getContext('2d');
     if (!ctx) {
@@ -172,7 +204,6 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
 
     for (const fileData of files) {
         const img = new Image();
-        // Use a promise to handle image loading for each file
         await new Promise<void>((resolve, reject) => {
             img.src = fileData.src;
             img.onload = async () => {
@@ -182,16 +213,19 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                 sliceCanvas.width = fileData.tileWidth;
                 sliceCanvas.height = fileData.tileHeight;
                 
+                const tilesFromMetadata = fileData.metadata?.tiles;
+
                 for (let y = 0; y < rows; y++) {
                     for (let x = 0; x < cols; x++) {
                         ctx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
                         ctx.drawImage(img, x * fileData.tileWidth, y * fileData.tileHeight, fileData.tileWidth, fileData.tileHeight, 0, 0, fileData.tileWidth, fileData.tileHeight);
                         
-                        // Convert canvas to blob, then to file
                         await new Promise<void>(resolveBlob => {
                            sliceCanvas.toBlob(blob => {
                                if(blob) {
-                                   const newFile = new File([blob], `${fileData.name}_${x}_${y}.png`, { type: 'image/png' });
+                                   const index = y * cols + x;
+                                   const tileName = tilesFromMetadata?.[index]?.name || `${fileData.name}_${x}_${y}`;
+                                   const newFile = new File([blob], `${tileName}.png`, { type: 'image/png' });
                                    allSlicedFiles.push(newFile);
                                }
                                resolveBlob();
@@ -244,7 +278,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         <DialogHeader>
           <DialogTitle>Batch Spritesheet Slicer</DialogTitle>
           <DialogDescription>
-            Drag-and-drop or import one or more spritesheets, configure their slice dimensions, and add all tiles to your palette at once.
+            Import spritesheets to slice them. If you provide a companion `.json` file, names and dimensions will be loaded automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -256,7 +290,6 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
               </div>
             </div>
           )}
-          {/* File List */}
           <div className="md:col-span-1 h-full flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-muted-foreground">Spritesheets</h3>
             <ScrollArea className="flex-grow border rounded-md">
@@ -291,11 +324,19 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
             </Button>
           </div>
 
-          {/* Preview and Config */}
           <div className="md:col-span-2 h-full flex flex-col gap-4">
              <h3 className="text-sm font-semibold text-muted-foreground">Preview & Configuration</h3>
              {selectedFile ? (
                 <>
+                {selectedFile.metadata && (
+                  <Alert variant="default">
+                    <FileJson2 className="h-4 w-4" />
+                    <AlertTitle>Metadata Detected!</AlertTitle>
+                    <AlertDescription>
+                      Tile names and dimensions have been automatically configured from the companion JSON file.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <ScrollArea className="w-full rounded-md border max-h-[60vh] bg-muted/20">
                     <div className="flex items-center justify-center p-1">
                         <canvas ref={previewCanvasRef} className="max-w-full h-auto" style={{ imageRendering: 'pixelated' }} />
@@ -332,7 +373,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
             Slice All & Add ({files.length})
           </Button>
         </DialogFooter>
-        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,.json" className="hidden" onChange={(e) => handleFiles(e.target.files)} multiple />
       </DialogContent>
     </Dialog>
   );
