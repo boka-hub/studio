@@ -41,6 +41,7 @@ import {
   Undo2,
   Redo2,
   Dices,
+  FileText,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -68,7 +69,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
 import { isTileTransparent } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -660,6 +660,7 @@ export default function Home() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // Use a small timeout to prevent flickering when moving between child elements
     const currentTarget = e.currentTarget;
     setTimeout(() => {
       if (currentTarget) {
@@ -1138,5 +1139,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
