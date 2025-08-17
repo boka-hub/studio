@@ -112,9 +112,8 @@ const features = [
 
 const handleReset = () => {
     if (typeof window !== 'undefined') {
-        window.localStorage.removeItem('tileforge-grid');
-        window.localStorage.removeItem('tileforge-tiles');
-        window.localStorage.removeItem('tileforge-zoom');
+        window.localStorage.removeItem('tileforge-projects');
+        window.localStorage.removeItem('tileforge-panel-layout');
         window.location.reload();
     }
 }
@@ -238,7 +237,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure you want to reset?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete all saved map data, tiles, and settings from your browser&apos;s local storage. This action cannot be undone.
+                            This will permanently delete all saved projects and settings from your browser&apos;s local storage. This action cannot be undone.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -254,5 +253,3 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     </Dialog>
   );
 };
-
-    
