@@ -72,9 +72,9 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     if (isOpen) {
       drawSpritesheet();
     }
-  }, [isOpen, columns, gap, drawSpritesheet]);
+  }, [isOpen, drawSpritesheet]);
   
-  const downloadFile = (blobOrDataUrl: Blob | string, filename: string) => {
+  const downloadFile = useCallback((blobOrDataUrl: Blob | string, filename: string) => {
     const url = typeof blobOrDataUrl === 'string' ? blobOrDataUrl : URL.createObjectURL(blobOrDataUrl);
     const a = document.createElement('a');
     a.href = url;
@@ -85,7 +85,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     if (typeof blobOrDataUrl !== 'string') {
         URL.revokeObjectURL(url);
     }
-  }
+  }, []);
 
   const downloadMetadata = useCallback(() => {
     const metadata = {
@@ -98,13 +98,13 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         solid: tile.solid,
       })),
     };
-    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'text/plain' });
-    downloadFile(metadataBlob, 'tileforge-metadata.txt');
-  }, [tiles, columns]);
+    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
+    downloadFile(metadataBlob, 'tileforge-metadata.json');
+  }, [tiles, columns, downloadFile]);
 
   const handleDownloadMetadata = useCallback(() => {
     downloadMetadata();
-    toast({ title: 'Metadata Downloaded', description: 'tileforge-metadata.txt has been downloaded.' });
+    toast({ title: 'Metadata Downloaded', description: 'tileforge-metadata.json has been downloaded.' });
   }, [downloadMetadata, toast]);
 
   const handleExportSpritesheet = useCallback(() => {
@@ -123,9 +123,9 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     // Export Metadata
     downloadMetadata();
 
-    toast({ title: 'Export Complete', description: 'Spritesheet and metadata.txt have been downloaded.' });
+    toast({ title: 'Export Complete', description: 'Spritesheet and metadata.json have been downloaded.' });
     onClose();
-  }, [downloadMetadata, onClose, toast]);
+  }, [downloadMetadata, onClose, toast, downloadFile]);
   
   const handleExportIndividual = useCallback(() => {
     if (tiles.length === 0) {
@@ -142,9 +142,9 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     // Export Metadata
     downloadMetadata();
 
-    toast({ title: 'Export Complete', description: `${tiles.length} individual tiles and metadata.txt have been downloaded.` });
+    toast({ title: 'Export Complete', description: `${tiles.length} individual tiles and metadata.json have been downloaded.` });
     onClose();
-  }, [tiles, downloadMetadata, onClose, toast]);
+  }, [tiles, downloadMetadata, onClose, toast, downloadFile]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
