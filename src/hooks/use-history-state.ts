@@ -14,24 +14,29 @@ export function useHistoryState<T>(initialState: T) {
 
   const set = useCallback((newState: T, batch = false) => {
     setState(currentState => {
-      // If batching, we don't want to create a new history entry for this set.
-      // The new history entry will be created when the final `set` with batch=false is called.
+      // If batching, we just update the present without adding to history.
+      // The final update in the sequence should have batch=false.
       if (batch) {
         return {
           ...currentState,
-          present: newState
+          present: newState,
         };
       }
-      
-      const newPast = [...currentState.past, currentState.present].slice(-MAX_HISTORY_SIZE);
-      
+
+      // If this is not a batch update, we create a new history entry.
+      const newPast = [...currentState.past, currentState.present];
+      if (newPast.length > MAX_HISTORY_SIZE) {
+        newPast.shift();
+      }
+
       return {
         past: newPast,
         present: newState,
-        future: [],
+        future: [], // Clear future on new action
       };
     });
   }, []);
+
 
   const undo = useCallback(() => {
     setState(currentState => {
