@@ -74,32 +74,34 @@ const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
 const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
 
 const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState<T>(defaultValue);
-  
-  useEffect(() => {
-    const item = window.localStorage.getItem(key);
-    if (item) {
-        try {
-            setState(JSON.parse(item));
-        } catch (e) {
-            console.error(`Error parsing localStorage key "${key}":`, e);
-            window.localStorage.removeItem(key);
-        }
+  const [state, setState] = useState<T>(() => {
+    // This function runs only on the client, avoiding server/client mismatch
+    if (typeof window === 'undefined') {
+      return defaultValue;
     }
-  }, [key]);
+    try {
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error);
+      return defaultValue;
+    }
+  });
 
   useEffect(() => {
+    // This effect runs only on the client
     if (typeof window !== 'undefined') {
-        try {
-            window.localStorage.setItem(key, JSON.stringify(state));
-        } catch (error) {
-            console.error(`Error setting localStorage key "${key}":`, error);
-        }
+      try {
+        window.localStorage.setItem(key, JSON.stringify(state));
+      } catch (error) {
+        console.error(`Error setting localStorage key "${key}":`, error);
+      }
     }
   }, [key, state]);
 
   return [state, setState];
 };
+
 
 export default function Home() {
   const [grid, setGrid] = usePersistentState<GridState>('tileforge-grid', initialGrid);
@@ -126,6 +128,11 @@ export default function Home() {
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const { toast } = useToast();
 
@@ -757,8 +764,11 @@ export default function Home() {
       setPaletteCollapsed(sizes[2] === 0);
   }
   
-  const storedLayout = typeof window !== 'undefined' ? localStorage.getItem('tileforge-panel-layout') : null;
-  const defaultLayout = storedLayout ? JSON.parse(storedLayout) : [15, 70, 15];
+  const defaultLayout = isClient && typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('tileforge-panel-layout') || '[15, 70, 15]')) : [15, 70, 15];
+
+  if (!isClient) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -957,3 +967,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
