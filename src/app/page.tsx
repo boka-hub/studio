@@ -727,11 +727,10 @@ export default function Home() {
           <div className="bg-card border-r border-border flex flex-col">
             <aside
               className={cn(
-                'flex flex-col transition-all duration-300',
+                'flex flex-col transition-all duration-300 flex-grow',
                 (isToolbarCollapsed || isPreviewMode) ? 'w-20' : 'w-60'
               )}
             >
-             <div className='flex-grow overflow-y-auto'>
               {!isPreviewMode && (
               <Toolbar<Tool>
                 actions={toolbarActions}
@@ -750,7 +749,6 @@ export default function Home() {
                 onSprayDensityChange={setSprayDensity}
               />
               )}
-             </div>
             </aside>
             {!isPreviewMode && (
               <div className="flex items-center justify-center border-t border-border">
@@ -791,10 +789,9 @@ export default function Home() {
           
           <div className="bg-card border-l border-border flex flex-col">
             <aside className={cn(
-                "flex flex-col transition-all duration-300 flex-grow",
+                "flex flex-col transition-all duration-300",
                 (isPaletteCollapsed || isPreviewMode) ? 'w-20' : 'w-80'
                 )}>
-                <div className="flex-grow overflow-y-auto">
                   {!isPreviewMode && (
                       <TilePalette
                       tiles={tiles}
@@ -808,7 +805,6 @@ export default function Home() {
                       isCollapsed={isPaletteCollapsed}
                       />
                   )}
-                </div>
             </aside>
              {!isPreviewMode && (
                 <div className="flex items-center justify-center border-t border-border">
@@ -877,5 +873,7 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
 
     
