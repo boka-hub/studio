@@ -33,9 +33,20 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
     const drawSpritesheet = async () => {
       const canvas = canvasRef.current;
-      if (!canvas || tiles.length === 0) return;
+      if (!canvas) return;
+
       const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      if (!ctx) {
+        // This can happen if the canvas is not yet fully ready.
+        // We'll retry on the next frame.
+        requestAnimationFrame(drawSpritesheet);
+        return;
+      }
+      
+      if (tiles.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
 
       try {
         const imagePromises = tiles.map(tile => new Promise<HTMLImageElement>((resolve, reject) => {
@@ -48,7 +59,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         const images = await Promise.all(imagePromises);
 
         if (images.length === 0 || !images[0]) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas if no images
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             return;
         };
 
@@ -77,7 +88,8 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
       }
     };
     
-    drawSpritesheet();
+    // Use requestAnimationFrame to ensure the canvas is ready before drawing.
+    requestAnimationFrame(drawSpritesheet);
 
   }, [isOpen, tiles, columns, gap, toast]);
   
