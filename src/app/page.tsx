@@ -145,7 +145,7 @@ export default function Home() {
     setZoom(1);
   }, [currentProject.id]);
   
-  const toggleToolbar = () => {
+  const toggleToolbar = useCallback(() => {
     const panel = leftPanelRef.current;
     if (!panel) return;
     if (panel.isCollapsed()) {
@@ -153,9 +153,9 @@ export default function Home() {
     } else {
       panel.collapse();
     }
-  }
+  }, []);
 
-  const togglePalette = () => {
+  const togglePalette = useCallback(() => {
     const panel = rightPanelRef.current;
     if (!panel) return;
     if (panel.isCollapsed()) {
@@ -163,9 +163,9 @@ export default function Home() {
     } else {
       panel.collapse();
     }
-  }
+  }, []);
 
-  const handleGridResize = (newWidth: number, newHeight: number) => {
+  const handleGridResize = useCallback((newWidth: number, newHeight: number) => {
     const oldGrid = grid;
     const oldHeight = oldGrid.length;
     const oldWidth = oldGrid[0]?.length || 0;
@@ -180,9 +180,9 @@ export default function Home() {
     setGridSize({ width: newGrid[0]?.length || 0, height: newGrid.length || 0 });
     setSelection(null);
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
-  };
+  }, [grid, updateGrid, toast]);
   
-  const handleRenameTile = (tileId: number, newName: string) => {
+  const handleRenameTile = useCallback((tileId: number, newName: string) => {
     const isNameTaken = tiles.some(t => t.name === newName && t.id !== tileId);
     if (isNameTaken) {
       toast({ variant: 'destructive', title: 'Rename Failed', description: 'A tile with that name already exists.' });
@@ -193,27 +193,24 @@ export default function Home() {
     );
     updateTiles(newTiles);
     toast({ title: 'Tile Renamed', description: `Tile has been renamed to "${newName}".` });
-  };
+  }, [tiles, toast, updateTiles]);
 
-  const handleToggleSolid = (tileId: number) => {
+  const handleToggleSolid = useCallback((tileId: number) => {
     const newTiles = tiles.map(t =>
       t.id === tileId ? { ...t, solid: !t.solid } : t
     );
     updateTiles(newTiles);
-  };
+  }, [tiles, updateTiles]);
 
-  const confirmDeleteTile = () => {
+  const confirmDeleteTile = useCallback(() => {
     if (!tileToDelete) return;
 
     const tileId = tileToDelete.id;
     
-    // Remove tile from palette
     updateTiles(tiles.filter(t => t.id !== tileId), true);
     
-    // Remove tile from grid and update history
     updateGrid(grid.map(row => row.map(cell => (cell === tileId ? 0 : cell))));
     
-    // If deleted tile was selected, select empty tile
     if (selectedTileId === tileId) {
       setSelectedTileId(0);
     }
@@ -227,28 +224,28 @@ export default function Home() {
       description: `Tile "${tileToDelete.name}" has been removed.`,
     });
     setTileToDelete(null);
-  };
+  }, [tileToDelete, tiles, grid, selectedTileId, secondarySelectedTileId, updateTiles, updateGrid, toast]);
 
-  const handleDeleteTile = (tileId: number) => {
+  const handleDeleteTile = useCallback((tileId: number) => {
     const tile = tiles.find(t => t.id === tileId);
     if(tile) {
       setTileToDelete(tile);
     }
-  };
+  }, [tiles]);
 
-  const handleImportTiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportTiles = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
     const fileList = Array.from(files);
     addTiles(fileList);
     event.target.value = '';
-  };
+  }, [addTiles]);
   
-  const openSlicer = (files: File[] = []) => {
+  const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
     setSlicerOpen(true);
-  }
+  }, []);
 
   const handleExportMap = useCallback(() => {
     const mapData = grid.map(row => row.join(',')).join('\n');
@@ -264,7 +261,7 @@ export default function Home() {
     toast({ title: 'Map Exported', description: 'Your map has been saved as tileforge-map.txt' });
   },[grid, toast]);
   
-    const handleImportMap = (file: File) => {
+    const handleImportMap = useCallback((file: File) => {
         if (!file || !file.type.startsWith('text/')) {
             toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop a valid .txt map file.' });
             return;
@@ -296,7 +293,7 @@ export default function Home() {
             }
         };
         reader.readAsText(file);
-    };
+    }, [toast, updateGrid]);
 
   const handleCellAction = useCallback(
     async (row: number, col: number) => {
@@ -470,7 +467,7 @@ export default function Home() {
     updateGrid(newGrid);
   }, [grid, selectedTileId, secondarySelectedTileId, tool, scatterSet, toast, updateGrid]);
 
-  const applyToSelection = (callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
+  const applyToSelection = useCallback((callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection) return;
 
     const newGrid = grid.map((r, rowIndex) => {
@@ -489,28 +486,28 @@ export default function Home() {
     });
 
     updateGrid(newGrid);
-  }
+  }, [selection, grid, updateGrid]);
 
-  const handleFillSelection = () => {
+  const handleFillSelection = useCallback(() => {
     applyToSelection(() => selectedTileId);
     toast({ title: 'Selection Filled', description: 'The selected area has been filled with the current tile.' });
-  }
+  }, [applyToSelection, selectedTileId, toast]);
 
-  const handleDeleteSelection = () => {
+  const handleDeleteSelection = useCallback(() => {
     applyToSelection(() => 0);
     toast({ title: 'Selection Deleted', description: 'The selected area has been cleared.' });
-  }
+  }, [applyToSelection, toast]);
   
-  const handleInvertSelection = () => {
+  const handleInvertSelection = useCallback(() => {
     if (selectedTileId === 0) {
       toast({ variant: 'destructive', title: 'Invert Failed', description: 'Cannot invert with Empty tile. Please select a tile.' });
       return;
     }
     applyToSelection((cell) => cell === selectedTileId ? 0 : selectedTileId);
     toast({ title: 'Selection Inverted', description: 'Tiles in the selected area have been inverted.' });
-  }
+  }, [applyToSelection, selectedTileId, toast]);
   
-  const handleMirrorHorizontal = () => {
+  const handleMirrorHorizontal = useCallback(() => {
     if (!selection) return;
     const selectionWidth = selection.maxCol - selection.minCol + 1;
     const tempSelection = grid.slice(selection.minRow, selection.maxRow + 1).map(row => row.slice(selection.minCol, selection.maxCol + 1));
@@ -520,9 +517,9 @@ export default function Home() {
         return tempSelection[rowIndex - sel.minRow][sourceCol - sel.minCol];
     });
     toast({ title: 'Selection Mirrored', description: 'The selected area has been mirrored horizontally.' });
-  }
+  }, [selection, grid, applyToSelection, toast]);
 
-  const handleMirrorVertical = () => {
+  const handleMirrorVertical = useCallback(() => {
     if (!selection) return;
     const selectionHeight = selection.maxRow - selection.minRow + 1;
     const tempSelection = grid.slice(selection.minRow, selection.maxRow + 1).map(row => row.slice(selection.minCol, selection.maxCol + 1));
@@ -532,7 +529,7 @@ export default function Home() {
         return tempSelection[sourceRow - sel.minRow][colIndex - sel.minCol];
     });
      toast({ title: 'Selection Mirrored', description: 'The selected area has been mirrored vertically.' });
-  }
+  }, [selection, grid, applyToSelection, toast]);
 
   const handleCopySelection = useCallback(() => {
     if (!selection?.selectedCells) return;
@@ -542,7 +539,7 @@ export default function Home() {
       .map((row, rIndex) => row.slice(selection.minCol, selection.maxCol + 1)
         .map((cell, cIndex) => {
           if (selection.selectedCells && selection.selectedCells[selection.minRow + rIndex][selection.minCol + cIndex] === 0) {
-            return -1; // Use -1 to signify not part of the selection
+            return -1;
           }
           return cell;
         })
@@ -573,7 +570,7 @@ export default function Home() {
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
   }, [grid, selection, clipboard, toast, updateGrid]);
   
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -591,9 +588,9 @@ export default function Home() {
       }
       e.dataTransfer.clearData();
     }
-  };
+  }, [dragFileType, handleImportMap, openSlicer, toast]);
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isDragging) setIsDragging(true);
@@ -611,12 +608,11 @@ export default function Home() {
             }
         }
     }
-  };
+  }, [isDragging]);
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // This check is to prevent the drag leave event from firing when moving over a child element.
     const currentTarget = e.currentTarget;
     setTimeout(() => {
         if (currentTarget) {
@@ -627,7 +623,7 @@ export default function Home() {
             }
         }
     }, 50);
-  };
+  }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
@@ -661,7 +657,7 @@ export default function Home() {
     if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.role === 'slider') return;
 
     if ((e.ctrlKey || e.metaKey)) {
-        if (e.key === 'c' || e.key === 'v' || e.key === 'z' || e.key === 'y' || e.key === 's' || e.key === '0' || e.key === '=' || e.key === '-') {
+        if (['c', 'v', 'z', 'y', 's', '0', '=', '-'].includes(e.key)) {
             e.preventDefault();
         }
       if (e.key === 'c' && selection) handleCopySelection();
@@ -697,7 +693,7 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const handleToolSelect = (newTool: Tool) => {
+  const handleToolSelect = useCallback((newTool: Tool) => {
     setTool(newTool);
     if (newTool !== 'select' && newTool !== 'magic-wand') {
       setSelection(null);
@@ -706,12 +702,11 @@ export default function Home() {
     if (toolsWithSettings.includes(newTool)) {
       leftPanelRef.current?.expand();
     }
-  };
+  }, []);
 
-  const togglePreviewMode = () => {
+  const togglePreviewMode = useCallback(() => {
     const newPreviewState = !isPreviewMode;
     if (newPreviewState) {
-      // Find first non-solid tile to start
       let startPos = { row: 0, col: 0 };
       let found = false;
       for (let r = 0; r < grid.length; r++) {
@@ -736,15 +731,15 @@ export default function Home() {
       setPlayerPos(startPos);
     }
     setPreviewMode(newPreviewState);
-  };
+  }, [grid, isPreviewMode, tiles, toast]);
   
-  const handleClearMap = () => {
+  const handleClearMap = useCallback(() => {
     updateGrid(createEmptyGrid(gridSize.width, gridSize.height));
     setConfirmClearMapOpen(false);
     toast({ title: "Map Cleared", description: "The grid has been reset."});
-  };
+  }, [gridSize, toast, updateGrid]);
   
-  const handleClearPalette = () => {
+  const handleClearPalette = useCallback(() => {
     updateGrid(createEmptyGrid(gridSize.width, gridSize.height), true);
     updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
 
@@ -753,7 +748,13 @@ export default function Home() {
     setScatterSet([]);
     setConfirmClearPaletteOpen(false);
     toast({ title: "Palette Cleared", description: "All tiles have been removed."});
-  }
+  }, [gridSize, toast, updateGrid, updateTiles]);
+  
+  const onToggleScatterTile = useCallback((id: number) => {
+    setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
+  }, []);
+
+  const onClearScatterSet = useCallback(() => setScatterSet([]), []);
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -909,6 +910,7 @@ export default function Home() {
                             size="icon"
                             onClick={toggleToolbar}
                             className="w-full h-8 rounded-none"
+                            aria-label={isToolbarCollapsed ? 'Expand Toolbar' : 'Collapse Toolbar'}
                         >
                             {isToolbarCollapsed ? <PanelRight /> : <PanelLeft />}
                         </Button>
@@ -963,10 +965,8 @@ export default function Home() {
                           tool={tool}
                           onSelectTile={setSelectedTileId}
                           onSelectSecondaryTile={setSecondarySelectedTileId}
-                          onToggleScatterTile={(id) => {
-                            setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
-                          }}
-                          onClearScatterSet={() => setScatterSet([])}
+                          onToggleScatterTile={onToggleScatterTile}
+                          onClearScatterSet={onClearScatterSet}
                           onRenameTile={handleRenameTile}
                           onDeleteTile={handleDeleteTile}
                           onToggleSolid={handleToggleSolid}
@@ -982,6 +982,7 @@ export default function Home() {
                               size="icon"
                               onClick={togglePalette}
                               className="w-full h-8 rounded-none"
+                              aria-label={isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}
                               >
                               {isPaletteCollapsed ? <PanelLeft /> : <PanelRight />}
                               </Button>
@@ -1003,12 +1004,13 @@ export default function Home() {
           accept="image/png,image/jpeg"
           multiple
           className="hidden"
+          aria-hidden="true"
         />
         
         <SpritesheetSlicerModal
           isOpen={isSlicerOpen}
           onClose={() => setSlicerOpen(false)}
-          onSlice={(files) => addTiles(files)}
+          onSlice={addTiles}
           initialFiles={slicerInitialFiles}
         />
         <ExportTilesModal
@@ -1090,4 +1092,3 @@ export default function Home() {
   );
 }
 
-    

@@ -37,7 +37,7 @@ export const useProjects = () => {
 
   const { projects, currentProjectId } = state;
 
-  const currentProject = projects.find(p => p.id === currentProjectId) || createNewProject("New Project");
+  const currentProject = projects.find(p => p.id === currentProjectId) || createNewProject("Loading...");
 
   useEffect(() => {
     setIsLoading(true);
@@ -73,13 +73,13 @@ export const useProjects = () => {
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
         try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ projects, currentProjectId }));
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (error) {
             console.error("Failed to save projects to localStorage", error);
             toast({ variant: 'destructive', title: 'Save Error', description: 'Could not save your changes.' });
         }
     }
-  }, [state, isLoading, toast, projects, currentProjectId]);
+  }, [state, isLoading, toast]);
 
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     setProjectState(currentState => {
@@ -198,7 +198,6 @@ export const useProjects = () => {
         
         if (remainingProjects.length === 0) {
             const newDefault = createNewProject('New Project');
-            resetHistory({ projects: [newDefault], currentProjectId: newDefault.id });
             return { projects: [newDefault], currentProjectId: newDefault.id };
         }
         
@@ -207,11 +206,10 @@ export const useProjects = () => {
             newCurrentId = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
         }
         
-        resetHistory({ projects: remainingProjects, currentProjectId: newCurrentId });
         return { projects: remainingProjects, currentProjectId: newCurrentId };
     });
     toast({ title: 'Project Deleted'});
-  }, [setProjectState, toast, resetHistory]);
+  }, [setProjectState, toast]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     setProjectState(currentState => ({
@@ -237,3 +235,4 @@ export const useProjects = () => {
     canRedo,
   };
 };
+
