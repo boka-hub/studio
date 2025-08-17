@@ -94,8 +94,7 @@ export default function Home() {
     canRedo,
   } = useProjects();
   
-  const grid = currentProject.grid;
-  const tiles = currentProject.tiles;
+  const { grid, tiles } = currentProject;
 
   const [gridSize, setGridSize] = useState({ width: grid[0]?.length || INITIAL_GRID_SIZE, height: grid.length || INITIAL_GRID_SIZE });
 
@@ -1090,3 +1089,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
