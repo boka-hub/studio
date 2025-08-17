@@ -64,10 +64,8 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     const textFiles = fileList.filter(f => f.name.endsWith('.txt'));
 
     for (const file of imageFiles) {
-       const baseNameWithSuffix = file.name.replace(EXTENSION_REGEX, '');
-       const baseName = baseNameWithSuffix.replace(FILENAME_REGEX, '');
-       
-       const companionText = textFiles.find(txtFile => txtFile.name.replace(EXTENSION_REGEX, '').replace(FILENAME_REGEX, '') === baseName);
+       const baseName = file.name.replace(EXTENSION_REGEX, '');
+       const companionText = textFiles.find(txtFile => txtFile.name.replace(EXTENSION_REGEX, '') === baseName);
 
       let tileWidth = 16, tileHeight = 16, metadata = null;
 
