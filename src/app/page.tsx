@@ -184,24 +184,24 @@ export default function Home() {
   };
   
   const addTiles = async (newTiles: Omit<Tile, 'id'>[]) => {
-    const filteredTiles = [];
+    const filteredNewTiles = [];
     for (const tile of newTiles) {
       if (!(await isTileTransparent(tile.src))) {
-        filteredTiles.push(tile);
+        filteredNewTiles.push(tile);
       }
     }
 
-    if (filteredTiles.length < newTiles.length) {
-      const skippedCount = newTiles.length - filteredTiles.length;
+    if (filteredNewTiles.length < newTiles.length) {
+      const skippedCount = newTiles.length - filteredNewTiles.length;
       toast({
         title: 'Transparent Tiles Skipped',
         description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
       });
     }
     
-    if (filteredTiles.length > 0) {
+    if (filteredNewTiles.length > 0) {
       let nextId = tiles.length > 0 ? Math.max(...tiles.map((t) => t.id)) + 1 : 1;
-      const tilesWithIds = filteredTiles.map((tile) => ({
+      const tilesWithIds = filteredNewTiles.map((tile) => ({
         ...tile,
         id: nextId++,
         solid: false,
@@ -660,7 +660,6 @@ export default function Home() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Use a small timeout to prevent flickering when moving between child elements
     const currentTarget = e.currentTarget;
     setTimeout(() => {
       if (currentTarget) {
@@ -1136,5 +1135,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
