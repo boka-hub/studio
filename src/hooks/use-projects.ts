@@ -108,7 +108,6 @@ export const useProjects = () => {
     }
   }, [projects, currentProjectId, isLoading, toast]);
 
-
   const updateGrid = useCallback((grid: GridState, batch = false) => {
       setProjectState(currentState => ({ ...currentState, grid }), batch);
   }, [setProjectState]);
@@ -170,16 +169,18 @@ export const useProjects = () => {
       });
   }, [setProjectState, toast]);
 
-
   const loadProject = useCallback((id: string) => {
-    const projectToLoad = projects.find(p => p.id === id);
-    if (projectToLoad) {
-      setCurrentProjectId(id);
-      resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
-    } else {
-      toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
-    }
-  }, [projects, toast, resetHistory]);
+      setProjects(projs => {
+          const projectToLoad = projs.find(p => p.id === id);
+          if (projectToLoad) {
+              setCurrentProjectId(id);
+              resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
+          } else {
+              toast({ variant: 'destructive', title: 'Load Error', description: 'Could not find the selected project.' });
+          }
+          return projs;
+      });
+  }, [toast, resetHistory]);
 
   const saveProject = useCallback((name: string) => {
     const newProject: Project = {
@@ -191,27 +192,47 @@ export const useProjects = () => {
   }, [projectState]);
 
   const deleteProject = useCallback((id: string) => {
+    const isDeletingCurrent = id === currentProjectId;
+    let nextProjectIdToLoad: string | null = null;
+    
     setProjects(projs => {
-      const newProjects = projs.filter(p => p.id !== id);
-      if (newProjects.length === 0) {
+      const remainingProjects = projs.filter(p => p.id !== id);
+      
+      if (remainingProjects.length === 0) {
         const defaultProject = createNewProject('New Project');
-        setCurrentProjectId(defaultProject.id);
-        resetHistory(createInitialState());
+        nextProjectIdToLoad = defaultProject.id;
         return [defaultProject];
       }
-      if (id === currentProjectId) {
-        // If we deleted the current project, switch to the most recently modified one
-        const nextProject = newProjects.sort((a,b) => b.lastModified - a.lastModified)[0];
-        loadProject(nextProject.id);
+      
+      if (isDeletingCurrent) {
+        nextProjectIdToLoad = remainingProjects.sort((a,b) => b.lastModified - a.lastModified)[0].id;
       }
-      return newProjects;
+      
+      return remainingProjects;
     });
+
+    if (nextProjectIdToLoad) {
+        // This state update will trigger the useEffect to load the project
+        setCurrentProjectId(nextProjectIdToLoad);
+    }
+    
     toast({ title: 'Project Deleted'});
-  }, [currentProjectId, toast, loadProject, resetHistory]);
+
+  }, [currentProjectId, toast]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     setProjects(projs => projs.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p));
   }, []);
+
+  useEffect(() => {
+    if (isLoading || !currentProjectId) return;
+    const projectToLoad = projects.find(p => p.id === currentProjectId);
+    if(projectToLoad) {
+        resetHistory({ grid: projectToLoad.grid, tiles: projectToLoad.tiles });
+    }
+  // This should only run when the currentProjectId changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProjectId, isLoading]);
 
   return {
     projects,
