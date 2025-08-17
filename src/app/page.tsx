@@ -69,31 +69,28 @@ const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
 const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
 
 const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState<T>(defaultValue);
-
-  // Load from localStorage on initial client-side render
-  useEffect(() => {
+  const [state, setState] = useState<T>(() => {
+     if (typeof window === 'undefined') {
+      return defaultValue;
+    }
     try {
       const item = window.localStorage.getItem(key);
-      if (item) {
-        setState(JSON.parse(item));
-      }
+      return item ? JSON.parse(item) : defaultValue;
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
+      return defaultValue;
     }
-  }, [key]);
+  });
 
-  // Save to localStorage whenever state changes
   useEffect(() => {
-    try {
-      // Don't save the default value
-      if (JSON.stringify(state) !== JSON.stringify(defaultValue)) {
-          window.localStorage.setItem(key, JSON.stringify(state));
-      }
-    } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
+    if (typeof window !== 'undefined') {
+        try {
+            window.localStorage.setItem(key, JSON.stringify(state));
+        } catch (error) {
+            console.error(`Error setting localStorage key "${key}":`, error);
+        }
     }
-  }, [key, state, defaultValue]);
+  }, [key, state]);
 
   return [state, setState];
 };
@@ -805,7 +802,7 @@ export default function Home() {
             />
           </main>
           
-          <div className="bg-card border-l border-border flex flex-col">
+          <div className="bg-card border-l border-border flex flex-col w-64">
             <aside className="flex-grow flex flex-col transition-all duration-300 overflow-hidden">
                   {!isPreviewMode && (
                       <TilePalette
