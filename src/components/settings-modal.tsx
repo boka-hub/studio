@@ -40,85 +40,120 @@ const shortcuts = [
     { keys: ['R'], description: 'Select Rectangle Tool' },
     { keys: ['L'], description: 'Select Gradient Tool' },
     { keys: ['N'], description: 'Select Noise Tool' },
+    { keys: ['C'], description: 'Select Scatter Tool' },
     { keys: ['M'], description: 'Select/Lasso Tool' },
     { keys: ['W'], description: 'Select Magic Wand Tool' },
-    { keys: ['Ctrl', 'C'], description: 'Copy selection' },
-    { keys: ['Ctrl', 'V'], description: 'Paste selection' },
-    { keys: ['Delete'], description: 'Delete selection' },
-    { keys: ['Escape'], description: 'Deselect current selection' },
+    { keys: ['Ctrl', 'C'], description: 'Copy selection to clipboard' },
+    { keys: ['Ctrl', 'V'], description: 'Paste from clipboard to selection' },
+    { keys: ['Delete'], description: 'Delete tiles within a selection' },
+    { keys: ['Escape'], description: 'Deselect current selection or cancel drawing' },
     { keys: ['Ctrl', '='], description: 'Zoom In' },
     { keys: ['Ctrl', '-'], description: 'Zoom Out' },
     { keys: ['Ctrl', '0'], description: 'Reset Zoom to 100%' },
-    { keys: ['Ctrl', 'S'], description: 'Export Map as .txt' },
+    { keys: ['Ctrl', 'S'], description: 'Export Map as .txt file' },
 ];
 
 const features = [
-    { 
-        name: "Brush Tool",
-        short: "Paints individual tiles on the canvas.",
-        long: "The most basic tool. Click on any cell to place the currently selected primary tile from the palette. You can also click and drag to draw freeform lines."
-    },
-    { 
-        name: "Eraser Tool",
-        short: "Removes tiles from the canvas.",
-        long: "The eraser sets any tile it touches back to the default 'Empty' state (ID 0). You can click to erase a single tile or click and drag to erase multiple tiles."
-    },
-    { 
-        name: "Picker Tool",
-        short: "Selects a tile directly from the canvas.",
-        long: "Instead of finding a tile in the palette, use the picker to click on any tile already placed on the grid. That tile will become your new primary selected tile, and the tool will automatically switch back to the brush."
-    },
-    { 
-        name: "Fill (Bucket) Tool",
-        short: "Fills a contiguous area of the same tile.",
-        long: "Click on any tile on the grid, and the fill tool will replace that tile and every connected tile of the same type with your currently selected primary tile. It will not cross boundaries of different tile types."
-    },
-    { 
-        name: "Spray Tool",
-        short: "Scatters the selected tile in a random pattern.",
-        long: "Creates a more natural, randomized look. When you click and drag, the spray tool applies the primary tile in a circular area around the cursor, but only to a random subset of the cells within that circle, based on a fixed density. Great for grass, rocks, and flowers."
+    // Drawing Tools
+    {
+        name: "Brush",
+        short: "Paints individual tiles.",
+        long: "This is your main drawing tool. Select a tile from the palette by left-clicking it. Then, click on any cell in the grid to place that tile. You can also click and hold the mouse button while dragging to draw free-form lines."
     },
     {
-        name: "Rectangle Tool",
+        name: "Eraser",
+        short: "Removes tiles from the grid.",
+        long: "The eraser sets any tile it touches back to the transparent 'Empty' state (which has an ID of 0). You can click a single tile to erase it, or click and drag to clear a larger area."
+    },
+    {
+        name: "Picker",
+        short: "Selects a tile directly from the grid.",
+        long: "Tired of hunting for a tile in the palette? Use the Picker tool to click on any tile that's already placed on your map. That tile will instantly become your active primary tile, and the tool will automatically switch back to the Brush so you can continue drawing with it."
+    },
+    {
+        name: "Fill (Bucket)",
+        short: "Fills a whole area of identical tiles.",
+        long: "The Fill tool replaces a whole section of connected, identical tiles with your currently selected primary tile. For example, if you have a large patch of grass and click on one grass tile with 'water' selected, the entire patch of grass will become water. The fill will not go past tiles of a different type."
+    },
+    // Shape & Pattern Tools
+    {
+        name: "Rectangle",
         short: "Draws a filled rectangle of tiles.",
-        long: "Click and drag to define the two opposite corners of a rectangle. The tool will preview the shape as you drag, and upon release, it will fill the entire rectangular area with your currently selected primary tile."
+        long: "This tool is for creating perfect rectangular shapes. Click and hold the mouse button to set the first corner, drag your mouse to the opposite corner, and release. The entire area you defined will be filled with your currently selected primary tile."
     },
     {
-        name: "Gradient Tool",
-        short: "Blends two tiles over a rectangular area.",
-        long: "This tool creates a smooth transition between your primary and secondary tiles using a dithering pattern. Select a primary tile (left-click) and a secondary tile (right-click) in the palette. Then, click and drag to define an area. The area will be filled with a mix of the two tiles, creating a gradient effect."
+        name: "Gradient",
+        short: "Blends two tiles smoothly.",
+        long: "Creates a smooth transition between two tiles using a dithering (checkerboard) pattern. First, select a primary tile (left-click) and a secondary tile (right-click) in the palette. Then, use the Gradient tool to draw a rectangle. The area will be filled with a mix of the two tiles, creating a gradient effect from left to right."
     },
     {
-        name: "Noise Tool",
-        short: "Fills a rectangle with a random mix of two tiles.",
-        long: "Similar to the Gradient tool, this uses your primary and secondary tiles. Click and drag to define a rectangle. Upon release, every cell in the area will be randomly set to either the primary or secondary tile with a 50/50 chance. Ideal for creating varied, non-uniform terrain."
+        name: "Noise",
+        short: "Fills an area with a random mix of two tiles.",
+        long: "Similar to the Gradient tool, this uses your primary and secondary tiles. When you draw a rectangle, every cell inside it will be randomly set to either the primary or secondary tile with a 50/50 chance. This is perfect for creating varied, non-uniform textures like dirt patches, rocky ground, or starry skies."
     },
     {
-        name: "Select (Lasso) Tool",
-        short: "Selects a rectangular area of tiles.",
-        long: "Click and drag to draw a rectangular selection box. Once an area is selected, you can use the Selection Actions (Fill, Copy, Paste, Delete, Invert) on it. Press 'Escape' to deselect."
+        name: "Spray",
+        short: "Scatters the selected tile in a random pattern.",
+        long: "This tool helps create a more natural, randomized look. When you click and drag, the spray tool applies your primary tile in a circular area, but only to a random subset of cells. You can adjust the 'Radius' and 'Density' of the spray in the toolbar. Great for things like grass, flowers, or rubble."
     },
     {
-        name: "Magic Wand Tool",
+        name: "Scatter",
+        short: "Paints with a random tile from a custom set.",
+        long: "The Scatter tool lets you draw with a random tile from a pre-defined set. First, select the Scatter tool. Then, go to the tile palette and click on all the tiles you want to include in your set (they will be highlighted). Now, when you draw with the scatter tool, it will randomly pick a tile from your set for each cell. This is excellent for creating varied forests or dungeons with different tile types."
+    },
+    // Selection Tools
+    {
+        name: "Select (Lasso)",
+        short: "Selects a rectangular area of your map.",
+        long: "Click and drag to draw a rectangular selection box. Once an area is selected, you can perform special actions on it using the 'Selection' tools in the toolbar (like Fill, Copy, Paste, etc.). Press the 'Escape' key to clear your selection."
+    },
+    {
+        name: "Magic Wand",
         short: "Selects a connected area of identical tiles.",
-        long: "A powerful selection tool. Click on any tile, and the magic wand will automatically select all adjacent tiles of the same type, no matter how complex the shape. You can then use the Selection Actions on this precise selection."
+        long: "A very powerful selection tool. Click on any tile, and the magic wand will automatically select all adjacent tiles of the same type, no matter how complex the shape is. This is perfect for selecting an entire river, forest, or room floor with a single click. You can then use the 'Selection' actions on it."
     },
     {
         name: "Selection Actions",
-        short: "Perform actions on a selected area.",
-        long: "Once you have an area selected with the Lasso or Magic Wand, a new set of tools appears in the toolbar: Fill (fills with primary tile), Copy (copies tile data), Paste (pastes copied data at selection start), Delete (clears the area), and Invert (swaps primary tile with others)."
-    }
+        short: "Tools for editing a selected area.",
+        long: "Once you have an area selected, a new set of tools appears in the toolbar: Fill (fills the selection with your primary tile), Copy (copies the selected tile data to an invisible clipboard), Paste (pastes the clipboard into the top-left of a new selection), Delete (clears all tiles in the selection), Invert (swaps your primary tile with other tiles), and Mirror (flips the selection horizontally or vertically)."
+    },
+    // Project & File Management
+    {
+        name: "Project Management",
+        short: "Save and load multiple maps.",
+        long: "All of your work is automatically saved in your browser. Use the 'Manage Projects' button (database icon) to open the project manager. Here you can: 'Save as New Project' to create a snapshot of your current map, 'Load' a different project, 'Rename' existing ones, or 'Delete' projects you no longer need. The app will always auto-load the last project you worked on."
+    },
+    {
+        name: "Importing & Slicing",
+        short: "Add new tiles to your palette.",
+        long: "You can add tiles using the 'Import Tiles' button (for individual image files) or the 'Slice Sheet' button (for spritesheets). The slicer lets you define the tile dimensions (e.g., 16x16) to automatically cut up a larger image. You can also drag-and-drop images directly onto the app to open the slicer."
+    },
+    {
+        name: "Exporting",
+        short: "Save your map and tiles to your computer.",
+        long: "Use 'Export Map' to save your map's layout as a simple text file (.txt). Use 'Export Spritesheet' to create a single, optimized spritesheet image of all your tiles, along with a metadata file that describes each tile's properties and position."
+    },
+     {
+        name: "Clearing & Resetting",
+        short: "Quickly clear your workspace.",
+        long: "The header contains buttons to 'Clear Map' (erases the grid but keeps your tiles) and 'Clear Palette' (deletes all tiles and the map). Both actions have confirmation dialogs. To completely reset the entire application and delete all saved projects, you can use the 'Reset Project' button found in the 'About' tab of this settings window."
+    },
+    {
+        name: "Live Preview",
+        short: "A simple mode to test your map's collisions.",
+        long: "Click the 'Play' icon in the header to enter Live Preview mode. A player indicator will appear on the map. You can move it around with the arrow keys. The player will not be able to move onto any tiles that you have marked as 'Solid' in the palette, allowing you to quickly test the collidable areas of your map. Press 'Escape' to exit."
+    },
 ];
 
-const handleReset = () => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const handleReset = () => {
     if (typeof window !== 'undefined') {
         window.localStorage.removeItem('tileforge-projects');
         window.localStorage.removeItem('tileforge-panel-layout');
         window.location.reload();
     }
-}
+  }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl h-[70vh] flex flex-col">
@@ -174,48 +209,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <div className="space-y-2">
                     <h3 className="font-semibold text-lg">Getting Started with TileForge</h3>
                     <p className="text-muted-foreground">
-                        Welcome to TileForge! Your work is automatically saved to your browser&apos;s local storage. Here&apos;s a quick guide to creating your first map.
+                        Welcome to TileForge! This is an all-in-one tool for creating 2D tile maps. Your work is automatically saved to your browser&apos;s local storage, so you can close the tab and come back later. Here&apos;s a quick guide to creating your first map from scratch.
                     </p>
                 </div>
                  <div className="space-y-3">
-                    <h4 className="font-semibold">Step 1: Importing Your Tiles</h4>
+                    <h4 className="font-semibold">Step 1: Adding Tiles to Your Palette</h4>
                     <p className="text-muted-foreground">
-                        Every map starts with tiles. You have two primary ways to add them to your palette on the right:
+                        Your map is made of tiles, which live in the **Palette** on the right. To start, you need to add some images.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li><span className="font-semibold text-foreground">Import Individual Tiles:</span> Use the <span className="italic">Import Tiles</span> button in the header to select one or more image files from your computer.</li>
-                        <li><span className="font-semibold text-foreground">Slice a Spritesheet:</span> If you have a single image containing multiple tiles (a spritesheet), use the <span className="italic">Slice Sheet</span> button. This will open a tool where you can specify the dimensions of your tiles (e.g., 16x16) and automatically slice them into individual tiles for your palette. You can also drag-and-drop a spritesheet directly onto the canvas to open this tool.</li>
+                        <li><span className="font-semibold text-foreground">Importing Individual Images:</span> Use the <span className="italic">Import Tiles</span> button (upload icon) in the header to select one or more image files (like PNGs) from your computer. Each image will become a single tile.</li>
+                        <li><span className="font-semibold text-foreground">Slicing a Spritesheet:</span> If you have a single image that contains a grid of many smaller tiles (a spritesheet), use the <span className="italic">Slice Sheet</span> button (scissors icon). This opens a tool where you can specify the dimensions of your tiles (e.g., 16x16 pixels). It will then automatically cut up the sheet and add each piece as a separate tile to your palette. You can also **drag-and-drop a spritesheet file** directly onto the app to open this tool.</li>
                     </ul>
                 </div>
                 <div className="space-y-3">
-                    <h4 className="font-semibold">Step 2: Building Your Map</h4>
+                    <h4 className="font-semibold">Step 2: Drawing Your Map</h4>
                      <p className="text-muted-foreground">
-                        With your tiles in the palette, you can start building. Select a tile by left-clicking it in the palette to make it your primary "brush" color. Select a secondary tile with a right-click for use with advanced tools.
+                        With tiles in your palette, you can now build your map on the central **Grid**. Select a tool from the **Toolbar** on the left.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                       <li>Use the <span className="font-semibold text-foreground">Brush</span> to paint tiles and the <span className="font-semibold text-foreground">Eraser</span> to remove them.</li>
-                       <li>The <span className="font-semibold text-foreground">Fill</span> tool will flood-fill an area of identical tiles with your selected tile.</li>
-                       <li>The <span className="font-semibold text-foreground">Picker</span> lets you select a tile that's already on the map.</li>
+                       <li>In the palette, **left-click** a tile to select it as your primary "brush" color.</li>
+                       <li>Use the <span className="font-semibold text-foreground">Brush</span> tool to paint tiles, and the <span className="font-semibold text-foreground">Eraser</span> to remove them.</li>
+                       <li>Experiment with other tools like <span className="font-semibold text-foreground">Fill</span>, <span className="font-semibold text-foreground">Rectangle</span>, and <span className="font-semibold text-foreground">Spray</span> to build your world quickly.</li>
                     </ul>
                 </div>
                  <div className="space-y-3">
-                    <h4 className="font-semibold">Step 3: Advanced Tools & Selections</h4>
+                    <h4 className="font-semibold">Step 3: Managing and Saving Your Work</h4>
                      <p className="text-muted-foreground">
-                        For more complex patterns, use the shape and selection tools.
+                        All your changes are **auto-saved** to the current project. If you want to work on multiple maps, use the project manager.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li>The <span className="font-semibold text-foreground">Rectangle</span> tool draws filled rectangles. <span className="font-semibold text-foreground">Gradient</span> and <span className="font-semibold text-foreground">Noise</span> use your primary and secondary tiles to create interesting textures.</li>
-                        <li>Use <span className="font-semibold text-foreground">Select</span> or the <span className="font-semibold text-foreground">Magic Wand</span> to select areas of your map. Once selected, you can use the selection-specific actions in the toolbar to Fill, Delete, Copy, or Paste parts of your map.</li>
+                        <li>Click the <span className="font-semibold text-foreground">Manage Projects</span> button (database icon) to see all your saved projects.</li>
+                        <li>Here, you can <span className="font-semibold text-foreground">Save as New Project</span> to create a copy of your current work, or <span className="font-semibold text-foreground">Load</span> a different map to continue editing it.</li>
                     </ul>
                 </div>
                 <div className="space-y-3">
-                    <h4 className="font-semibold">Step 4: Exporting Your Work</h4>
+                    <h4 className="font-semibold">Step 4: Exporting for Your Game</h4>
                      <p className="text-muted-foreground">
-                        Once you&apos;re done, you can export your creation.
+                        When your map is ready, you need to get it into your game engine.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li><span className="font-semibold text-foreground">Export Map:</span> Saves the grid data as a simple text file, easy to parse in any game engine.</li>
-                        <li><span className="font-semibold text-foreground">Export Spritesheet:</span> Compiles all the tiles used in your palette back into a single, optimized spritesheet image and provides a metadata file that maps tile names and properties to their coordinates on the sheet.</li>
+                        <li><span className="font-semibold text-foreground">Export Map:</span> Saves the grid data as a comma-separated text file (.txt). Each number in the file corresponds to a tile's ID, which you can use to reconstruct the map in your code.</li>
+                        <li><span className="font-semibold text-foreground">Export Spritesheet:</span> This is the most common option. It compiles all the tiles from your palette back into a single, optimized spritesheet image (PNG). It also gives you a metadata file (.txt) that tells you the name, properties (like 'solid'), and coordinates of each tile on the sheet.</li>
                     </ul>
                 </div>
                 <div className="space-y-2 mt-6">
