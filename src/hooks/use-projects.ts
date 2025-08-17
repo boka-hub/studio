@@ -1,7 +1,9 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import type { Project, GridState, Tile, ProjectState } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useHistoryState } from './use-history-state';
+import { isTileTransparent } from '@/lib/utils';
 
 const STORAGE_KEY = 'tileforge-projects';
 const INITIAL_GRID_SIZE = 32;
@@ -72,7 +74,7 @@ export const useProjects = () => {
       const defaultProject = createNewProject('TileForge');
       setProjects([defaultProject]);
       setCurrentProjectId(defaultProject.id);
-      resetHistory({ grid: defaultProject.grid, tiles: defaultProject.tiles });
+      resetHistory(createInitialState());
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +116,35 @@ export const useProjects = () => {
   const updateTiles = useCallback((tiles: Tile[], batch = false) => {
       setProjectState({ ...projectState, tiles }, batch);
   }, [projectState, setProjectState]);
+
+  const addTiles = useCallback(async (newTiles: Omit<Tile, 'id' | 'solid'>[]) => {
+    const filteredNewTiles = [];
+    for (const tile of newTiles) {
+      if (!(await isTileTransparent(tile.src))) {
+        filteredNewTiles.push(tile);
+      }
+    }
+
+    if (filteredNewTiles.length < newTiles.length) {
+      const skippedCount = newTiles.length - filteredNewTiles.length;
+      toast({
+        title: 'Transparent Tiles Skipped',
+        description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
+      });
+    }
+    
+    if (filteredNewTiles.length > 0) {
+      setProjectState(currentState => {
+        let nextId = currentState.tiles.length > 0 ? Math.max(...currentState.tiles.map((t) => t.id)) + 1 : 1;
+        const tilesWithIds: Tile[] = filteredNewTiles.map((tile) => ({
+          ...tile,
+          id: nextId++,
+          solid: false,
+        }));
+        return { ...currentState, tiles: [...currentState.tiles, ...tilesWithIds] };
+      });
+    }
+  }, [setProjectState, toast]);
 
 
   const loadProject = useCallback((id: string) => {
@@ -174,11 +205,10 @@ export const useProjects = () => {
     renameProject,
     updateGrid,
     updateTiles,
+    addTiles,
     undo,
     redo,
     canUndo,
     canRedo,
   };
 };
-
-    

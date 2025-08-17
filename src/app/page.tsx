@@ -68,7 +68,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
-import { isTileTransparent } from '@/lib/utils';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -88,6 +87,7 @@ export default function Home() {
     isLoading,
     updateGrid,
     updateTiles,
+    addTiles,
     undo,
     redo,
     canUndo,
@@ -183,33 +183,6 @@ export default function Home() {
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   };
   
-  const addTiles = async (newTiles: Omit<Tile, 'id'>[]) => {
-    const filteredNewTiles = [];
-    for (const tile of newTiles) {
-      if (!(await isTileTransparent(tile.src))) {
-        filteredNewTiles.push(tile);
-      }
-    }
-
-    if (filteredNewTiles.length < newTiles.length) {
-      const skippedCount = newTiles.length - filteredNewTiles.length;
-      toast({
-        title: 'Transparent Tiles Skipped',
-        description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
-      });
-    }
-    
-    if (filteredNewTiles.length > 0) {
-      let nextId = tiles.length > 0 ? Math.max(...tiles.map((t) => t.id)) + 1 : 1;
-      const tilesWithIds = filteredNewTiles.map((tile) => ({
-        ...tile,
-        id: nextId++,
-        solid: false,
-      }));
-      updateTiles([...tiles, ...tilesWithIds]);
-    }
-  };
-
   const handleRenameTile = (tileId: number, newName: string) => {
     const isNameTaken = tiles.some(t => t.name === newName && t.id !== tileId);
     if (isNameTaken) {
@@ -272,7 +245,7 @@ export default function Home() {
     if (!files) return;
 
     const fileList = Array.from(files);
-    const newTiles: Omit<Tile, 'id'>[] = [];
+    const newTiles: Omit<Tile, 'id' | 'solid'>[] = [];
     let processedCount = 0;
 
     fileList.forEach((file) => {
@@ -1136,4 +1109,3 @@ export default function Home() {
   );
 }
 
-    
