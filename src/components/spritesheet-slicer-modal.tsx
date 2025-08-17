@@ -36,7 +36,9 @@ interface FileData {
 }
 
 // Regex to parse filenames like: tileforge_sheet_16x16_8c_0g.png
-const FILENAME_REGEX = /_(\d+)x(\d+)_(\d+)c_(\d+)g\.(png|jpg|jpeg)$/;
+const FILENAME_REGEX = /_(\d+)x(\d+)_(\d+)c_(\d+)g\.(png|jpg|jpeg)$/i;
+const EXTENSION_REGEX = /\.(png|jpg|jpeg|txt)$/i;
+
 
 export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   isOpen,
@@ -62,8 +64,10 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     const textFiles = fileList.filter(f => f.name.endsWith('.txt'));
 
     for (const file of imageFiles) {
-      const baseName = file.name.replace(FILENAME_REGEX, '');
-      const companionText = textFiles.find(jf => jf.name.replace('.txt', '') === baseName);
+       const baseNameWithSuffix = file.name.replace(EXTENSION_REGEX, '');
+       const baseName = baseNameWithSuffix.replace(FILENAME_REGEX, '');
+       
+       const companionText = textFiles.find(txtFile => txtFile.name.replace(EXTENSION_REGEX, '').replace(FILENAME_REGEX, '') === baseName);
 
       let tileWidth = 16, tileHeight = 16, metadata = null;
 
@@ -74,7 +78,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         tileHeight = parseInt(match[2], 10);
       }
       
-      // Override with data from companion JSON if it exists
+      // Override with data from companion .txt if it exists
       if (companionText) {
         try {
           const jsonContent = await companionText.text();
