@@ -72,7 +72,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     if (isOpen) {
       drawSpritesheet();
     }
-  }, [isOpen, drawSpritesheet]);
+  }, [isOpen, columns, gap, drawSpritesheet]);
   
   const downloadFile = (blobOrDataUrl: Blob | string, filename: string) => {
     const url = typeof blobOrDataUrl === 'string' ? blobOrDataUrl : URL.createObjectURL(blobOrDataUrl);
@@ -87,7 +87,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     }
   }
 
-  const downloadMetadata = () => {
+  const downloadMetadata = useCallback(() => {
     const metadata = {
       tileCount: tiles.length,
       columns: Math.min(columns > 0 ? columns : 1, tiles.length),
@@ -100,14 +100,14 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     };
     const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'text/plain' });
     downloadFile(metadataBlob, 'tileforge-metadata.txt');
-  };
+  }, [tiles, columns]);
 
-  const handleDownloadMetadata = () => {
+  const handleDownloadMetadata = useCallback(() => {
     downloadMetadata();
     toast({ title: 'Metadata Downloaded', description: 'tileforge-metadata.txt has been downloaded.' });
-  }
+  }, [downloadMetadata, toast]);
 
-  const handleExportSpritesheet = () => {
+  const handleExportSpritesheet = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -125,9 +125,9 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
     toast({ title: 'Export Complete', description: 'Spritesheet and metadata.txt have been downloaded.' });
     onClose();
-  };
+  }, [downloadMetadata, onClose, toast]);
   
-  const handleExportIndividual = () => {
+  const handleExportIndividual = useCallback(() => {
     if (tiles.length === 0) {
         toast({ variant: 'destructive', title: 'Export Failed', description: 'No tiles to export.' });
         return;
@@ -144,7 +144,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
     toast({ title: 'Export Complete', description: `${tiles.length} individual tiles and metadata.txt have been downloaded.` });
     onClose();
-  }
+  }, [tiles, downloadMetadata, onClose, toast]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -206,5 +206,3 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     </Dialog>
   );
 };
-
-    
