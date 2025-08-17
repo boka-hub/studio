@@ -59,7 +59,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, isTileTransparent } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
 
 const INITIAL_GRID_SIZE = 32;
@@ -956,5 +956,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
