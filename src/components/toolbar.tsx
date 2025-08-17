@@ -151,7 +151,7 @@ export function Toolbar<T extends Tool>({
                                   <TooltipTrigger asChild>
                                       <div>
                                           <Button
-                                              size="sm"
+                                              size="icon"
                                               variant="outline"
                                               className="w-full h-8"
                                               onClick={action.onClick}
