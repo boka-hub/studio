@@ -760,8 +760,6 @@ export default function Home() {
       if (typeof window !== 'undefined') {
           localStorage.setItem('tileforge-panel-layout', JSON.stringify(sizes));
       }
-      setToolbarCollapsed(sizes[0] === 0);
-      setPaletteCollapsed(sizes[2] === 0);
   }
   
   const defaultLayout = isClient && typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('tileforge-panel-layout') || '[15, 70, 15]')) : [15, 70, 15];
@@ -799,12 +797,12 @@ export default function Home() {
               ref={leftPanelRef}
               defaultSize={defaultLayout[0]}
               collapsible={true}
-              collapsedSize={0}
+              collapsedSize={4}
               minSize={10}
               onCollapse={(collapsed) => setToolbarCollapsed(collapsed)}
             >
               <div className="bg-card border-r border-border flex flex-col h-full">
-                <aside className='flex-grow overflow-hidden'>
+                <div className='flex-grow overflow-hidden'>
                   {!isPreviewMode && (
                     <Toolbar<Tool>
                       actions={toolbarActions}
@@ -823,7 +821,7 @@ export default function Home() {
                       onSprayDensityChange={setSprayDensity}
                     />
                   )}
-                </aside>
+                </div>
                 <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -870,12 +868,12 @@ export default function Home() {
                 ref={rightPanelRef}
                 defaultSize={defaultLayout[2]}
                 collapsible={true}
-                collapsedSize={0}
+                collapsedSize={4}
                 minSize={10}
                 onCollapse={(collapsed) => setPaletteCollapsed(collapsed)}
             >
               <div className="bg-card border-l border-border flex flex-col h-full">
-                <aside className="flex-grow overflow-hidden">
+                <div className="flex-grow overflow-hidden">
                       {!isPreviewMode && (
                           <TilePalette
                           tiles={tiles}
@@ -895,7 +893,7 @@ export default function Home() {
                           isCollapsed={isPaletteCollapsed}
                           />
                       )}
-                </aside>
+                </div>
                   <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
                       <Tooltip>
                           <TooltipTrigger asChild>

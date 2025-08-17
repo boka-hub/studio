@@ -107,7 +107,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
     .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       <div className={cn("p-4 pb-2 flex-shrink-0 space-y-2", isCollapsed && "hidden")}>
         <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
         <div className="relative">
