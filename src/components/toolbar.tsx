@@ -25,7 +25,7 @@ interface SelectionAction {
     disabled?: boolean;
 }
 
-interface ToolbarProps<T extends string> {
+interface ToolbarProps<T extends Tool> {
   actions: Record<T, Action<T>>;
   selectedAction: T;
   onActionSelect: (action: T) => void;
@@ -73,11 +73,11 @@ export function Toolbar<T extends Tool>({
   const selectionActionEntries = Object.entries(selectionActions);
   
   return (
-    <ScrollArea>
+    <ScrollArea className="h-full">
       <div className="flex flex-col gap-4 p-2">
         <div>
           <h3 className={cn("text-sm font-semibold mb-2 px-2 text-muted-foreground", isCollapsed && "hidden")}>Tools</h3>
-          <div className={cn("grid gap-1 grid-cols-2")}>
+          <div className={cn("grid gap-1", isCollapsed ? "grid-cols-1" : "grid-cols-2")}>
             {(Object.keys(actions) as T[]).map((key) => {
               const action = actions[key];
               const Icon = action.icon;

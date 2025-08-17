@@ -3,6 +3,11 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+} from "react-resizable-panels"
+import {
   Brush,
   Eraser,
   Pipette,
@@ -69,18 +74,19 @@ const initialGrid = createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
 const initialTiles: Tile[] = [{ id: 0, name: 'Empty', src: '', solid: false }];
 
 const usePersistentState = <T,>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
-  const [state, setState] = useState<T>(() => {
-     if (typeof window === 'undefined') {
-      return defaultValue;
+  const [state, setState] = useState<T>(defaultValue);
+  
+  useEffect(() => {
+    const item = window.localStorage.getItem(key);
+    if (item) {
+        try {
+            setState(JSON.parse(item));
+        } catch (e) {
+            console.error(`Error parsing localStorage key "${key}":`, e);
+            window.localStorage.removeItem(key);
+        }
     }
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return defaultValue;
-    }
-  });
+  }, [key]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -124,6 +130,29 @@ export default function Home() {
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
+  const leftPanelRef = useRef<any>(null);
+  const rightPanelRef = useRef<any>(null);
+  
+  const toggleToolbar = () => {
+    const panel = leftPanelRef.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) {
+      panel.expand();
+    } else {
+      panel.collapse();
+    }
+  }
+
+  const togglePalette = () => {
+    const panel = rightPanelRef.current;
+    if (!panel) return;
+    if (panel.isCollapsed()) {
+      panel.expand();
+    } else {
+      panel.collapse();
+    }
+  }
+
 
   const updateGridState = (newGrid: GridState) => {
     setGrid(newGrid);
@@ -654,7 +683,7 @@ export default function Home() {
     }
     const toolsWithSettings: Tool[] = ['spray', 'rectangle', 'gradient', 'noise', 'scatter'];
     if (toolsWithSettings.includes(newTool)) {
-      setToolbarCollapsed(false);
+      leftPanelRef.current?.expand();
     }
   };
 
@@ -719,6 +748,17 @@ export default function Home() {
     mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal', onClick: handleMirrorHorizontal },
     mirrorVertical: { icon: FlipVertical, label: 'Mirror Vertical', onClick: handleMirrorVertical },
   };
+  
+  const handleLayout = (sizes: number[]) => {
+      if (typeof window !== 'undefined') {
+          localStorage.setItem('tileforge-panel-layout', JSON.stringify(sizes));
+      }
+      setToolbarCollapsed(sizes[0] === 0);
+      setPaletteCollapsed(sizes[2] === 0);
+  }
+  
+  const storedLayout = typeof window !== 'undefined' ? localStorage.getItem('tileforge-panel-layout') : null;
+  const defaultLayout = storedLayout ? JSON.parse(storedLayout) : [15, 70, 15];
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -744,106 +784,132 @@ export default function Home() {
             onTitleClick={() => setSettingsOpen(true)}
         />
         <div className="flex flex-1 overflow-hidden">
-          <div className="bg-card border-r border-border flex flex-col">
-             <aside className="flex-grow flex flex-col transition-all duration-300 overflow-hidden">
-              {!isPreviewMode && (
-              <Toolbar<Tool>
-                actions={toolbarActions}
-                selectedAction={tool}
-                onActionSelect={handleToolSelect}
-                gridSize={gridSize}
-                onGridResize={handleGridResize}
-                zoom={zoom}
-                onZoomChange={setZoom}
-                isCollapsed={isToolbarCollapsed}
-                selection={selection}
-                selectionActions={selectionActions}
-                sprayRadius={sprayRadius}
-                onSprayRadiusChange={setSprayRadius}
-                sprayDensity={sprayDensity}
-                onSprayDensityChange={setSprayDensity}
-              />
-              )}
-            </aside>
-            {!isPreviewMode && (
-              <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
-                  <Tooltip>
-                      <TooltipTrigger asChild>
-                      <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setToolbarCollapsed(!isToolbarCollapsed)}
-                          className="w-full h-8 rounded-none"
-                      >
-                          {isToolbarCollapsed ? <PanelRight /> : <PanelLeft />}
-                      </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                      <p>{isToolbarCollapsed ? 'Expand Toolbar' : 'Collapse Toolbar'}</p>
-                      </TooltipContent>
-                  </Tooltip>
-              </div>
-            )}
-          </div>
-
-          <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto">
-            <MapGrid
-              grid={grid}
-              tiles={tiles}
-              onCellAction={handleCellAction}
-              onShapeDraw={handleShapeDraw}
-              tool={tool}
-              zoom={zoom}
-              selectedTileId={selectedTileId}
-              secondarySelectedTileId={secondarySelectedTileId}
-              selection={selection}
-              isPreviewMode={isPreviewMode}
-              playerPos={playerPos}
-            />
-          </main>
-          
-          <div className="bg-card border-l border-border flex flex-col w-64">
-            <aside className="flex-grow flex flex-col transition-all duration-300 overflow-hidden">
+          <PanelGroup direction="horizontal" onLayout={handleLayout} autoSaveId="tileforge-panels">
+            <Panel
+              ref={leftPanelRef}
+              defaultSize={defaultLayout[0]}
+              collapsible={true}
+              minSize={10}
+              onCollapse={setToolbarCollapsed}
+              onExpand={() => setToolbarCollapsed(false)}
+            >
+              <div className="bg-card border-r border-border flex flex-col h-full">
+                <aside className='flex-grow overflow-hidden'>
                   {!isPreviewMode && (
-                      <TilePalette
-                      tiles={tiles}
-                      selectedTileId={selectedTileId}
-                      secondarySelectedTileId={secondarySelectedTileId}
-                      scatterSet={scatterSet}
-                      tool={tool}
-                      onSelectTile={setSelectedTileId}
-                      onSelectSecondaryTile={setSecondarySelectedTileId}
-                      onToggleScatterTile={(id) => {
-                        setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
-                      }}
-                      onClearScatterSet={() => setScatterSet([])}
-                      onRenameTile={handleRenameTile}
-                      onDeleteTile={handleDeleteTile}
-                      onToggleSolid={handleToggleSolid}
-                      isCollapsed={isPaletteCollapsed}
-                      />
+                    <Toolbar<Tool>
+                      actions={toolbarActions}
+                      selectedAction={tool}
+                      onActionSelect={handleToolSelect}
+                      gridSize={gridSize}
+                      onGridResize={handleGridResize}
+                      zoom={zoom}
+                      onZoomChange={setZoom}
+                      isCollapsed={isToolbarCollapsed}
+                      selection={selection}
+                      selectionActions={selectionActions}
+                      sprayRadius={sprayRadius}
+                      onSprayRadiusChange={setSprayRadius}
+                      sprayDensity={sprayDensity}
+                      onSprayDensityChange={setSprayDensity}
+                    />
                   )}
-            </aside>
-             {!isPreviewMode && (
+                </aside>
+                {!isPreviewMode && (
                 <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button
+                        <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setPaletteCollapsed(!isPaletteCollapsed)}
+                            onClick={toggleToolbar}
                             className="w-full h-8 rounded-none"
-                            >
-                            {isPaletteCollapsed ? <PanelLeft /> : <PanelRight />}
-                            </Button>
+                        >
+                            {isToolbarCollapsed ? <PanelRight /> : <PanelLeft />}
+                        </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="left">
-                            <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
+                        <TooltipContent side="right">
+                        <p>{isToolbarCollapsed ? 'Expand Toolbar' : 'Collapse Toolbar'}</p>
                         </TooltipContent>
                     </Tooltip>
                 </div>
-            )}
-          </div>
+                )}
+              </div>
+            </Panel>
+            <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center">
+              <div className="w-1 h-8 bg-primary/20 rounded-full" />
+            </PanelResizeHandle>
+            <Panel defaultSize={defaultLayout[1]} minSize={30}>
+              <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full">
+                <MapGrid
+                  grid={grid}
+                  tiles={tiles}
+                  onCellAction={handleCellAction}
+                  onShapeDraw={handleShapeDraw}
+                  tool={tool}
+                  zoom={zoom}
+                  selectedTileId={selectedTileId}
+                  secondarySelectedTileId={secondarySelectedTileId}
+                  selection={selection}
+                  isPreviewMode={isPreviewMode}
+                  playerPos={playerPos}
+                />
+              </main>
+            </Panel>
+            <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center">
+                <div className="w-1 h-8 bg-primary/20 rounded-full" />
+            </PanelResizeHandle>
+            <Panel
+                ref={rightPanelRef}
+                defaultSize={defaultLayout[2]}
+                collapsible={true}
+                minSize={10}
+                onCollapse={setPaletteCollapsed}
+                onExpand={() => setPaletteCollapsed(false)}
+            >
+              <div className="bg-card border-l border-border flex flex-col h-full">
+                <aside className="flex-grow overflow-hidden">
+                      {!isPreviewMode && (
+                          <TilePalette
+                          tiles={tiles}
+                          selectedTileId={selectedTileId}
+                          secondarySelectedTileId={secondarySelectedTileId}
+                          scatterSet={scatterSet}
+                          tool={tool}
+                          onSelectTile={setSelectedTileId}
+                          onSelectSecondaryTile={setSecondarySelectedTileId}
+                          onToggleScatterTile={(id) => {
+                            setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
+                          }}
+                          onClearScatterSet={() => setScatterSet([])}
+                          onRenameTile={handleRenameTile}
+                          onDeleteTile={handleDeleteTile}
+                          onToggleSolid={handleToggleSolid}
+                          isCollapsed={isPaletteCollapsed}
+                          />
+                      )}
+                </aside>
+                {!isPreviewMode && (
+                    <div className="flex-shrink-0 flex items-center justify-center border-t border-border">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={togglePalette}
+                                className="w-full h-8 rounded-none"
+                                >
+                                {isPaletteCollapsed ? <PanelLeft /> : <PanelRight />}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                                <p>{isPaletteCollapsed ? 'Expand Palette' : 'Collapse Palette'}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                )}
+              </div>
+            </Panel>
+          </PanelGroup>
         </div>
 
         <input

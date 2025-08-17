@@ -107,7 +107,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
     .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden h-full">
       <div className={cn("p-4 pb-2 flex-shrink-0 space-y-2", isCollapsed && "hidden")}>
         <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
         <div className="relative">
@@ -132,7 +132,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
             </div>
         )}
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-grow">
         <div className={cn(
             "grid gap-2 p-4 pt-2",
             isCollapsed ? "grid-cols-1" : "grid-cols-3"
