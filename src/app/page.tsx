@@ -309,21 +309,26 @@ export default function Home() {
     }, [toast, updateGrid]);
 
   const handleCellAction = useCallback(
-    async (row: number, col: number) => {
-      if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
+    (row: number, col: number, gridState?: GridState) => {
+      const isPreview = !!gridState;
+      let newGrid = gridState || grid.map(r => [...r]);
+
+      // If this is the final action (not a preview), deselect
+      if (!isPreview) {
+        setSelection(null);
+      }
+       if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
+        if (!isPreview) updateGrid(newGrid);
         return;
       }
-      setSelection(null);
-      
-      let newGrid = grid.map(r => [...r]);
 
       if (tool === 'brush') {
-        if (grid[row][col] === selectedTileId) return;
+        if (newGrid[row][col] === selectedTileId) return;
         newGrid[row][col] = selectedTileId;
       } else if (tool === 'auto-tile') {
           const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
           if (autoTileSet.length !== requiredTiles[autoTileMode]) {
-              toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: `Your auto-tile set must contain exactly ${requiredTiles[autoTileMode]} tiles.` });
+              if (!isPreview) toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: `Your auto-tile set must contain exactly ${requiredTiles[autoTileMode]} tiles.` });
               return;
           }
           const originalTile = newGrid[row][col];
@@ -355,15 +360,15 @@ export default function Home() {
               }
           }
       } else if (tool === 'eraser') {
-        if (grid[row][col] === 0) return;
+        if (newGrid[row][col] === 0) return;
         newGrid[row][col] = 0;
       } else if (tool === 'picker') {
-        const tileId = grid[row][col];
+        const tileId = newGrid[row][col];
         const pickedTile = tiles.find(t => t.id === tileId);
         if (pickedTile) {
           setSelectedTileId(tileId);
           setTool('brush');
-          toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
+          if (!isPreview) toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
         }
         return; 
       } else if (tool === 'spray') {
@@ -372,7 +377,7 @@ export default function Home() {
                 if (r * r + c * c <= sprayRadius * sprayRadius) {
                     const targetRow = row + r;
                     const targetCol = col + c;
-                    if (targetRow >= 0 && targetRow < grid.length && targetCol >= 0 && targetCol < grid[0].length) {
+                    if (targetRow >= 0 && targetRow < newGrid.length && targetCol >= 0 && targetCol < newGrid[0].length) {
                         if (Math.random() < sprayDensity) {
                             newGrid[targetRow][targetCol] = selectedTileId;
                         }
@@ -381,7 +386,7 @@ export default function Home() {
             }
         }
       } else if (tool === 'fill') {
-        const targetId = grid[row][col];
+        const targetId = newGrid[row][col];
         const replacementId = selectedTileId;
 
         if (targetId === replacementId) return;
@@ -407,15 +412,15 @@ export default function Home() {
           }
         }
       } else if (tool === 'magic-wand') {
-        const targetId = grid[row][col];
+        const targetId = newGrid[row][col];
         if (targetId === 0) return;
 
         const queue: [number, number][] = [[row, col]];
         const visited = new Set<string>();
         visited.add(`${row},${col}`);
         let minRow = row, maxRow = row, minCol = col, maxCol = col;
-        const width = grid[0].length;
-        const height = grid.length;
+        const width = newGrid[0].length;
+        const height = newGrid.length;
 
         while (queue.length > 0) {
           const [r, c] = queue.shift()!;
@@ -434,15 +439,18 @@ export default function Home() {
 
         const selectedCellsGrid = createEmptyGrid(width, height);
         visited.forEach(key => {
-            const [r, c] = key.split(',').map(Number);
-            if(grid[r][c] === targetId) selectedCellsGrid[r][c] = 1; 
+            const [r_sel, c_sel] = key.split(',').map(Number);
+            if(grid[r_sel][c_sel] === targetId) selectedCellsGrid[r_sel][c_sel] = 1; 
         });
         
         setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
-        toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
+        if (!isPreview) toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
         return; 
       }
-      updateGrid(newGrid);
+      
+      if (!isPreview) {
+        updateGrid(newGrid);
+      }
     },
     [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid, autoTileSet, autoTileMode]
   );

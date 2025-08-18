@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,7 @@ interface MapGridProps {
   grid: GridState;
   tiles: Tile[];
   tool: Tool;
-  onCellAction: (row: number, col: number) => void;
+  onCellAction: (row: number, col: number, newGrid?: GridState) => void;
   onShapeDraw: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
   zoom?: number;
   selectedTileId: number;
@@ -40,6 +40,7 @@ export const MapGrid: FC<MapGridProps> = ({
   const [previewSelection, setPreviewSelection] = useState<Selection | null>(null);
   
   const TILE_SIZE = BASE_TILE_SIZE * zoom;
+  const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
 
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
@@ -48,29 +49,44 @@ export const MapGrid: FC<MapGridProps> = ({
   const handleMouseDown = (row: number, col: number) => {
     if (isPreviewMode) return;
     setIsDrawing(true);
-    if (tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
+    
+    if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
         setStartCell({ row, col });
         setPreviewSelection(null);
-        if (tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
-            setPreviewGrid(grid); // Start preview from current grid state
+        if (tool !== 'select') {
+            setPreviewGrid(grid); // Start preview from current grid state for shape tools
         }
     } else {
-        onCellAction(row, col);
+        // For brush-like tools, start a preview and perform the first action
+        const newPreviewGrid = grid.map(r => [...r]);
+        onCellAction(row, col, newPreviewGrid); // This will mutate newPreviewGrid
+        setPreviewGrid(newPreviewGrid);
     }
   };
 
   const handleMouseOver = (row: number, col: number) => {
     if (!isDrawing || isPreviewMode) return;
 
-    if (tool === 'brush' || tool === 'eraser' || tool === 'spray' || tool === 'auto-tile') {
-      onCellAction(row, col);
-    } else if ((tool === 'rectangle' || tool === 'gradient' || tool === 'noise') && startCell) {
-        const newPreviewGrid = grid.map(r => [...r]);
+    if (isBrushLikeTool) {
+        setPreviewGrid(currentPreview => {
+            if (!currentPreview) return null;
+            const newPreviewGrid = currentPreview.map(r => [...r]);
+            onCellAction(row, col, newPreviewGrid); // Mutate the preview grid
+            return newPreviewGrid;
+        });
+    } else if (startCell) { // Shape tools
         const minRow = Math.min(startCell.row, row);
         const maxRow = Math.max(startCell.row, row);
         const minCol = Math.min(startCell.col, col);
         const maxCol = Math.max(startCell.col, col);
+        
+        if (tool === 'select') {
+             setPreviewSelection({ minRow, minCol, maxRow, maxCol });
+             return;
+        }
 
+        const newPreviewGrid = grid.map(r => [...r]);
+        // This part seems to duplicate onShapeDraw logic, but it's for live preview
         if (tool === 'rectangle') {
             for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
@@ -85,7 +101,6 @@ export const MapGrid: FC<MapGridProps> = ({
                 for (let c = minCol; c <= maxCol; c++) {
                     if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
                         const step = (c - minCol) / Math.max(1, width - 1);
-                        // Deterministic dithering based on coordinates
                         const threshold = ((r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25));
                         newPreviewGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
                     }
@@ -95,7 +110,6 @@ export const MapGrid: FC<MapGridProps> = ({
             for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
                     if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                        // Deterministic noise based on coordinates
                         const random = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453;
                         newPreviewGrid[r][c] = (random - Math.floor(random)) < 0.5 ? selectedTileId : secondarySelectedTileId;
                     }
@@ -103,20 +117,19 @@ export const MapGrid: FC<MapGridProps> = ({
             }
         }
         setPreviewGrid(newPreviewGrid);
-    } else if (tool === 'select' && startCell) {
-        const minRow = Math.min(startCell.row, row);
-        const maxRow = Math.max(startCell.row, row);
-        const minCol = Math.min(startCell.col, col);
-        const maxCol = Math.max(startCell.col, col);
-        setPreviewSelection({ minRow, minCol, maxRow, maxCol });
     }
   };
 
   const handleMouseUp = (row: number, col: number) => {
     if (isPreviewMode) return;
-    if ((tool === 'rectangle' || tool === 'select' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') && startCell) {
+
+    if (isBrushLikeTool) {
+        // Finalize the action with the complete previewGrid
+        if(previewGrid) onCellAction(row, col, previewGrid);
+    } else if (startCell) { // Shape tools
       onShapeDraw(startCell, { row, col });
     }
+
     setIsDrawing(false);
     setStartCell(null);
     setPreviewGrid(null);
@@ -125,6 +138,10 @@ export const MapGrid: FC<MapGridProps> = ({
 
   const handleMouseLeave = () => {
     if (isDrawing) {
+        if (isBrushLikeTool) {
+            // If mouse leaves while drawing, commit the changes made so far
+            if(previewGrid) onCellAction(0, 0, previewGrid); // Coords don't matter here
+        }
         setIsDrawing(false);
         setStartCell(null);
         setPreviewGrid(null);
