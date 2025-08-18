@@ -80,7 +80,7 @@ const features = [
      {
         name: "Auto-Tile",
         short: "Automatically places the correct tile to form connections.",
-        long: "This powerful offline tool makes drawing environments like roads, walls, or coastlines incredibly fast. First, select the Auto-Tile tool. In the palette, click to add tiles to the 'Auto-Tile Set'. For a standard 'blob' tileset (like grass blending into dirt), you must select exactly 47 tiles in the correct order. When you draw, the tool analyzes the neighbors of the cell you're on and automatically picks the correct tile from your set to make it connect perfectly—whether it's a corner, an edge, a T-junction, etc."
+        long: "This powerful offline tool makes drawing environments like roads, walls, or coastlines incredibly fast. To use it, you must first create a specific 47-tile spritesheet. The order is very important, as the logic depends on it.\n\nHere is the required layout (read from left to right, top to bottom):\n1. Top-left corner\n2. Top edge\n3. Top-right corner\n4. Left edge (U-shape)\n5. Center (surrounded)\n6. Right edge (U-shape)\n7. T-junction (up)\n8. Bottom-left corner\n9. Bottom edge\n10. Bottom-right corner\n11. Left edge (T-junction)\n12. Right edge (T-junction)\n13. T-junction (down)\n14. Crossroad (+ shape)\n15. Left edge\n16. Right edge\n17. Top edge (U-shape)\n18. Bottom edge (U-shape)\n19. Top-left (isolated)\n20. Top-right (isolated)\n21. Bottom-left (isolated)\n22. Bottom-right (isolated)\n23. Top-left inside corner\n24. Top-right inside corner\n25. Bottom-left inside corner\n26. Bottom-right inside corner\n27-38. (various combinations of inside corners and straight edges)\n39. Horizontal road\n40. Vertical road\n41-46. (end pieces for roads)\n47. Single (isolated) tile\n\nOnce you have your tiles arranged this way in the palette: select the Auto-Tile tool, click all 47 tiles in order to add them to the set, and then draw on the canvas. The tool will analyze neighbors and place the correct tile automatically."
     },
     {
         name: "Rectangle",
@@ -186,7 +186,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                 <p className="text-sm font-normal text-muted-foreground">{feature.short}</p>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="text-sm text-muted-foreground">
+                        <AccordionContent className="text-sm text-muted-foreground whitespace-pre-line">
                           {feature.long}
                         </AccordionContent>
                       </AccordionItem>
