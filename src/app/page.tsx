@@ -42,6 +42,7 @@ import {
   Redo2,
   Dices,
   FileText,
+  Wand,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -68,6 +69,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
+import { getAutoTileId } from '@/lib/auto-tiler';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -102,6 +104,7 @@ export default function Home() {
   const [selectedTileId, setSelectedTileId] = useState<number>(0);
   const [secondarySelectedTileId, setSecondarySelectedTileId] = useState<number>(0);
   const [scatterSet, setScatterSet] = useState<number[]>([]);
+  const [autoTileSet, setAutoTileSet] = useState<number[]>([]);
   const [tool, setTool] = useState<Tool>('brush');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
@@ -312,6 +315,28 @@ export default function Home() {
       if (tool === 'brush') {
         if (grid[row][col] === selectedTileId) return;
         newGrid[row][col] = selectedTileId;
+      } else if (tool === 'auto-tile') {
+        if (autoTileSet.length < 47) {
+          toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: 'Your auto-tile set must contain exactly 47 tiles.' });
+          return;
+        }
+        if (newGrid[row][col] === 0) { // Only draw on empty cells for now
+            newGrid[row][col] = autoTileSet[0];
+        }
+
+        // Update neighbors
+        for (let r_offset = -1; r_offset <= 1; r_offset++) {
+            for (let c_offset = -1; c_offset <= 1; c_offset++) {
+                const nr = row + r_offset;
+                const nc = col + c_offset;
+                if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
+                    if (autoTileSet.includes(newGrid[nr][nc]) || (r_offset === 0 && c_offset === 0)) {
+                         const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet);
+                         newGrid[nr][nc] = newTileId;
+                    }
+                }
+            }
+        }
       } else if (tool === 'eraser') {
         if (grid[row][col] === 0) return;
         newGrid[row][col] = 0;
@@ -402,7 +427,7 @@ export default function Home() {
       }
       updateGrid(newGrid);
     },
-    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid]
+    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid, autoTileSet]
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
@@ -691,7 +716,7 @@ export default function Home() {
        const keyMap: { [key: string]: Tool } = {
         'b': 'brush', 'e': 'eraser', 'p': 'picker', 'g': 'fill',
         'r': 'rectangle', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
-        'l': 'gradient', 'n': 'noise', 'c': 'scatter',
+        'l': 'gradient', 'n': 'noise', 'c': 'scatter', 'a': 'auto-tile',
       };
 
       if (keyMap[e.key]) {
@@ -710,7 +735,7 @@ export default function Home() {
     if (newTool !== 'select' && newTool !== 'magic-wand') {
       setSelection(null);
     }
-    const toolsWithSettings: Tool[] = ['spray', 'rectangle', 'gradient', 'noise', 'scatter'];
+    const toolsWithSettings: Tool[] = ['spray', 'rectangle', 'gradient', 'noise', 'scatter', 'auto-tile'];
     if (toolsWithSettings.includes(newTool)) {
       leftPanelRef.current?.expand();
     }
@@ -767,6 +792,12 @@ export default function Home() {
   }, []);
 
   const onClearScatterSet = useCallback(() => setScatterSet([]), []);
+  
+  const onToggleAutoTile = useCallback((id: number) => {
+    setAutoTileSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
+  }, []);
+
+  const onClearAutoTileSet = useCallback(() => setAutoTileSet([]), []);
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -774,6 +805,7 @@ export default function Home() {
     picker: { icon: Pipette, label: 'Picker (P)' },
     fill: { icon: PaintBucket, label: 'Fill (G)'},
     spray: { icon: SprayCan, label: 'Spray (S)' },
+    'auto-tile': { icon: Wand, label: 'Auto-Tile (A)' },
     rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
     gradient: { icon: Layers, label: 'Gradient (L)' },
     noise: { icon: Waves, label: 'Noise (N)' },
@@ -979,11 +1011,14 @@ export default function Home() {
                           selectedTileId={selectedTileId}
                           secondarySelectedTileId={secondarySelectedTileId}
                           scatterSet={scatterSet}
+                          autoTileSet={autoTileSet}
                           tool={tool}
                           onSelectTile={setSelectedTileId}
                           onSelectSecondaryTile={setSecondarySelectedTileId}
                           onToggleScatterTile={onToggleScatterTile}
                           onClearScatterSet={onClearScatterSet}
+                          onToggleAutoTile={onToggleAutoTile}
+                          onClearAutoTileSet={onClearAutoTileSet}
                           onRenameTile={handleRenameTile}
                           onDeleteTile={handleDeleteTile}
                           onToggleSolid={handleToggleSolid}

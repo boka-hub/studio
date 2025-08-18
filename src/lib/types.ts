@@ -1,5 +1,5 @@
 
-export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'rectangle' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter';
+export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'rectangle' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile';
 
 export interface Tile {
   id: number;

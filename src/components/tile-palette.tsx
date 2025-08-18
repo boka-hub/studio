@@ -7,7 +7,7 @@ import type { Tile, Tool } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search, Dices } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Dices, Wand } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 
@@ -16,11 +16,14 @@ interface TilePaletteProps {
   selectedTileId: number;
   secondarySelectedTileId: number;
   scatterSet: number[];
+  autoTileSet: number[];
   tool: Tool;
   onSelectTile: (id: number) => void;
   onSelectSecondaryTile: (id: number) => void;
   onToggleScatterTile: (id: number) => void;
   onClearScatterSet: () => void;
+  onToggleAutoTile: (id: number) => void;
+  onClearAutoTileSet: () => void;
   onRenameTile: (id: number, newName: string) => void;
   onDeleteTile: (id: number) => void;
   onToggleSolid: (id: number) => void;
@@ -33,11 +36,14 @@ export const TilePalette: FC<TilePaletteProps> = ({
   selectedTileId,
   secondarySelectedTileId,
   scatterSet,
+  autoTileSet,
   tool,
   onSelectTile,
   onSelectSecondaryTile,
   onToggleScatterTile,
   onClearScatterSet,
+  onToggleAutoTile,
+  onClearAutoTileSet,
   onRenameTile,
   onDeleteTile,
   onToggleSolid,
@@ -80,6 +86,10 @@ export const TilePalette: FC<TilePaletteProps> = ({
         if (tileId !== 0) onToggleScatterTile(tileId);
         return;
     }
+    if (tool === 'auto-tile') {
+        if (tileId !== 0) onToggleAutoTile(tileId);
+        return;
+    }
     if (e.button === 2) { // Right-click
       e.preventDefault();
       onSelectSecondaryTile(tileId);
@@ -91,6 +101,9 @@ export const TilePalette: FC<TilePaletteProps> = ({
   const getBorderStyle = (tileId: number) => {
     if (tool === 'scatter') {
         return scatterSet.includes(tileId) ? 'border-blue-500 scale-105 shadow-lg' : 'border-card hover:border-accent';
+    }
+    if (tool === 'auto-tile') {
+        return autoTileSet.includes(tileId) ? 'border-yellow-500 scale-105 shadow-lg' : 'border-card hover:border-accent';
     }
     const isPrimary = selectedTileId === tileId;
     const isSecondary = secondarySelectedTileId === tileId;
@@ -207,6 +220,19 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 )}
             </div>
         )}
+        {tool === 'auto-tile' && (
+            <div className="p-2 rounded-md bg-muted/50 text-center space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                    <Wand className="h-4 w-4 text-muted-foreground"/>
+                    <p className="text-sm text-muted-foreground">Auto-Tile Set:</p>
+                    <Badge variant="secondary">{autoTileSet.length} tiles</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">Select exactly 47 tiles for a blob tileset.</p>
+                {autoTileSet.length > 0 && (
+                    <Button variant="outline" size="sm" className="h-7" onClick={onClearAutoTileSet}>Clear Set</Button>
+                )}
+            </div>
+        )}
       </div>
       <ScrollArea className="flex-grow">
         <div className={cn(
@@ -292,6 +318,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                      {isCollapsed ? <p>{tile.name}</p> : 
                      searchQuery ? <p>{tile.name}</p> :
                      tool === 'scatter' ? <p>Toggle in Scatter Set</p> :
+                     tool === 'auto-tile' ? <p>Toggle in Auto-Tile Set</p> :
                      <div><p>Left-click: Set Primary</p><p>Right-click: Set Secondary</p><p>Drag to Reorder</p></div>}
                   </TooltipContent>
                 </Tooltip>
