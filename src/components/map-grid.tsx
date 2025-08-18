@@ -62,7 +62,7 @@ export const MapGrid: FC<MapGridProps> = ({
   const handleMouseOver = (row: number, col: number) => {
     if (!isDrawing || isPreviewMode) return;
 
-    if (tool === 'brush' || tool === 'eraser' || tool === 'spray') {
+    if (tool === 'brush' || tool === 'eraser' || tool === 'spray' || tool === 'auto-tile') {
       onCellAction(row, col);
     } else if ((tool === 'rectangle' || tool === 'gradient' || tool === 'noise') && startCell) {
         const newPreviewGrid = grid.map(r => [...r]);
@@ -136,6 +136,7 @@ export const MapGrid: FC<MapGridProps> = ({
     if (isPreviewMode) return 'cursor-none';
     switch (tool) {
       case 'brush':
+      case 'auto-tile':
         return 'cursor-cell';
       case 'eraser':
         return 'cursor-crosshair';
