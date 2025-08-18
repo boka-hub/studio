@@ -54,7 +54,7 @@ export const MapGrid: FC<MapGridProps> = ({
         setStartCell({ row, col });
         setPreviewSelection(null);
         if (tool !== 'select') {
-            setPreviewGrid(grid); // Start preview from current grid state for shape tools
+            setPreviewGrid(grid.map(r => [...r])); // Start preview from current grid state for shape tools
         }
     } else {
         // For brush-like tools, start a preview and perform the first action
@@ -121,13 +121,17 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseUp = (row: number, col: number) => {
-    if (isPreviewMode) return;
+    if (isPreviewMode || !isDrawing) return;
 
     if (isBrushLikeTool) {
-        // Finalize the action with the complete previewGrid
-        if(previewGrid) onCellAction(row, col, previewGrid);
+        if(previewGrid) {
+            // Finalize the action with the complete previewGrid
+            onCellAction(row, col, previewGrid);
+        }
     } else if (startCell) { // Shape tools
       onShapeDraw(startCell, { row, col });
+    } else { // Handle simple clicks for non-brush tools
+      onCellAction(row, col);
     }
 
     setIsDrawing(false);

@@ -313,10 +313,13 @@ export default function Home() {
       const isPreview = !!gridState;
       let newGrid = gridState || grid.map(r => [...r]);
 
-      // If this is the final action (not a preview), deselect
-      if (!isPreview) {
-        setSelection(null);
+      // If this is a final action (not a preview), deselect
+      if (!isPreview && gridState) {
+          updateGrid(gridState);
+          setSelection(null);
+          return;
       }
+      
        if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
         if (!isPreview) updateGrid(newGrid);
         return;
@@ -450,6 +453,7 @@ export default function Home() {
       
       if (!isPreview) {
         updateGrid(newGrid);
+        setSelection(null);
       }
     },
     [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid, autoTileSet, autoTileMode]
