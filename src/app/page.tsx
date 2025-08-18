@@ -337,8 +337,8 @@ export default function Home() {
                 
                 // Check bounds
                 if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                    // Only update tiles that are part of the set
-                    if (autoTileSet.includes(newGrid[nr][nc])) {
+                    // Only update tiles that are part of the set, or empty tiles where we just drew.
+                    if (autoTileSet.includes(newGrid[nr][nc]) || (nr === row && nc === col)) {
                          const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet);
                          newGrid[nr][nc] = newTileId;
                     }
@@ -1152,5 +1152,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
