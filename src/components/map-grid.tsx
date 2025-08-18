@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { GridState, Tile, Tool, Selection } from '@/lib/types';
+import type { GridState, Tile, Tool, Selection, AutoTileMode } from '@/lib/types';
 import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
 
 interface MapGridProps {
@@ -18,6 +18,8 @@ interface MapGridProps {
   selection: Selection | null;
   isPreviewMode: boolean;
   playerPos: {row: number, col: number};
+  autoTileMode: AutoTileMode;
+  autoTileSet: number[];
 }
 
 const BASE_TILE_SIZE = 16;
@@ -34,6 +36,8 @@ export const MapGrid: FC<MapGridProps> = ({
   selection,
   isPreviewMode,
   playerPos,
+  autoTileMode,
+  autoTileSet,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
@@ -47,8 +51,6 @@ export const MapGrid: FC<MapGridProps> = ({
     return new Map(tiles.map(tile => [tile.id, tile]));
   }, [tiles]);
   
-  // This is a dummy function and should not be used for actual auto-tiling logic in the preview
-  // The real logic is in page.tsx. This just provides a basic brush-like feel for the preview.
   const performPreviewAction = useCallback((gridState: GridState, row: number, col: number) => {
       let newGrid = gridState.map(r => [...r]);
       if (tool === 'brush') {
@@ -74,14 +76,39 @@ export const MapGrid: FC<MapGridProps> = ({
             }
         }
       } else if (tool === 'auto-tile') {
-          // NOTE: This does not perform the full auto-tile calculation for performance reasons.
-          // It just paints the center tile of a 9-tile set for preview.
-          // The actual, correct tiling is calculated once on mouse up in `page.tsx`.
-          if (newGrid[row][col] === selectedTileId) return newGrid;
-          newGrid[row][col] = selectedTileId; // Use selectedTileId as a placeholder for auto-tile preview
+          const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
+          if (autoTileSet.length !== requiredTiles[autoTileMode]) {
+              return newGrid;
+          }
+          const originalTile = newGrid[row][col];
+          if (originalTile !== 0 && !autoTileSet.includes(originalTile)) {
+              return newGrid;
+          }
+          
+          const getTileIdFunc = {
+              '9-tile': getAutoTileId9,
+              '13-tile': getAutoTileId13,
+              '47-tile': getAutoTileId47,
+          }[autoTileMode];
+
+          newGrid[row][col] = autoTileMode === '9-tile' ? autoTileSet[4] : autoTileSet[autoTileSet.length - 1];
+
+          for (let r_offset = -1; r_offset <= 1; r_offset++) {
+              for (let c_offset = -1; c_offset <= 1; c_offset++) {
+                  const nr = row + r_offset;
+                  const nc = col + c_offset;
+                  
+                  if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
+                      if (autoTileSet.includes(newGrid[nr][nc]) || (nr === row && nc === col)) {
+                           const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
+                           newGrid[nr][nc] = newTileId;
+                      }
+                  }
+              }
+          }
       }
       return newGrid;
-  }, [tool, selectedTileId]);
+  }, [tool, selectedTileId, autoTileMode, autoTileSet]);
 
   const handleMouseDown = (row: number, col: number) => {
     if (isPreviewMode) return;

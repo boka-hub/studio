@@ -305,7 +305,7 @@ export default function Home() {
 
   const handleCellAction = useCallback(
     (row: number, col: number, gridState?: GridState) => {
-      // If a full grid state is passed, it means we're committing a change (e.g., from a brush drag).
+      // If a full grid state is passed, it means we're committing a change from a preview.
       if (gridState) {
         updateGrid(gridState);
         setSelection(null);
@@ -1011,6 +1011,8 @@ export default function Home() {
                   selection={selection}
                   isPreviewMode={isPreviewMode}
                   playerPos={playerPos}
+                  autoTileMode={autoTileMode}
+                  autoTileSet={autoTileSet}
                 />
               </main>
             </Panel>
