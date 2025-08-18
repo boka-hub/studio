@@ -52,7 +52,7 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -69,7 +69,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
-import { getAutoTileId } from '@/lib/auto-tiler';
+import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -105,6 +105,7 @@ export default function Home() {
   const [secondarySelectedTileId, setSecondarySelectedTileId] = useState<number>(0);
   const [scatterSet, setScatterSet] = useState<number[]>([]);
   const [autoTileSet, setAutoTileSet] = useState<number[]>([]);
+  const [autoTileMode, setAutoTileMode] = useState<AutoTileMode>('9-tile');
   const [tool, setTool] = useState<Tool>('brush');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
@@ -316,35 +317,39 @@ export default function Home() {
         if (grid[row][col] === selectedTileId) return;
         newGrid[row][col] = selectedTileId;
       } else if (tool === 'auto-tile') {
-        if (autoTileSet.length !== 9) {
-          toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: 'Your auto-tile set must contain exactly 9 tiles.' });
-          return;
-        }
-        
-        const originalTile = newGrid[row][col];
-        if (originalTile !== 0 && !autoTileSet.includes(originalTile)) {
-          return; // Don't draw over unrelated tiles
-        }
-        
-        // Place the center tile to establish connection
-        newGrid[row][col] = autoTileSet[4];
+          const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
+          if (autoTileSet.length !== requiredTiles[autoTileMode]) {
+              toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: `Your auto-tile set must contain exactly ${requiredTiles[autoTileMode]} tiles.` });
+              return;
+          }
+          const originalTile = newGrid[row][col];
+          if (originalTile !== 0 && !autoTileSet.includes(originalTile)) {
+              return; // Don't draw over unrelated tiles
+          }
+          
+          const getTileIdFunc = {
+              '9-tile': getAutoTileId9,
+              '13-tile': getAutoTileId13,
+              '47-tile': getAutoTileId47,
+          }[autoTileMode];
 
-        // Update the 3x3 grid around the action point
-        for (let r_offset = -1; r_offset <= 1; r_offset++) {
-            for (let c_offset = -1; c_offset <= 1; c_offset++) {
-                const nr = row + r_offset;
-                const nc = col + c_offset;
-                
-                // Check bounds
-                if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                    // Only update tiles that are part of the set, or empty tiles where we just drew.
-                    if (autoTileSet.includes(newGrid[nr][nc]) || (nr === row && nc === col)) {
-                         const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet);
-                         newGrid[nr][nc] = newTileId;
-                    }
-                }
-            }
-        }
+          // Place the tile to establish connection
+          newGrid[row][col] = autoTileMode === '9-tile' ? autoTileSet[4] : autoTileSet[autoTileSet.length - 1]; // Center tile
+
+          // Update the 3x3 grid around the action point
+          for (let r_offset = -1; r_offset <= 1; r_offset++) {
+              for (let c_offset = -1; c_offset <= 1; c_offset++) {
+                  const nr = row + r_offset;
+                  const nc = col + c_offset;
+                  
+                  if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
+                      if (autoTileSet.includes(newGrid[nr][nc]) || (nr === row && nc === col)) {
+                           const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
+                           newGrid[nr][nc] = newTileId;
+                      }
+                  }
+              }
+          }
       } else if (tool === 'eraser') {
         if (grid[row][col] === 0) return;
         newGrid[row][col] = 0;
@@ -435,7 +440,7 @@ export default function Home() {
       }
       updateGrid(newGrid);
     },
-    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid, autoTileSet]
+    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid, autoTileSet, autoTileMode]
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
@@ -956,6 +961,8 @@ export default function Home() {
                       onSprayRadiusChange={setSprayRadius}
                       sprayDensity={sprayDensity}
                       onSprayDensityChange={setSprayDensity}
+                      autoTileMode={autoTileMode}
+                      onAutoTileModeChange={setAutoTileMode}
                     />
                   )}
                 </div>
@@ -1020,6 +1027,7 @@ export default function Home() {
                           secondarySelectedTileId={secondarySelectedTileId}
                           scatterSet={scatterSet}
                           autoTileSet={autoTileSet}
+                          autoTileMode={autoTileMode}
                           tool={tool}
                           onSelectTile={setSelectedTileId}
                           onSelectSecondaryTile={setSecondarySelectedTileId}

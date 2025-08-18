@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Selection, Tool } from '@/lib/types';
+import type { Selection, Tool, AutoTileMode } from '@/lib/types';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 interface Action<T extends string> {
   icon: ElementType;
@@ -40,6 +41,8 @@ interface ToolbarProps<T extends Tool> {
   onSprayRadiusChange: (radius: number) => void;
   sprayDensity: number;
   onSprayDensityChange: (density: number) => void;
+  autoTileMode: AutoTileMode;
+  onAutoTileModeChange: (mode: AutoTileMode) => void;
 }
 
 export function Toolbar<T extends Tool>({
@@ -57,6 +60,8 @@ export function Toolbar<T extends Tool>({
   onSprayRadiusChange,
   sprayDensity,
   onSprayDensityChange,
+  autoTileMode,
+  onAutoTileModeChange,
 }: ToolbarProps<T>) {
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
@@ -137,6 +142,28 @@ export function Toolbar<T extends Tool>({
                             />
                         </div>
                     </div>
+                </div>
+              </>
+            )}
+             {selectedAction === 'auto-tile' && (
+              <>
+                <Separator />
+                <div className="px-2 space-y-2">
+                    <h3 className="text-sm font-semibold text-muted-foreground">Auto-Tile Mode</h3>
+                    <RadioGroup value={autoTileMode} onValueChange={(v) => onAutoTileModeChange(v as AutoTileMode)}>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="9-tile" id="r1" />
+                            <Label htmlFor="r1">9-Tile (Simple)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="13-tile" id="r2" />
+                            <Label htmlFor="r2">13-Tile (Interior Corners)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="47-tile" id="r3" />
+                            <Label htmlFor="r3">47-Tile (Blob/Terrain)</Label>
+                        </div>
+                    </RadioGroup>
                 </div>
               </>
             )}
@@ -229,5 +256,3 @@ export function Toolbar<T extends Tool>({
     </ScrollArea>
   );
 }
-
-    

@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { Tile, Tool } from '@/lib/types';
+import type { Tile, Tool, AutoTileMode } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -17,6 +17,7 @@ interface TilePaletteProps {
   secondarySelectedTileId: number;
   scatterSet: number[];
   autoTileSet: number[];
+  autoTileMode: AutoTileMode;
   tool: Tool;
   onSelectTile: (id: number) => void;
   onSelectSecondaryTile: (id: number) => void;
@@ -37,6 +38,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
   secondarySelectedTileId,
   scatterSet,
   autoTileSet,
+  autoTileMode,
   tool,
   onSelectTile,
   onSelectSecondaryTile,
@@ -194,6 +196,28 @@ export const TilePalette: FC<TilePaletteProps> = ({
     setDraggedTileId(null);
   };
 
+  const renderAutoTileHelper = () => {
+    const requiredTiles = {
+      '9-tile': 9,
+      '13-tile': 13,
+      '47-tile': 47,
+    }[autoTileMode];
+
+    return (
+      <div className="p-2 rounded-md bg-muted/50 text-center space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <Wand className="h-4 w-4 text-muted-foreground"/>
+          <p className="text-sm text-muted-foreground">Auto-Tile Set:</p>
+          <Badge variant="secondary">{autoTileSet.length} / {requiredTiles}</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">Select exactly {requiredTiles} tiles for a {autoTileMode} tileset.</p>
+        {autoTileSet.length > 0 && (
+          <Button variant="outline" size="sm" className="h-7" onClick={onClearAutoTileSet}>Clear Set</Button>
+        )}
+      </div>
+    );
+  };
+
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -220,19 +244,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 )}
             </div>
         )}
-        {tool === 'auto-tile' && (
-            <div className="p-2 rounded-md bg-muted/50 text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                    <Wand className="h-4 w-4 text-muted-foreground"/>
-                    <p className="text-sm text-muted-foreground">Auto-Tile Set:</p>
-                    <Badge variant="secondary">{autoTileSet.length} tiles</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">Select exactly 9 tiles for a 3x3 tileset.</p>
-                {autoTileSet.length > 0 && (
-                    <Button variant="outline" size="sm" className="h-7" onClick={onClearAutoTileSet}>Clear Set</Button>
-                )}
-            </div>
-        )}
+        {tool === 'auto-tile' && renderAutoTileHelper()}
       </div>
       <ScrollArea className="flex-grow">
         <div className={cn(
