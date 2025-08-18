@@ -47,6 +47,8 @@ export const MapGrid: FC<MapGridProps> = ({
     return new Map(tiles.map(tile => [tile.id, tile]));
   }, [tiles]);
   
+  // This is a dummy function and should not be used for actual auto-tiling logic in the preview
+  // The real logic is in page.tsx. This just provides a basic brush-like feel for the preview.
   const performPreviewAction = useCallback((gridState: GridState, row: number, col: number) => {
       let newGrid = gridState.map(r => [...r]);
       if (tool === 'brush') {
@@ -71,6 +73,12 @@ export const MapGrid: FC<MapGridProps> = ({
                 }
             }
         }
+      } else if (tool === 'auto-tile') {
+          // NOTE: This does not perform the full auto-tile calculation for performance reasons.
+          // It just paints the center tile of a 9-tile set for preview.
+          // The actual, correct tiling is calculated once on mouse up in `page.tsx`.
+          if (newGrid[row][col] === selectedTileId) return newGrid;
+          newGrid[row][col] = selectedTileId; // Use selectedTileId as a placeholder for auto-tile preview
       }
       return newGrid;
   }, [tool, selectedTileId]);
@@ -107,7 +115,7 @@ export const MapGrid: FC<MapGridProps> = ({
         const maxCol = Math.max(startCell.col, col);
         
         if (tool === 'select') {
-             setPreviewSelection({ minRow, minCol, maxRow, maxCol });
+             setPreviewSelection({ minRow, minCol, maxRow, maxCol, selectedCells: undefined });
              return;
         }
 
