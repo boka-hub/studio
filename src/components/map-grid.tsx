@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -47,21 +47,33 @@ export const MapGrid: FC<MapGridProps> = ({
     return new Map(tiles.map(tile => [tile.id, tile]));
   }, [tiles]);
   
-    // This is a stand-alone version of the drawing logic used for the preview.
-    // It is intentionally duplicated from page.tsx to keep the MapGrid component isolated
-    // and to avoid passing down many state setters. It only handles the visual part.
-  const performPreviewAction = (gridState: GridState, row: number, col: number) => {
-      let newGrid = gridState;
+  const performPreviewAction = useCallback((gridState: GridState, row: number, col: number) => {
+      let newGrid = gridState.map(r => [...r]);
       if (tool === 'brush') {
           if (newGrid[row][col] === selectedTileId) return newGrid;
           newGrid[row][col] = selectedTileId;
       } else if (tool === 'eraser') {
           if (newGrid[row][col] === 0) return newGrid;
           newGrid[row][col] = 0;
+      } else if (tool === 'spray') {
+         const sprayRadius = 3;
+         const sprayDensity = 0.4;
+         for (let r = -sprayRadius; r <= sprayRadius; r++) {
+            for (let c = -sprayRadius; c <= sprayRadius; c++) {
+                if (r * r + c * c <= sprayRadius * sprayRadius) {
+                    const targetRow = row + r;
+                    const targetCol = col + c;
+                    if (targetRow >= 0 && targetRow < newGrid.length && targetCol >= 0 && targetCol < newGrid[0].length) {
+                        if (Math.random() < sprayDensity) {
+                            newGrid[targetRow][targetCol] = selectedTileId;
+                        }
+                    }
+                }
+            }
+        }
       }
-      // Simplified preview for other tools - complex logic is only finalized on mouse up
       return newGrid;
-  }
+  }, [tool, selectedTileId]);
 
   const handleMouseDown = (row: number, col: number) => {
     if (isPreviewMode) return;
@@ -71,10 +83,9 @@ export const MapGrid: FC<MapGridProps> = ({
         setStartCell({ row, col });
         setPreviewSelection(null);
         if (tool !== 'select') {
-            setPreviewGrid(grid.map(r => [...r])); // Start preview from current grid state for shape tools
+            setPreviewGrid(grid.map(r => [...r]));
         }
     } else {
-        // For brush-like tools, start a preview and perform the first action
         const newPreviewGrid = performPreviewAction(grid.map(r => [...r]), row, col);
         setPreviewGrid(newPreviewGrid);
     }
@@ -86,7 +97,7 @@ export const MapGrid: FC<MapGridProps> = ({
     if (isBrushLikeTool) {
         setPreviewGrid(currentPreview => {
             if (!currentPreview) return null;
-            const newPreviewGrid = performPreviewAction(currentPreview.map(r => [...r]), row, col);
+            const newPreviewGrid = performPreviewAction(currentPreview, row, col);
             return newPreviewGrid;
         });
     } else if (startCell) { // Shape tools
@@ -139,23 +150,20 @@ export const MapGrid: FC<MapGridProps> = ({
     if (isPreviewMode || !isDrawing) return;
 
     setIsDrawing(false);
-    setStartCell(null);
-    setPreviewSelection(null);
-
-    // If there's a preview grid, commit it. This handles all brush-like tools.
+    
+    // If there's a preview grid, commit it. This handles brush-like tools & shape tools.
     if (previewGrid) {
       onCellAction(row, col, previewGrid);
-      setPreviewGrid(null); // Clear the preview after committing
-      return;
-    }
-
-    // Handle shape tools that don't use a preview grid in the same way.
-    if (startCell) {
+    } else if (startCell) { // Handle shape tools that only update selection preview (like 'select')
       onShapeDraw(startCell, { row, col });
     } else {
       // Handle simple clicks for non-brush, non-shape tools (like Picker, Fill).
       onCellAction(row, col);
     }
+
+    setStartCell(null);
+    setPreviewGrid(null);
+    setPreviewSelection(null);
   };
 
   const handleMouseLeave = () => {

@@ -91,6 +91,7 @@ export default function Home() {
     updateTiles,
     remapGrid,
     addTiles,
+    deleteTile,
     undo,
     redo,
     canUndo,
@@ -213,29 +214,23 @@ export default function Home() {
 
   const confirmDeleteTile = useCallback(() => {
     if (!tileToDelete) return;
-
     const tileId = tileToDelete.id;
     
-    updateTiles(tiles.filter(t => t.id !== tileId), true);
+    deleteTile(tileId);
     
-    updateGrid(grid.map(row => row.map(cell => (cell === tileId ? 0 : cell))));
-    
-    if (selectedTileId === tileId) {
-      setSelectedTileId(0);
-    }
-    if (secondarySelectedTileId === tileId) {
-      setSecondarySelectedTileId(0);
-    }
+    if (selectedTileId === tileId) setSelectedTileId(0);
+    if (secondarySelectedTileId === tileId) setSecondarySelectedTileId(0);
     setScatterSet(s => s.filter(id => id !== tileId));
+    setAutoTileSet(a => a.filter(id => id !== tileId));
 
     toast({ 
       title: 'Tile Deleted', 
       description: `Tile "${tileToDelete.name}" has been removed.`,
     });
     setTileToDelete(null);
-  }, [tileToDelete, tiles, grid, selectedTileId, secondarySelectedTileId, updateTiles, updateGrid, toast]);
+  }, [tileToDelete, selectedTileId, secondarySelectedTileId, deleteTile, toast]);
 
-  const handleDeleteTile = useCallback((tileId: number) => {
+  const handleQueueTileDelete = useCallback((tileId: number) => {
     const tile = tiles.find(t => t.id === tileId);
     if(tile) {
       setTileToDelete(tile);
@@ -317,11 +312,10 @@ export default function Home() {
         return;
       }
       
-      const isPreview = false;
       let newGrid = grid.map(r => [...r]);
 
        if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
-        if (!isPreview) updateGrid(newGrid);
+        updateGrid(newGrid);
         return;
       }
 
@@ -331,7 +325,7 @@ export default function Home() {
       } else if (tool === 'auto-tile') {
           const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
           if (autoTileSet.length !== requiredTiles[autoTileMode]) {
-              if (!isPreview) toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: `Your auto-tile set must contain exactly ${requiredTiles[autoTileMode]} tiles.` });
+              toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: `Your auto-tile set must contain exactly ${requiredTiles[autoTileMode]} tiles.` });
               return;
           }
           const originalTile = newGrid[row][col];
@@ -371,7 +365,7 @@ export default function Home() {
         if (pickedTile) {
           setSelectedTileId(tileId);
           setTool('brush');
-          if (!isPreview) toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
+          toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
         }
         return; 
       } else if (tool === 'spray') {
@@ -447,14 +441,12 @@ export default function Home() {
         });
         
         setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
-        if (!isPreview) toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
+        toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
         return; 
       }
       
-      if (!isPreview) {
-        updateGrid(newGrid);
-        setSelection(null);
-      }
+      updateGrid(newGrid);
+      setSelection(null);
     },
     [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid, autoTileSet, autoTileMode]
   );
@@ -1052,7 +1044,7 @@ export default function Home() {
                           onToggleAutoTile={onToggleAutoTile}
                           onClearAutoTileSet={onClearAutoTileSet}
                           onRenameTile={handleRenameTile}
-                          onDeleteTile={handleDeleteTile}
+                          onDeleteTile={handleQueueTileDelete}
                           onToggleSolid={handleToggleSolid}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}

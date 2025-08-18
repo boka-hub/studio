@@ -171,6 +171,15 @@ export const useProjects = () => {
       });
   }, [setProjectState, toast]);
 
+    const deleteTile = useCallback((tileId: number) => {
+        modifyCurrentProject(project => {
+            const newTiles = project.tiles.filter(t => t.id !== tileId);
+            const newGrid = project.grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
+            return { tiles: newTiles, grid: newGrid };
+        });
+    }, [modifyCurrentProject]);
+
+
   const loadProject = useCallback((id: string) => {
       setProjectState(currentState => {
           if (currentState.projects.some(p => p.id === id)) {
@@ -246,6 +255,7 @@ export const useProjects = () => {
     remapGrid,
     updateTiles,
     addTiles,
+    deleteTile,
     undo,
     redo,
     canUndo,

@@ -30,14 +30,16 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
+  const tilesToExport = tiles.filter(t => t.id !== 0);
+
   useEffect(() => {
     if (!isOpen) return;
 
     const draw = async () => {
       const canvas = canvasRef.current;
-      if (!canvas || tiles.length === 0) return;
+      if (!canvas || tilesToExport.length === 0) return;
 
-      const imagePromises = tiles.map(tile => new Promise<HTMLImageElement>((resolve, reject) => {
+      const imagePromises = tilesToExport.map(tile => new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = tile.src;
@@ -60,8 +62,8 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         setTileWidth(effectiveTileWidth);
         setTileHeight(effectiveTileHeight);
 
-        const numCols = Math.max(1, Math.min(columns, tiles.length));
-        const numRows = Math.ceil(tiles.length / numCols);
+        const numCols = Math.max(1, Math.min(columns, tilesToExport.length));
+        const numRows = Math.ceil(tilesToExport.length / numCols);
 
         canvas.width = numCols * effectiveTileWidth + Math.max(0, numCols - 1) * gap;
         canvas.height = numRows * effectiveTileHeight + Math.max(0, numRows - 1) * gap;
@@ -86,7 +88,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     
     requestAnimationFrame(draw);
 
-  }, [isOpen, tiles, columns, gap]);
+  }, [isOpen, tilesToExport, columns, gap, toast]);
   
   const getBaseFilename = () => {
     return `tileforge_sheet_${tileWidth}x${tileHeight}_${columns}c_${gap}g`;
@@ -109,9 +111,9 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     const metadata = {
       tileWidth,
       tileHeight,
-      columns: Math.min(columns > 0 ? columns : 1, tiles.length),
+      columns: Math.min(columns > 0 ? columns : 1, tilesToExport.length),
       gap,
-      tiles: tiles.map((tile, index) => ({
+      tiles: tilesToExport.map((tile, index) => ({
         id: tile.id,
         name: tile.name,
         index: index,
@@ -120,7 +122,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     };
     const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
     downloadFile(metadataBlob, filename);
-  }, [tiles, columns, downloadFile, tileWidth, tileHeight, gap]);
+  }, [tilesToExport, columns, downloadFile, tileWidth, tileHeight, gap]);
 
   const handleDownloadMetadata = useCallback(() => {
     const filename = `${getBaseFilename()}.txt`;
@@ -153,20 +155,20 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   }, [downloadMetadata, onClose, toast, downloadFile, getBaseFilename]);
   
   const handleExportIndividual = useCallback(() => {
-    if (tiles.length === 0) {
+    if (tilesToExport.length === 0) {
         toast({ variant: 'destructive', title: 'Export Failed', description: 'No tiles to export.' });
         return;
     }
     
     // Export Individual Tiles
-    tiles.forEach(tile => {
+    tilesToExport.forEach(tile => {
         const filename = `${tile.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
         downloadFile(tile.src, filename);
     });
 
-    toast({ title: 'Export Complete', description: `${tiles.length} individual tiles have been downloaded.` });
+    toast({ title: 'Export Complete', description: `${tilesToExport.length} individual tiles have been downloaded.` });
     onClose();
-  }, [tiles, onClose, toast, downloadFile]);
+  }, [tilesToExport, onClose, toast, downloadFile]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -209,16 +211,16 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         </div>
         <DialogFooter>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
-              <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tiles.length === 0} className="col-span-1">
+              <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tilesToExport.length === 0} className="col-span-1">
                   <FileImage className="mr-2 h-4 w-4" />
                   PNGs
               </Button>
-               <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tiles.length === 0} className="col-span-1">
+               <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tilesToExport.length === 0} className="col-span-1">
                   <FileText className="mr-2 h-4 w-4" />
                   .txt
               </Button>
               <Button type="button" variant="secondary" onClick={onClose} className="col-span-1">Cancel</Button>
-              <Button type="button" onClick={handleExportSpritesheet} disabled={tiles.length === 0} className="col-span-1">
+              <Button type="button" onClick={handleExportSpritesheet} disabled={tilesToExport.length === 0} className="col-span-1">
                   <Download className="mr-2 h-4 w-4" />
                   Sheet
               </Button>

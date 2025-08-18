@@ -52,6 +52,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const manualMetaInputRef = useRef<HTMLInputElement>(null);
+  const fileListRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const parseMetadata = async (fileData: FileData, textFile: File): Promise<FileData> => {
@@ -111,7 +112,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         return updatedFiles;
       });
     }
-  }, [selectedFileId, toast]);
+  }, [selectedFileId]);
   
   useEffect(() => {
     if(isOpen && initialFiles.length > 0) {
@@ -159,8 +160,12 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       drawPreview();
+      if (selectedFileId && fileListRef.current) {
+        const selectedElement = fileListRef.current.querySelector(`[data-file-id="${selectedFileId}"]`);
+        selectedElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
-  }, [isOpen, drawPreview]);
+  }, [isOpen, drawPreview, selectedFileId]);
 
   const resetState = () => {
     setFiles([]);
@@ -305,9 +310,10 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           <div className="md:col-span-1 h-full flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-muted-foreground">Spritesheets</h3>
             <ScrollArea className="flex-grow border rounded-md">
-                <div className="p-2 space-y-1">
+                <div className="p-2 space-y-1" ref={fileListRef}>
                     {files.map(file => (
                         <div key={file.id} 
+                            data-file-id={file.id}
                             className={cn("p-2 rounded-md cursor-pointer hover:bg-muted", selectedFileId === file.id && "bg-muted")}
                             onClick={() => setSelectedFileId(file.id)}
                         >
