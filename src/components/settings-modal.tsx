@@ -37,6 +37,7 @@ const shortcuts = [
     { keys: ['P'], description: 'Select Picker Tool' },
     { keys: ['G'], description: 'Select Fill Tool' },
     { keys: ['S'], description: 'Select Spray Tool' },
+    { keys: ['A'], description: 'Select Auto-Tile Tool' },
     { keys: ['R'], description: 'Select Rectangle Tool' },
     { keys: ['L'], description: 'Select Gradient Tool' },
     { keys: ['N'], description: 'Select Noise Tool' },
@@ -76,6 +77,11 @@ const features = [
         long: "The Fill tool replaces a whole section of connected, identical tiles with your currently selected primary tile. For example, if you have a large patch of grass and click on one grass tile with 'water' selected, the entire patch of grass will become water. The fill will not go past tiles of a different type."
     },
     // Shape & Pattern Tools
+     {
+        name: "Auto-Tile",
+        short: "Automatically places the correct tile to form connections.",
+        long: "This powerful offline tool makes drawing environments like roads, walls, or coastlines incredibly fast. First, select the Auto-Tile tool. In the palette, click to add tiles to the 'Auto-Tile Set'. For a standard 'blob' tileset (like grass blending into dirt), you must select exactly 47 tiles in the correct order. When you draw, the tool analyzes the neighbors of the cell you're on and automatically picks the correct tile from your set to make it connect perfectly—whether it's a corner, an edge, a T-junction, etc."
+    },
     {
         name: "Rectangle",
         short: "Draws a filled rectangle of tiles.",
@@ -126,7 +132,7 @@ const features = [
     {
         name: "Importing & Slicing",
         short: "Add new tiles from images and spritesheets.",
-        long: "Use 'Import Tiles' for individual images or 'Slice Sheet' for spritesheets. The Batch Slicer handles multiple sheets at once. For lossless re-importing, drop a spritesheet and its companion metadata .txt file (from exporting) together. The slicer will automatically detect the .txt, applying all your original names and settings. If needed, you can also manually assign a .txt metadata file to any sheet inside the slicer."
+        long: "Use 'Import Tiles' for individual images or 'Slice Sheet' for spritesheets. The Batch Slicer handles multiple sheets at once. For lossless re-importing, use the manual 'Add .txt Metadata' button inside the slicer to associate your exported metadata file with its spritesheet. This guarantees all your original names and settings are preserved."
     },
     {
         name: "Exporting",
@@ -172,7 +178,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <TabsContent value="features" className="flex-grow overflow-hidden">
              <ScrollArea className="h-full">
                 <Accordion type="single" collapsible className="w-full p-4">
-                  {features.map((feature, index) => (
+                  {features.sort((a, b) => a.name.localeCompare(b.name)).map((feature, index) => (
                      <AccordionItem value={`item-${index}`} key={index}>
                         <AccordionTrigger className="text-left hover:no-underline">
                             <div className="flex flex-col gap-1">
@@ -230,7 +236,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
                        <li>In the palette, **left-click** a tile to select it as your primary "brush" color. **Right-click** to select a secondary color for tools like Gradient and Noise.</li>
                        <li>Use the <span className="font-semibold text-foreground">Brush</span> tool to paint tiles, and the <span className="font-semibold text-foreground">Eraser</span> to remove them.</li>
-                       <li>Experiment with other tools like <span className="font-semibold text-foreground">Fill</span>, <span className="font-semibold text-foreground">Rectangle</span>, and <span className="font-semibold text-foreground">Spray</span> to build your world quickly.</li>
+                       <li>Experiment with other tools like <span className="font-semibold text-foreground">Fill</span>, <span className="font-semibold text-foreground">Rectangle</span>, and the powerful <span className="font-semibold text-foreground">Auto-Tile</span> tool to build your world quickly.</li>
                     </ul>
                 </div>
                  <div className="space-y-3">
@@ -250,8 +256,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
                         <li>Open the <span className="font-semibold text-foreground">Slice Sheet</span> tool.</li>
-                        <li>Drag and drop the exported spritesheet PNG and its companion metadata .txt file **at the same time**.</li>
-                        <li>The slicer will automatically read the metadata and perfectly restore all your tiles, names, and settings. You can also use the "Add .txt Metadata" button inside the slicer for manual association.</li>
+                        <li>Drop in your spritesheet image file.</li>
+                        <li>Use the <span className="font-semibold text-foreground">"Add .txt Metadata"</span> button to manually select your corresponding metadata file. This will perfectly restore all your tiles, names, and settings.</li>
                     </ul>
                 </div>
                 <div className="space-y-2 mt-6">
