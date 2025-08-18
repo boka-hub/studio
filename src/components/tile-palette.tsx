@@ -227,7 +227,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                     <p className="text-sm text-muted-foreground">Auto-Tile Set:</p>
                     <Badge variant="secondary">{autoTileSet.length} tiles</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">Select exactly 47 tiles for a blob tileset.</p>
+                <p className="text-xs text-muted-foreground">Select exactly 9 tiles for a 3x3 tileset.</p>
                 {autoTileSet.length > 0 && (
                     <Button variant="outline" size="sm" className="h-7" onClick={onClearAutoTileSet}>Clear Set</Button>
                 )}

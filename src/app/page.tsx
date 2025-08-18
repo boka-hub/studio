@@ -316,21 +316,27 @@ export default function Home() {
         if (grid[row][col] === selectedTileId) return;
         newGrid[row][col] = selectedTileId;
       } else if (tool === 'auto-tile') {
-        if (autoTileSet.length < 47) {
-          toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: 'Your auto-tile set must contain exactly 47 tiles.' });
+        if (autoTileSet.length !== 9) {
+          toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: 'Your auto-tile set must contain exactly 9 tiles.' });
           return;
         }
-        if (newGrid[row][col] === 0) { // Only draw on empty cells for now
-            newGrid[row][col] = autoTileSet[0];
+        
+        const originalTile = newGrid[row][col];
+        if (originalTile !== 0 && !autoTileSet.includes(originalTile)) {
+          return; // Don't draw over unrelated tiles
         }
+        
+        // Temporarily place the center tile to establish connection
+        newGrid[row][col] = autoTileSet[4];
 
-        // Update neighbors
+        // Update the 3x3 grid around the action point
         for (let r_offset = -1; r_offset <= 1; r_offset++) {
             for (let c_offset = -1; c_offset <= 1; c_offset++) {
                 const nr = row + r_offset;
                 const nc = col + c_offset;
                 if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                    if (autoTileSet.includes(newGrid[nr][nc]) || (r_offset === 0 && c_offset === 0)) {
+                    // Only update tiles that are part of the set, or the one we just placed
+                    if (autoTileSet.includes(newGrid[nr][nc])) {
                          const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet);
                          newGrid[nr][nc] = newTileId;
                     }
