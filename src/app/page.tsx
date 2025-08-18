@@ -188,7 +188,11 @@ export default function Home() {
   }, [grid, updateGrid, toast]);
   
   const handleRenameTile = useCallback((tileId: number, newName: string) => {
-    const isNameTaken = tiles.some(t => t.name === newName && t.id !== tileId);
+    const tileBeingRenamed = tiles.find(t => t.id === tileId);
+    if (tileBeingRenamed && tileBeingRenamed.name === newName) {
+      return; // No change, so no action needed.
+    }
+    const isNameTaken = tiles.some(t => t.name === newName);
     if (isNameTaken) {
       toast({ variant: 'destructive', title: 'Rename Failed', description: 'A tile with that name already exists.' });
       return;
@@ -689,7 +693,7 @@ export default function Home() {
           if (e.key === 'ArrowUp') row--;
           if (e.key === 'ArrowDown') row++;
           if (e.key === 'ArrowLeft') col--;
-          if (e.key === 'ArrowRight') col--;
+          if (e.key === 'ArrowRight') col++;
 
           row = Math.max(0, Math.min(grid.length - 1, row));
           col = Math.max(0, Math.min(grid[0].length - 1, col));

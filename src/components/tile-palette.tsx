@@ -128,7 +128,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, tileId: number) => {
-    if (searchQuery) {
+    if (searchQuery || isCollapsed) {
         e.preventDefault();
         return;
     }
@@ -272,7 +272,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       onClick={(e) => handleTileClick(e, tile.id)}
                       className={cn(
                         'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                         searchQuery ? 'cursor-not-allowed' : 'cursor-grab',
+                         !isCollapsed && !searchQuery ? 'cursor-grab' : 'cursor-pointer',
                         getBorderStyle(tile.id)
                       )}
                       aria-label={`Select tile ${tile.name}`}
