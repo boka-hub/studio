@@ -310,16 +310,16 @@ export default function Home() {
 
   const handleCellAction = useCallback(
     (row: number, col: number, gridState?: GridState) => {
-      const isPreview = !!gridState;
-      let newGrid = gridState || grid.map(r => [...r]);
-
-      // If this is a final action (not a preview), deselect
-      if (!isPreview && gridState) {
-          updateGrid(gridState);
-          setSelection(null);
-          return;
+      // If a full grid state is passed, it means we're committing a change (e.g., from a brush drag).
+      if (gridState) {
+        updateGrid(gridState);
+        setSelection(null);
+        return;
       }
       
+      const isPreview = false;
+      let newGrid = grid.map(r => [...r]);
+
        if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
         if (!isPreview) updateGrid(newGrid);
         return;

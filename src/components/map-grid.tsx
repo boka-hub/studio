@@ -4,6 +4,7 @@ import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { GridState, Tile, Tool, Selection } from '@/lib/types';
+import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
 
 interface MapGridProps {
   grid: GridState;
@@ -45,6 +46,22 @@ export const MapGrid: FC<MapGridProps> = ({
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
   }, [tiles]);
+  
+    // This is a stand-alone version of the drawing logic used for the preview.
+    // It is intentionally duplicated from page.tsx to keep the MapGrid component isolated
+    // and to avoid passing down many state setters. It only handles the visual part.
+  const performPreviewAction = (gridState: GridState, row: number, col: number) => {
+      let newGrid = gridState;
+      if (tool === 'brush') {
+          if (newGrid[row][col] === selectedTileId) return newGrid;
+          newGrid[row][col] = selectedTileId;
+      } else if (tool === 'eraser') {
+          if (newGrid[row][col] === 0) return newGrid;
+          newGrid[row][col] = 0;
+      }
+      // Simplified preview for other tools - complex logic is only finalized on mouse up
+      return newGrid;
+  }
 
   const handleMouseDown = (row: number, col: number) => {
     if (isPreviewMode) return;
@@ -58,8 +75,7 @@ export const MapGrid: FC<MapGridProps> = ({
         }
     } else {
         // For brush-like tools, start a preview and perform the first action
-        const newPreviewGrid = grid.map(r => [...r]);
-        onCellAction(row, col, newPreviewGrid); // This will mutate newPreviewGrid
+        const newPreviewGrid = performPreviewAction(grid.map(r => [...r]), row, col);
         setPreviewGrid(newPreviewGrid);
     }
   };
@@ -70,8 +86,7 @@ export const MapGrid: FC<MapGridProps> = ({
     if (isBrushLikeTool) {
         setPreviewGrid(currentPreview => {
             if (!currentPreview) return null;
-            const newPreviewGrid = currentPreview.map(r => [...r]);
-            onCellAction(row, col, newPreviewGrid); // Mutate the preview grid
+            const newPreviewGrid = performPreviewAction(currentPreview.map(r => [...r]), row, col);
             return newPreviewGrid;
         });
     } else if (startCell) { // Shape tools
@@ -123,28 +138,30 @@ export const MapGrid: FC<MapGridProps> = ({
   const handleMouseUp = (row: number, col: number) => {
     if (isPreviewMode || !isDrawing) return;
 
-    if (isBrushLikeTool) {
-        if(previewGrid) {
-            // Finalize the action with the complete previewGrid
-            onCellAction(row, col, previewGrid);
-        }
-    } else if (startCell) { // Shape tools
-      onShapeDraw(startCell, { row, col });
-    } else { // Handle simple clicks for non-brush tools
-      onCellAction(row, col);
-    }
-
     setIsDrawing(false);
     setStartCell(null);
-    setPreviewGrid(null);
     setPreviewSelection(null);
+
+    // If there's a preview grid, commit it. This handles all brush-like tools.
+    if (previewGrid) {
+      onCellAction(row, col, previewGrid);
+      setPreviewGrid(null); // Clear the preview after committing
+      return;
+    }
+
+    // Handle shape tools that don't use a preview grid in the same way.
+    if (startCell) {
+      onShapeDraw(startCell, { row, col });
+    } else {
+      // Handle simple clicks for non-brush, non-shape tools (like Picker, Fill).
+      onCellAction(row, col);
+    }
   };
 
   const handleMouseLeave = () => {
     if (isDrawing) {
-        if (isBrushLikeTool) {
-            // If mouse leaves while drawing, commit the changes made so far
-            if(previewGrid) onCellAction(0, 0, previewGrid); // Coords don't matter here
+        if (previewGrid) {
+            onCellAction(0, 0, previewGrid); // Coords don't matter, we pass the whole grid
         }
         setIsDrawing(false);
         setStartCell(null);
