@@ -326,7 +326,7 @@ export default function Home() {
           return; // Don't draw over unrelated tiles
         }
         
-        // Temporarily place the center tile to establish connection
+        // Place the center tile to establish connection
         newGrid[row][col] = autoTileSet[4];
 
         // Update the 3x3 grid around the action point
@@ -334,8 +334,10 @@ export default function Home() {
             for (let c_offset = -1; c_offset <= 1; c_offset++) {
                 const nr = row + r_offset;
                 const nc = col + c_offset;
+                
+                // Check bounds
                 if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                    // Only update tiles that are part of the set, or the one we just placed
+                    // Only update tiles that are part of the set
                     if (autoTileSet.includes(newGrid[nr][nc])) {
                          const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet);
                          newGrid[nr][nc] = newTileId;
@@ -1150,3 +1152,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
