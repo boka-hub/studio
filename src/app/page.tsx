@@ -305,7 +305,7 @@ export default function Home() {
 
   const handleCellAction = useCallback(
     (row: number, col: number, gridState?: GridState) => {
-      // If a full grid state is passed, it means we're committing a change from a preview.
+      // If a full grid state is passed, it means we're committing a change from a preview (brush, eraser, etc.).
       if (gridState) {
         updateGrid(gridState);
         setSelection(null);
@@ -313,53 +313,9 @@ export default function Home() {
       }
       
       let newGrid = grid.map(r => [...r]);
-
-       if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
-        updateGrid(newGrid);
-        return;
-      }
-
-      if (tool === 'brush') {
-        if (newGrid[row][col] === selectedTileId) return;
-        newGrid[row][col] = selectedTileId;
-      } else if (tool === 'auto-tile') {
-          const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
-          if (autoTileSet.length !== requiredTiles[autoTileMode]) {
-              toast({ variant: 'destructive', title: 'Auto-Tile Failed', description: `Your auto-tile set must contain exactly ${requiredTiles[autoTileMode]} tiles.` });
-              return;
-          }
-          const originalTile = newGrid[row][col];
-          if (originalTile !== 0 && !autoTileSet.includes(originalTile)) {
-              return; // Don't draw over unrelated tiles
-          }
-          
-          const getTileIdFunc = {
-              '9-tile': getAutoTileId9,
-              '13-tile': getAutoTileId13,
-              '47-tile': getAutoTileId47,
-          }[autoTileMode];
-
-          // Place the tile to establish connection
-          newGrid[row][col] = autoTileMode === '9-tile' ? autoTileSet[4] : autoTileSet[autoTileSet.length - 1]; // Center tile
-
-          // Update the 3x3 grid around the action point
-          for (let r_offset = -1; r_offset <= 1; r_offset++) {
-              for (let c_offset = -1; c_offset <= 1; c_offset++) {
-                  const nr = row + r_offset;
-                  const nc = col + c_offset;
-                  
-                  if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                      if (autoTileSet.includes(newGrid[nr][nc]) || (nr === row && nc === col)) {
-                           const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
-                           newGrid[nr][nc] = newTileId;
-                      }
-                  }
-              }
-          }
-      } else if (tool === 'eraser') {
-        if (newGrid[row][col] === 0) return;
-        newGrid[row][col] = 0;
-      } else if (tool === 'picker') {
+      
+      // Handle tools that are just simple clicks and don't use the preview system.
+      if (tool === 'picker') {
         const tileId = newGrid[row][col];
         const pickedTile = tiles.find(t => t.id === tileId);
         if (pickedTile) {
@@ -368,20 +324,6 @@ export default function Home() {
           toast({title: 'Tile Picked', description: `Switched to brush with tile "${pickedTile.name}"`});
         }
         return; 
-      } else if (tool === 'spray') {
-        for (let r = -sprayRadius; r <= sprayRadius; r++) {
-            for (let c = -sprayRadius; c <= sprayRadius; c++) {
-                if (r * r + c * c <= sprayRadius * sprayRadius) {
-                    const targetRow = row + r;
-                    const targetCol = col + c;
-                    if (targetRow >= 0 && targetRow < newGrid.length && targetCol >= 0 && targetCol < newGrid[0].length) {
-                        if (Math.random() < sprayDensity) {
-                            newGrid[targetRow][targetCol] = selectedTileId;
-                        }
-                    }
-                }
-            }
-        }
       } else if (tool === 'fill') {
         const targetId = newGrid[row][col];
         const replacementId = selectedTileId;
@@ -445,10 +387,11 @@ export default function Home() {
         return; 
       }
       
+      // If we reach here, it means a tool that doesn't use the preview system modified the grid.
       updateGrid(newGrid);
       setSelection(null);
     },
-    [grid, selectedTileId, tiles, toast, tool, sprayRadius, sprayDensity, updateGrid, autoTileSet, autoTileMode]
+    [grid, selectedTileId, tiles, toast, tool, updateGrid]
   );
   
   const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
@@ -1013,6 +956,9 @@ export default function Home() {
                   playerPos={playerPos}
                   autoTileMode={autoTileMode}
                   autoTileSet={autoTileSet}
+                  sprayRadius={sprayRadius}
+                  sprayDensity={sprayDensity}
+                  scatterSet={scatterSet}
                 />
               </main>
             </Panel>
@@ -1170,3 +1116,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    

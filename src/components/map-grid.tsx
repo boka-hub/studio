@@ -20,6 +20,9 @@ interface MapGridProps {
   playerPos: {row: number, col: number};
   autoTileMode: AutoTileMode;
   autoTileSet: number[];
+  sprayRadius: number;
+  sprayDensity: number;
+  scatterSet: number[];
 }
 
 const BASE_TILE_SIZE = 16;
@@ -38,6 +41,9 @@ export const MapGrid: FC<MapGridProps> = ({
   playerPos,
   autoTileMode,
   autoTileSet,
+  sprayRadius,
+  sprayDensity,
+  scatterSet,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
@@ -46,6 +52,7 @@ export const MapGrid: FC<MapGridProps> = ({
   
   const TILE_SIZE = BASE_TILE_SIZE * zoom;
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
+  const isShapeTool = ['rectangle', 'gradient', 'noise', 'scatter', 'select'].includes(tool);
 
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
@@ -60,8 +67,6 @@ export const MapGrid: FC<MapGridProps> = ({
           if (newGrid[row][col] === 0) return newGrid;
           newGrid[row][col] = 0;
       } else if (tool === 'spray') {
-         const sprayRadius = 3;
-         const sprayDensity = 0.4;
          for (let r = -sprayRadius; r <= sprayRadius; r++) {
             for (let c = -sprayRadius; c <= sprayRadius; c++) {
                 if (r * r + c * c <= sprayRadius * sprayRadius) {
@@ -108,21 +113,24 @@ export const MapGrid: FC<MapGridProps> = ({
           }
       }
       return newGrid;
-  }, [tool, selectedTileId, autoTileMode, autoTileSet]);
+  }, [tool, selectedTileId, autoTileMode, autoTileSet, sprayRadius, sprayDensity]);
 
   const handleMouseDown = (row: number, col: number) => {
     if (isPreviewMode) return;
     setIsDrawing(true);
     
-    if (tool === 'select' || tool === 'rectangle' || tool === 'gradient' || tool === 'noise' || tool === 'scatter') {
+    if (isShapeTool) {
         setStartCell({ row, col });
         setPreviewSelection(null);
         if (tool !== 'select') {
             setPreviewGrid(grid.map(r => [...r]));
         }
-    } else {
+    } else if (isBrushLikeTool) {
         const newPreviewGrid = performPreviewAction(grid.map(r => [...r]), row, col);
         setPreviewGrid(newPreviewGrid);
+    } else {
+        // For simple click tools like Fill, Picker, Magic Wand
+        onCellAction(row, col);
     }
   };
 
@@ -135,7 +143,7 @@ export const MapGrid: FC<MapGridProps> = ({
             const newPreviewGrid = performPreviewAction(currentPreview, row, col);
             return newPreviewGrid;
         });
-    } else if (startCell) { // Shape tools
+    } else if (startCell && isShapeTool) {
         const minRow = Math.min(startCell.row, row);
         const maxRow = Math.max(startCell.row, row);
         const minCol = Math.min(startCell.col, col);
@@ -176,6 +184,16 @@ export const MapGrid: FC<MapGridProps> = ({
                     }
                 }
             }
+        } else if (tool === 'scatter') {
+             if (scatterSet.length === 0) return;
+             for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                        const randomIndex = Math.floor(Math.random() * scatterSet.length);
+                        newPreviewGrid[r][c] = scatterSet[randomIndex];
+                    }
+                }
+            }
         }
         setPreviewGrid(newPreviewGrid);
     }
@@ -186,15 +204,13 @@ export const MapGrid: FC<MapGridProps> = ({
 
     setIsDrawing(false);
     
-    // If there's a preview grid, commit it. This handles brush-like tools & shape tools.
+    // If there's a preview grid, commit it. This handles brush-like tools & some shape tools.
     if (previewGrid) {
       onCellAction(row, col, previewGrid);
-    } else if (startCell) { // Handle shape tools that only update selection preview (like 'select')
+    } else if (startCell && isShapeTool) { // Handle shape tools that only update selection preview (like 'select')
       onShapeDraw(startCell, { row, col });
-    } else {
-      // Handle simple clicks for non-brush, non-shape tools (like Picker, Fill).
-      onCellAction(row, col);
     }
+    // Simple click tools were already handled on mouse down.
 
     setStartCell(null);
     setPreviewGrid(null);
@@ -218,16 +234,14 @@ export const MapGrid: FC<MapGridProps> = ({
     switch (tool) {
       case 'brush':
       case 'auto-tile':
+      case 'spray':
         return 'cursor-cell';
       case 'eraser':
         return 'cursor-crosshair';
       case 'picker':
-        return 'cursor-pointer';
       case 'fill':
       case 'magic-wand':
-        return 'cursor-copy';
-      case 'spray':
-        return 'cursor-cell';
+        return 'cursor-pointer';
       case 'rectangle':
       case 'gradient':
       case 'noise':
@@ -332,3 +346,5 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
+
+    
