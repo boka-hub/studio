@@ -72,6 +72,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
+import { isTileTransparent } from '@/lib/utils';
 
 const INITIAL_GRID_SIZE = 32;
 
@@ -247,18 +248,45 @@ export default function Home() {
     updateTiles(reorderedTiles, false);
   }, [updateTiles]);
 
-  const handleImportTiles = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportTiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
 
-    const tileData: TileImportData[] = Array.from(files).map(file => ({
-      file,
-      isSolid: false, // Individual files default to not solid
-    }));
+    const fileList = Array.from(files);
+    
+    const readFiles = fileList.map(file => {
+      return new Promise<{ file: File; isSolid: boolean } | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const src = e.target?.result as string;
+          if (await isTileTransparent(src)) {
+            resolve(null);
+          } else {
+            resolve({ file, isSolid: false });
+          }
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    });
 
-    addTiles(tileData);
+    const results = await Promise.all(readFiles);
+    const validTileData = results.filter((r): r is TileImportData => r !== null);
+    
+    const skippedCount = fileList.length - validTileData.length;
+    if (skippedCount > 0) {
+      toast({
+        title: 'Transparent Tiles Skipped',
+        description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
+      });
+    }
+
+    if (validTileData.length > 0) {
+      addTiles(validTileData);
+    }
+
     event.target.value = '';
-  }, [addTiles]);
+  }, [addTiles, toast]);
   
   const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
@@ -1108,3 +1136,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
