@@ -658,7 +658,7 @@ export default function Home() {
     }
     
     const target = e.target as HTMLElement;
-    if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.role === 'slider') return;
+    if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.getAttribute('role') === 'slider') return;
 
     if ((e.ctrlKey || e.metaKey)) {
         if (['c', 'v', 'z', 'y', 's', '0', '=', '-'].includes(e.key)) {
@@ -1136,5 +1136,7 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
 
     
