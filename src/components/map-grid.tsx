@@ -112,7 +112,7 @@ export const MapGrid: FC<MapGridProps> = ({
               const neighborTile = newGrid[nr][nc];
               const isNeighborAutoTile = autoTileSet_.has(neighborTile);
               
-              if (isNeighborAutoTile || (autoTileOverwrite && (nr !== row || nc !== col)) || neighborTile === 0) {
+              if (isNeighborAutoTile || autoTileOverwrite || neighborTile === 0) {
                  const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
                  newGrid[nr][nc] = newTileId;
               }
@@ -182,12 +182,10 @@ export const MapGrid: FC<MapGridProps> = ({
               if (x0 === x1 && y0 === y1) break;
               const e2 = 2 * err;
               if (e2 >= dy) {
-                  if (x0 === x1) break;
                   err += dy;
                   x0 += sx;
               }
               if (e2 <= dx) {
-                  if (y0 === y1) break;
                   err += dx;
                   y0 += sy;
               }
