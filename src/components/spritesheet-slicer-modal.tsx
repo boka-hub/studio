@@ -302,110 +302,112 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden relative">
-          {isDragging && (
-            <div className="absolute inset-0 bg-primary/20 border-2 border-dashed border-primary z-10 flex items-center justify-center pointer-events-none">
-              <div className="text-center p-4 bg-background/80 rounded-lg">
-                <h3 className="font-bold text-primary">Drop to add spritesheet(s)</h3>
-              </div>
-            </div>
-          )}
-          <div className="md:col-span-1 h-full flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-muted-foreground">Spritesheets</h3>
-            <ScrollArea className="flex-grow border rounded-md">
-                <div className="p-2 space-y-1" ref={fileListRef}>
-                    {files.map(file => (
-                        <div key={file.id} 
-                            data-file-id={file.id}
-                            className={cn("p-2 rounded-md cursor-pointer hover:bg-muted", selectedFileId === file.id && "bg-muted")}
-                            onClick={() => setSelectedFileId(file.id)}
-                        >
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm truncate flex-grow mr-2">{file.file.name}</p>
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon"
-                                    className="h-6 w-6 flex-shrink-0"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        const newFiles = files.filter(f => f.id !== file.id);
-                                        setFiles(newFiles);
-                                        if (selectedFileId === file.id) {
-                                            setSelectedFileId(newFiles.length > 0 ? newFiles[0].id : null);
-                                        }
-                                    }}>
-                                    <X className="h-4 w-4"/>
-                                </Button>
-                            </div>
-                            {file.id === selectedFileId && (
-                                <div className="mt-2">
-                                  {file.metadata ? (
-                                    <div className="text-xs text-green-600 flex items-center gap-2 p-2 bg-green-500/10 rounded-md">
-                                      <FileJson2 className="h-4 w-4" />
-                                      <span className="truncate">Loaded: {file.companionName}</span>
-                                    </div>
-                                  ) : (
-                                    <Button size="sm" variant="outline" className="w-full h-8" onClick={() => manualMetaInputRef.current?.click()}>
-                                        <FilePlus2 className="h-4 w-4 mr-2" />
-                                        Add .txt Metadata
-                                    </Button>
-                                  )}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+        <ScrollArea className="flex-grow -mx-6 px-6 relative">
+             {isDragging && (
+                <div className="absolute inset-0 bg-primary/20 border-2 border-dashed border-primary z-10 flex items-center justify-center pointer-events-none">
+                <div className="text-center p-4 bg-background/80 rounded-lg">
+                    <h3 className="font-bold text-primary">Drop to add spritesheet(s)</h3>
                 </div>
-            </ScrollArea>
-             <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" />
-                Add Spritesheet(s)
-            </Button>
-          </div>
-
-          <div className="md:col-span-2 h-full flex flex-col gap-4">
-             <h3 className="text-sm font-semibold text-muted-foreground">Preview & Configuration</h3>
-             {selectedFile ? (
-                <>
-                {selectedFile.metadata && (
-                  <Alert variant="default" className="border-green-500/50 text-green-700 dark:text-green-400">
-                    <FileJson2 className="h-4 w-4 text-green-600 dark:text-green-500" />
-                    <AlertTitle className="text-green-800 dark:text-green-500">Metadata Detected!</AlertTitle>
-                    <AlertDescription>
-                      Tile names and properties have been automatically configured.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <ScrollArea className="w-full rounded-md border max-h-[60vh] bg-muted/20">
-                    <div className="flex items-center justify-center p-1">
-                        <canvas ref={previewCanvasRef} className="max-w-full h-auto" style={{ imageRendering: 'pixelated' }} />
+                </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
+            <div className="md:col-span-1 h-full flex flex-col gap-2">
+                <h3 className="text-sm font-semibold text-muted-foreground">Spritesheets</h3>
+                <ScrollArea className="flex-grow border rounded-md max-h-96">
+                    <div className="p-2 space-y-1" ref={fileListRef}>
+                        {files.map(file => (
+                            <div key={file.id} 
+                                data-file-id={file.id}
+                                className={cn("p-2 rounded-md cursor-pointer hover:bg-muted", selectedFileId === file.id && "bg-muted")}
+                                onClick={() => setSelectedFileId(file.id)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm truncate flex-grow mr-2">{file.file.name}</p>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        className="h-6 w-6 flex-shrink-0"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newFiles = files.filter(f => f.id !== file.id);
+                                            setFiles(newFiles);
+                                            if (selectedFileId === file.id) {
+                                                setSelectedFileId(newFiles.length > 0 ? newFiles[0].id : null);
+                                            }
+                                        }}>
+                                        <X className="h-4 w-4"/>
+                                    </Button>
+                                </div>
+                                {file.id === selectedFileId && (
+                                    <div className="mt-2">
+                                    {file.metadata ? (
+                                        <div className="text-xs text-green-600 flex items-center gap-2 p-2 bg-green-500/10 rounded-md">
+                                        <FileJson2 className="h-4 w-4" />
+                                        <span className="truncate">Loaded: {file.companionName}</span>
+                                        </div>
+                                    ) : (
+                                        <Button size="sm" variant="outline" className="w-full h-8" onClick={() => manualMetaInputRef.current?.click()}>
+                                            <FilePlus2 className="h-4 w-4 mr-2" />
+                                            Add .txt Metadata
+                                        </Button>
+                                    )}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </ScrollArea>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="tile-width">Tile Width (px)</Label>
-                    <Input id="tile-width" type="number" value={selectedFile.tileWidth}
-                      onChange={(e) => updateSelectedFileConfig(Math.max(1, Number(e.target.value)))}
-                      min="1" />
-                  </div>
-                  <div>
-                    <Label htmlFor="tile-height">Tile Height (px)</Label>
-                    <Input id="tile-height" type="number" value={selectedFile.tileHeight}
-                      onChange={(e) => updateSelectedFileConfig(undefined, Math.max(1, Number(e.target.value)))}
-                      min="1" />
-                  </div>
-                </div>
-                </>
-             ) : (
-                <div className="flex flex-col items-center justify-center h-full border-2 border-dashed rounded-lg text-center p-4">
-                    <Upload className="h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground mt-4">Select or upload a spritesheet to begin.</p>
-                     <p className="text-sm text-muted-foreground/80">You can also drag and drop files here.</p>
-                </div>
-             )}
-          </div>
-        </div>
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Add Spritesheet(s)
+                </Button>
+            </div>
 
-        <DialogFooter>
+            <div className="md:col-span-2 h-full flex flex-col gap-4">
+                <h3 className="text-sm font-semibold text-muted-foreground">Preview & Configuration</h3>
+                {selectedFile ? (
+                    <>
+                    {selectedFile.metadata && (
+                    <Alert variant="default" className="border-green-500/50 text-green-700 dark:text-green-400">
+                        <FileJson2 className="h-4 w-4 text-green-600 dark:text-green-500" />
+                        <AlertTitle className="text-green-800 dark:text-green-500">Metadata Detected!</AlertTitle>
+                        <AlertDescription>
+                        Tile names and properties have been automatically configured.
+                        </AlertDescription>
+                    </Alert>
+                    )}
+                    <div className="w-full rounded-md border bg-muted/20 overflow-auto">
+                        <div className="flex items-center justify-center p-1">
+                            <canvas ref={previewCanvasRef} className="max-w-full h-auto" style={{ imageRendering: 'pixelated' }} />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="tile-width">Tile Width (px)</Label>
+                        <Input id="tile-width" type="number" value={selectedFile.tileWidth}
+                        onChange={(e) => updateSelectedFileConfig(Math.max(1, Number(e.target.value)))}
+                        min="1" />
+                    </div>
+                    <div>
+                        <Label htmlFor="tile-height">Tile Height (px)</Label>
+                        <Input id="tile-height" type="number" value={selectedFile.tileHeight}
+                        onChange={(e) => updateSelectedFileConfig(undefined, Math.max(1, Number(e.target.value)))}
+                        min="1" />
+                    </div>
+                    </div>
+                    </>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full border-2 border-dashed rounded-lg text-center p-4">
+                        <Upload className="h-12 w-12 text-muted-foreground/50" />
+                        <p className="text-muted-foreground mt-4">Select or upload a spritesheet to begin.</p>
+                        <p className="text-sm text-muted-foreground/80">You can also drag and drop files here.</p>
+                    </div>
+                )}
+            </div>
+            </div>
+        </ScrollArea>
+
+        <DialogFooter className="mt-auto pt-4 border-t">
           <Button type="button" variant="secondary" onClick={handleClose}>Cancel</Button>
           <Button type="button" onClick={handleSlice} disabled={files.length === 0}>
             Slice All & Add ({files.length})
@@ -417,5 +419,3 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     </Dialog>
   );
 };
-
-    
