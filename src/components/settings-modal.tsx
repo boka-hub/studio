@@ -58,7 +58,102 @@ const features = [
     {
         name: "Auto-Tile",
         short: "Automatically places the correct tile to form connections.",
-        long: "This powerful offline tool makes drawing environments like walls or terrain incredibly fast. Select a mode (9, 13, or 47-tile) from the toolbar, then select the exact number of tiles required for that mode in the palette. When you draw, the tool analyzes neighbors and places the correct tile automatically.\n\nIMPORTANT: The order in which you select tiles in the palette is absolutely critical for the logic to work. You must select them in the precise order listed below.\n\n---\n\n**9-Tile (Simple Walls/Paths)**\n\nThis is for simple connections. You must select exactly 9 tiles.\n\nSelection Order:\n1. Top-Left Corner\n2. Top Edge\n3. Top-Right Corner\n4. Left Edge\n5. Center (solid)\n6. Right Edge\n7. Bottom-Left Corner\n8. Bottom Edge\n9. Bottom-Right Corner\n\n---\n\n**13-Tile (With Interior Corners)**\n\nThis set adds support for interior corners, perfect for more complex walls or dungeons. You must select exactly 13 tiles.\n\nSelection Order:\n1. Top Edge\n2. Bottom Edge\n3. Left Edge\n4. Right Edge\n5. Top-Left Corner (Outer)\n6. Top-Right Corner (Outer)\n7. Bottom-Left Corner (Outer)\n8. Bottom-Right Corner (Outer)\n9. Top-Left Corner (Inner)\n10. Top-Right Corner (Inner)\n11. Bottom-Left Corner (Inner)\n12. Bottom-Right Corner (Inner)\n13. Center (solid)\n\n---\n\n**47-Tile (Blob/Terrain)**\n\nThis is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must create a full 47-tile set and select them in the correct order.\n\nA visual guide for the standard 47-tile layout can be easily found by searching for 'blob tileset layout' online. It's a common standard in 2D game development."
+        long: `This powerful offline tool makes drawing environments like walls or terrain incredibly fast. Select a mode (9, 13, or 47-tile) from the toolbar, then select the exact number of tiles required for that mode in the palette. When you draw, the tool analyzes neighbors and places the correct tile automatically.
+
+IMPORTANT: The order in which you select tiles in the palette is absolutely critical for the logic to work. You must select them in the precise order listed below.
+
+---
+
+**9-Tile (Simple Walls/Paths)**
+
+This is for simple connections. You must select exactly 9 tiles.
+
+Selection Order:
+1. Top-Left Corner
+2. Top Edge
+3. Top-Right Corner
+4. Left Edge
+5. Center (solid)
+6. Right Edge
+7. Bottom-Left Corner
+8. Bottom Edge
+9. Bottom-Right Corner
+
+---
+
+**13-Tile (With Interior Corners)**
+
+This set adds support for interior corners, perfect for more complex walls or dungeons. You must select exactly 13 tiles.
+
+Selection Order:
+1. Top Edge
+2. Bottom Edge
+3. Left Edge
+4. Right Edge
+5. Top-Left Corner (Outer)
+6. Top-Right Corner (Outer)
+7. Bottom-Left Corner (Outer)
+8. Bottom-Right Corner (Outer)
+9. Top-Left Corner (Inner)
+10. Top-Right Corner (Inner)
+11. Bottom-Left Corner (Inner)
+12. Bottom-Right Corner (Inner)
+13. Center (solid)
+
+---
+
+**47-Tile (Blob/Terrain)**
+
+This is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must create a full 47-tile set and select them in the correct order based on the standardized "blob" tileset layout.
+
+Selection Order (based on a standard 47-tile atlas):
+0. Empty/Surrounded by no tiles
+1. Surrounded only by West
+2. West-East Horizontal Line
+3. Surrounded only by East
+4. North-South Vertical Line
+5. Top-Left Inner Corner
+6. Bottom-Left Inner Corner
+7. Bottom-Right Inner Corner
+8. Surrounded only by North
+9. Top-Right Outer Corner
+10. Top-Left Outer Corner
+11. Bottom-Left Outer Corner
+12. Bottom Edge
+13. Bottom-Right Outer Corner
+14. Top Edge
+15. Center/Fully Surrounded
+16. Hollow Center (NW corner missing)
+17. Hollow Center (NE corner missing)
+18. Hollow Center (SW corner missing)
+19. Hollow Center (SE corner missing)
+20. Top-Left Corner (filled SE)
+21. Top-Right Corner (filled SW)
+22. Bottom-Left Corner (filled NE)
+23. Bottom-Right Corner (filled NW)
+24. Top Edge (concave SW)
+25. Top Edge (concave SE)
+26. Top Edge (concave S)
+27. Right Edge (concave NW)
+28. Right Edge (concave SW)
+29. Right Edge (concave W)
+30. Bottom Edge (concave NW)
+31. Bottom Edge (concave NE)
+32. Bottom Edge (concave N)
+33. Left Edge (concave NE)
+34. Left Edge (concave SE)
+35. Left Edge (concave E)
+36. Vertical Line (concave SW+NE)
+37. Vertical Line (concave SE+NW)
+38. Vertical Line (concave SW+SE)
+39. Vertical Line (concave NW+NE)
+40. Horizontal Line (concave NE+SW)
+41. Horizontal Line (concave NW+SE)
+42. Horizontal Line (concave NW+SW)
+43. Horizontal Line (concave NE+SE)
+44. Right Cul-de-sac
+45. Left Cul-de-sac
+46. Bottom Cul-de-sac`
     },
     {
         name: "Brush",
