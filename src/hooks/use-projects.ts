@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Project, GridState, Tile, ProjectsState } from '@/lib/types';
+import type { Project, GridState, Tile, ProjectsState, TileImportData } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useHistoryState } from './use-history-state';
 import { isTileTransparent } from '@/lib/utils';
@@ -116,10 +116,10 @@ export const useProjects = () => {
       modifyCurrentProject(() => ({ tiles }), batch);
   }, [modifyCurrentProject]);
   
-  const addTiles = useCallback((files: File[]) => {
-      if (files.length === 0) return;
+  const addTiles = useCallback((tileData: TileImportData[]) => {
+      if (tileData.length === 0) return;
       
-      const readFiles = files.map(file => {
+      const readFiles = tileData.map(data => {
           return new Promise<{name: string, src: string, solid: boolean} | null>((resolve) => {
              const reader = new FileReader();
              reader.onload = async (e) => {
@@ -127,21 +127,19 @@ export const useProjects = () => {
                 if (await isTileTransparent(src)) {
                    resolve(null);
                 } else {
-                   const solidMarker = "__solid-true";
-                   const isSolid = file.name.includes(solidMarker);
-                   const name = file.name.replace(/\.[^/.]+$/, "").replace(solidMarker, "");
-                   resolve({ name, src, solid: isSolid });
+                   const name = data.file.name.replace(/\.[^/.]+$/, "");
+                   resolve({ name, src, solid: data.isSolid });
                 }
              };
              reader.onerror = () => resolve(null);
-             reader.readAsDataURL(file);
+             reader.readAsDataURL(data.file);
           });
       });
 
       Promise.all(readFiles).then(results => {
           const newTilesData = results.filter((r): r is {name: string, src: string, solid: boolean} => r !== null);
           
-          const skippedCount = files.length - newTilesData.length;
+          const skippedCount = tileData.length - newTilesData.length;
           if (skippedCount > 0) {
             toast({
                 title: 'Transparent Tiles Skipped',
@@ -266,3 +264,5 @@ export const useProjects = () => {
     canRedo,
   };
 };
+
+    

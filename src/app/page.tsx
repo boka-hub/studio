@@ -55,7 +55,7 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, TileImportData } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -250,8 +250,12 @@ export default function Home() {
     const files = event.target.files;
     if (!files) return;
 
-    const fileList = Array.from(files);
-    addTiles(fileList);
+    const tileData: TileImportData[] = Array.from(files).map(file => ({
+      file,
+      isSolid: false, // Individual files default to not solid
+    }));
+
+    addTiles(tileData);
     event.target.value = '';
   }, [addTiles]);
   
@@ -1084,3 +1088,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    

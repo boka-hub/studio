@@ -34,3 +34,10 @@ export interface ProjectsState {
     projects: Project[];
     currentProjectId: string | null;
 }
+
+export interface TileImportData {
+  file: File;
+  isSolid: boolean;
+}
+
+    

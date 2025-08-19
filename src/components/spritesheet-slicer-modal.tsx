@@ -17,11 +17,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, X, FileJson2, FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import type { TileImportData } from '@/lib/types';
 
 interface SpritesheetSlicerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSlice: (files: File[]) => void;
+  onSlice: (files: TileImportData[]) => void;
   initialFiles?: File[];
 }
 
@@ -197,7 +198,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   const handleSlice = async () => {
     if (files.length === 0) return;
     
-    let allSlicedFiles: File[] = [];
+    let allSlicedData: TileImportData[] = [];
 
     const sliceCanvas = document.createElement('canvas');
     const ctx = sliceCanvas.getContext('2d');
@@ -229,13 +230,11 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                                if(blob) {
                                    const index = y * cols + x;
                                    const tileInfo = tilesFromMetadata?.find((t: any) => t.index === index);
-                                   let tileName = tileInfo?.name || `${fileData.name}_${index}`;
+                                   const tileName = tileInfo?.name || `${fileData.name}_${index}`;
                                    const isSolid = tileInfo?.solid === true;
-                                   if (isSolid) {
-                                      tileName += `__solid-true`;
-                                   }
+                                   
                                    const newFile = new File([blob], `${tileName}.png`, { type: 'image/png' });
-                                   allSlicedFiles.push(newFile);
+                                   allSlicedData.push({ file: newFile, isSolid });
                                }
                                resolveBlob();
                            }, 'image/png');
@@ -248,8 +247,8 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         });
     }
 
-    if (allSlicedFiles.length > 0) {
-      onSlice(allSlicedFiles);
+    if (allSlicedData.length > 0) {
+      onSlice(allSlicedData);
     } else {
        toast({ variant: 'destructive', title: 'Slicing Error', description: 'Could not slice any tiles. Check tile dimensions.' });
     }
@@ -418,3 +417,5 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     </Dialog>
   );
 };
+
+    
