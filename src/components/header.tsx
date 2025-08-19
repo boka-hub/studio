@@ -14,26 +14,30 @@ interface HeaderAction {
 
 interface HeaderProps {
   title: string;
+  subtitle?: string;
   icon: ElementType;
   actionGroups: HeaderAction[][];
   onTitleClick?: () => void;
 }
 
-export const Header: FC<HeaderProps> = ({ title, icon: Icon, actionGroups, onTitleClick }) => {
+export const Header: FC<HeaderProps> = ({ title, subtitle, icon: Icon, actionGroups, onTitleClick }) => {
 
   return (
     <header className="flex items-center justify-between p-2 border-b border-border shadow-sm z-10 flex-shrink-0">
       <Tooltip>
         <TooltipTrigger asChild>
            <div 
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-3 cursor-pointer"
             onClick={onTitleClick}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onTitleClick?.()}
           >
-            <Icon className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold text-foreground truncate max-w-xs">{title}</h1>
+            <Icon className="h-7 w-7 text-primary" />
+            <div className="flex flex-col">
+                <h1 className="text-xl font-bold text-foreground leading-tight">{title}</h1>
+                {subtitle && <p className="text-xs text-muted-foreground leading-tight">{subtitle}</p>}
+            </div>
           </div>
         </TooltipTrigger>
         <TooltipContent>

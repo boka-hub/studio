@@ -906,7 +906,8 @@ export default function Home() {
       >
        {isDragging && renderDragOverlay()}
         <Header 
-            title={currentProject.name}
+            title="TileForge"
+            subtitle={currentProject.name}
             icon={ToyBrick} 
             actionGroups={[headerActions, projectActions, gameplayActions]}
             onTitleClick={() => setSettingsOpen(true)}
@@ -1040,7 +1041,7 @@ export default function Home() {
                           onToggleAutoTile={onToggleAutoTile}
                           onClearAutoTileSet={onClearAutoTileSet}
                           onRenameTile={handleRenameTile}
-                          onDeleteTile={openDeleteTileDialog}
+                          onDeleteTile={confirmDeleteTile}
                           onToggleSolid={handleToggleSolid}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
@@ -1127,7 +1128,7 @@ export default function Home() {
           tiles={tiles}
           onImport={handleMetadataImport}
         />
-        
+
         <AlertDialog open={!!tileToDelete} onOpenChange={(open) => !open && setTileToDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
