@@ -80,7 +80,6 @@ export const useProjects = () => {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (error) {
             console.error("Failed to save projects to localStorage", error);
-            // Using a console.error instead of a toast to avoid dependency loop
         }
     }
   }, [state, isLoading]);
