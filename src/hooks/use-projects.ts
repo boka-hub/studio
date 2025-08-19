@@ -188,14 +188,16 @@ export const useProjects = () => {
 
 
   const loadProject = useCallback((id: string) => {
-    const currentState = state;
-    if (currentState.projects.some(p => p.id === id)) {
+    setProjectState(currentState => {
+      if (currentState.projects.some(p => p.id === id)) {
         resetHistory({
             projects: currentState.projects,
             currentProjectId: id,
         });
-    }
-  }, [state, resetHistory]);
+      }
+      return currentState;
+    });
+  }, [resetHistory, setProjectState]);
 
   const saveProject = useCallback((name: string) => {
     setProjectState(currentState => {
@@ -238,7 +240,7 @@ export const useProjects = () => {
         return { projects: remainingProjects, currentProjectId: newCurrentId };
     });
     toast({ title: 'Project Deleted'});
-  }, [setProjectState, toast, resetHistory]);
+  }, [toast, resetHistory, setProjectState]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     setProjectState(currentState => ({
@@ -266,5 +268,3 @@ export const useProjects = () => {
     canRedo,
   };
 };
-
-    
