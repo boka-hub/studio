@@ -16,6 +16,7 @@ import { Upload, FileJson2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ShieldAlert } from 'lucide-react';
+import { ScrollArea } from './ui/scroll-area';
 
 interface MetadataImportModalProps {
   isOpen: boolean;
@@ -148,33 +149,36 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
             Import a metadata file to re-ID your tiles and update the map grid accordingly.
           </DialogDescription>
         </DialogHeader>
+        <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+            <div className="space-y-4 py-4">
+                <Alert variant="destructive">
+                    <ShieldAlert className="h-4 w-4" />
+                    <AlertTitle>Warning</AlertTitle>
+                    <AlertDescription>
+                        This is a destructive action. It will change the IDs of your tiles and permanently alter your map grid to match the imported file. This cannot be undone easily.
+                    </AlertDescription>
+                </Alert>
 
-        <Alert variant="destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <AlertTitle>Warning</AlertTitle>
-            <AlertDescription>
-                This is a destructive action. It will change the IDs of your tiles and permanently alter your map grid to match the imported file. This cannot be undone easily.
-            </AlertDescription>
-        </Alert>
-
-        <div className={cn(
-            "relative flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg text-center p-4 transition-colors",
-            isDragging ? "border-primary bg-primary/10" : "border-border"
-        )}>
-             {isDragging ? (
-                 <p className="font-semibold text-primary">Drop file here to import</p>
-             ) : (
-                <>
-                    <FileJson2 className="h-12 w-12 text-muted-foreground/50" />
-                    <p className="text-muted-foreground mt-4">Drag & drop your metadata .txt file here</p>
-                    <p className="text-sm text-muted-foreground/80">or</p>
-                    <Button variant="outline" size="sm" className="mt-2" onClick={() => fileInputRef.current?.click()}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Select a File
-                    </Button>
-                </>
-             )}
-        </div>
+                <div className={cn(
+                    "relative flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg text-center p-4 transition-colors",
+                    isDragging ? "border-primary bg-primary/10" : "border-border"
+                )}>
+                    {isDragging ? (
+                        <p className="font-semibold text-primary">Drop file here to import</p>
+                    ) : (
+                        <>
+                            <FileJson2 className="h-12 w-12 text-muted-foreground/50" />
+                            <p className="text-muted-foreground mt-4">Drag & drop your metadata .txt file here</p>
+                            <p className="text-sm text-muted-foreground/80">or</p>
+                            <Button variant="outline" size="sm" className="mt-2" onClick={() => fileInputRef.current?.click()}>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Select a File
+                            </Button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </ScrollArea>
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
         </DialogFooter>

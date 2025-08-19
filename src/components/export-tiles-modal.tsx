@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import type { Tile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Download, FileImage, FileText } from 'lucide-react';
+import { ScrollArea } from './ui/scroll-area';
 
 interface ExportTilesModalProps {
   isOpen: boolean;
@@ -180,36 +181,38 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
             Configure and export your tile palette. Exporting as a Sheet also saves a metadata file.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-6 py-4">
-          <div className="space-y-2">
-            <h4 className="font-medium leading-none">Spritesheet Preview</h4>
-            <div className="rounded-md border bg-muted/50 p-2 overflow-auto max-h-64">
-                <canvas ref={canvasRef} className="mx-auto" style={{ imageRendering: 'pixelated' }} />
+        <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+          <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Spritesheet Preview</h4>
+              <div className="rounded-md border bg-muted/50 p-2 overflow-auto max-h-64">
+                  <canvas ref={canvasRef} className="mx-auto" style={{ imageRendering: 'pixelated' }} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="columns">Columns</Label>
+                <Input
+                  id="columns"
+                  type="number"
+                  value={columns}
+                  onChange={(e) => setColumns(Math.max(1, Number(e.target.value)))}
+                  min="1"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gap">Gap (px)</Label>
+                <Input
+                  id="gap"
+                  type="number"
+                  value={gap}
+                  onChange={(e) => setGap(Math.max(0, Number(e.target.value)))}
+                  min="0"
+                />
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="columns">Columns</Label>
-              <Input
-                id="columns"
-                type="number"
-                value={columns}
-                onChange={(e) => setColumns(Math.max(1, Number(e.target.value)))}
-                min="1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gap">Gap (px)</Label>
-              <Input
-                id="gap"
-                type="number"
-                value={gap}
-                onChange={(e) => setGap(Math.max(0, Number(e.target.value)))}
-                min="0"
-              />
-            </div>
-          </div>
-        </div>
+        </ScrollArea>
         <DialogFooter>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
               <Button type="button" variant="outline" onClick={handleExportIndividual} disabled={tilesToExport.length === 0} className="col-span-1">
@@ -231,5 +234,3 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     </Dialog>
   );
 };
-
-    

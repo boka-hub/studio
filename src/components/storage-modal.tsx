@@ -122,98 +122,100 @@ export const StorageModal: React.FC<StorageModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden">
-          {/* Saved Projects List */}
-          <div className="flex flex-col gap-2 h-full">
-            <h3 className="font-semibold text-muted-foreground">Saved Projects</h3>
-            <ScrollArea className="border rounded-md flex-grow">
-              <div className="p-2 space-y-1">
-                {projects.map((project) => (
-                  <div 
-                    key={project.id} 
-                    className={cn(
-                        "flex items-center justify-between p-2 rounded-md",
-                        project.id === currentProjectId && "bg-muted font-semibold",
-                    )}
-                  >
-                   {editingProjectId === project.id ? (
-                      <div className="flex-grow flex items-center gap-1">
-                        <Input 
-                            value={editingName} 
-                            onChange={(e) => setEditingName(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') confirmRename();
-                                if (e.key === 'Escape') cancelEditing();
-                            }}
-                            className="h-8"
-                            autoFocus
-                            onFocus={(e) => e.target.select()}
-                        />
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-500" onClick={confirmRename}><Check className="h-4 w-4"/></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={cancelEditing}><X className="h-4 w-4"/></Button>
-                      </div>
-                   ) : (
-                    <>
-                        <span className="truncate flex-grow">{project.name}</span>
-                        <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditing(project)}><Edit className="h-4 w-4" /></Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete &quot;{project.name}&quot;?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This will permanently delete this project. This action cannot be undone.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => onDeleteProject(project.id)}>Delete</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                            <Button 
-                                size="sm" 
-                                className="h-8" 
-                                onClick={() => handleLoad(project.id)} 
-                                disabled={project.id === currentProjectId || loadingProjectId === project.id}
-                            >
-                                {loadingProjectId === project.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Load
-                            </Button>
+        <ScrollArea className="max-h-full -mx-6 px-6">
+          <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Saved Projects List */}
+            <div className="flex flex-col gap-2 h-full">
+              <h3 className="font-semibold text-muted-foreground px-1">Saved Projects</h3>
+              <ScrollArea className="border rounded-md flex-grow">
+                <div className="p-2 space-y-1">
+                  {projects.map((project) => (
+                    <div 
+                      key={project.id} 
+                      className={cn(
+                          "flex items-center justify-between p-2 rounded-md",
+                          project.id === currentProjectId && "bg-muted font-semibold",
+                      )}
+                    >
+                    {editingProjectId === project.id ? (
+                        <div className="flex-grow flex items-center gap-1">
+                          <Input 
+                              value={editingName} 
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => {
+                                  if (e.key === 'Enter') confirmRename();
+                                  if (e.key === 'Escape') cancelEditing();
+                              }}
+                              className="h-8"
+                              autoFocus
+                              onFocus={(e) => e.target.select()}
+                          />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-green-500" onClick={confirmRename}><Check className="h-4 w-4"/></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={cancelEditing}><X className="h-4 w-4"/></Button>
                         </div>
-                    </>
-                   )}
-                  </div>
-                ))}
+                    ) : (
+                      <>
+                          <span className="truncate flex-grow">{project.name}</span>
+                          <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditing(project)}><Edit className="h-4 w-4" /></Button>
+                              <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete &quot;{project.name}&quot;?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                          This will permanently delete this project. This action cannot be undone.
+                                      </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => onDeleteProject(project.id)}>Delete</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                              </AlertDialog>
+                              <Button 
+                                  size="sm" 
+                                  className="h-8" 
+                                  onClick={() => handleLoad(project.id)} 
+                                  disabled={project.id === currentProjectId || loadingProjectId === project.id}
+                              >
+                                  {loadingProjectId === project.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  Load
+                              </Button>
+                          </div>
+                      </>
+                    )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+            {/* Save New Project */}
+            <div className="flex flex-col gap-4 p-4 border rounded-md bg-muted/50">
+              <div className="space-y-2">
+                  <h3 className="font-semibold">Save Current Project</h3>
+                  <p className="text-sm text-muted-foreground">Save your current map and tile palette as a new project.</p>
               </div>
-            </ScrollArea>
-          </div>
-          {/* Save New Project */}
-          <div className="flex flex-col gap-4 p-4 border rounded-md bg-muted/50">
-            <div className="space-y-2">
-                <h3 className="font-semibold">Save Current Project</h3>
-                <p className="text-sm text-muted-foreground">Save your current map and tile palette as a new project.</p>
+              <div className="space-y-2">
+                  <Label htmlFor="new-project-name">Project Name</Label>
+                  <Input
+                  id="new-project-name"
+                  placeholder="My Awesome Map"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                  />
+              </div>
+              <Button onClick={handleSave} disabled={!newProjectName.trim()}>
+                <Save className="mr-2 h-4 w-4" />
+                Save New Project
+              </Button>
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="new-project-name">Project Name</Label>
-                <Input
-                id="new-project-name"
-                placeholder="My Awesome Map"
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                />
-            </div>
-            <Button onClick={handleSave} disabled={!newProjectName.trim()}>
-              <Save className="mr-2 h-4 w-4" />
-              Save New Project
-            </Button>
           </div>
-        </div>
-        <DialogFooter>
+        </ScrollArea>
+        <DialogFooter className="mt-auto pt-4 border-t">
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
