@@ -188,17 +188,14 @@ export const useProjects = () => {
 
 
   const loadProject = useCallback((id: string) => {
-      setProjectState(currentState => {
-          if (currentState.projects.some(p => p.id === id)) {
-              resetHistory({
-                  projects: currentState.projects,
-                  currentProjectId: id,
-              });
-              return { ...currentState, currentProjectId: id };
-          }
-          return currentState;
-      });
-  }, [setProjectState, resetHistory]);
+    const currentState = state;
+    if (currentState.projects.some(p => p.id === id)) {
+        resetHistory({
+            projects: currentState.projects,
+            currentProjectId: id,
+        });
+    }
+  }, [state, resetHistory]);
 
   const saveProject = useCallback((name: string) => {
     setProjectState(currentState => {
