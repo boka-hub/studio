@@ -20,6 +20,7 @@ interface MapGridProps {
   playerPos: {row: number, col: number};
   autoTileMode: AutoTileMode;
   autoTileSet: number[];
+  autoTileOverwrite: boolean;
   sprayRadius: number;
   sprayDensity: number;
   scatterSet: number[];
@@ -41,6 +42,7 @@ export const MapGrid: FC<MapGridProps> = ({
   playerPos,
   autoTileMode,
   autoTileSet,
+  autoTileOverwrite,
   sprayRadius,
   sprayDensity,
   scatterSet,
@@ -86,7 +88,7 @@ export const MapGrid: FC<MapGridProps> = ({
               return newGrid;
           }
           const originalTile = newGrid[row][col];
-          if (originalTile !== 0 && !autoTileSet.includes(originalTile)) {
+          if (!autoTileOverwrite && originalTile !== 0 && !autoTileSet.includes(originalTile)) {
               return newGrid;
           }
           
@@ -113,7 +115,7 @@ export const MapGrid: FC<MapGridProps> = ({
           }
       }
       return newGrid;
-  }, [tool, selectedTileId, autoTileMode, autoTileSet, sprayRadius, sprayDensity]);
+  }, [tool, selectedTileId, autoTileMode, autoTileSet, sprayRadius, sprayDensity, autoTileOverwrite]);
 
   const handleMouseDown = (row: number, col: number) => {
     if (isPreviewMode) return;

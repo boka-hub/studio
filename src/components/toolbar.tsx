@@ -12,6 +12,7 @@ import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Selection, Tool, AutoTileMode } from '@/lib/types';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Switch } from './ui/switch';
 
 interface Action<T extends string> {
   icon: ElementType;
@@ -43,6 +44,8 @@ interface ToolbarProps<T extends Tool> {
   onSprayDensityChange: (density: number) => void;
   autoTileMode: AutoTileMode;
   onAutoTileModeChange: (mode: AutoTileMode) => void;
+  autoTileOverwrite: boolean;
+  onAutoTileOverwriteChange: (overwrite: boolean) => void;
 }
 
 export function Toolbar<T extends Tool>({
@@ -62,6 +65,8 @@ export function Toolbar<T extends Tool>({
   onSprayDensityChange,
   autoTileMode,
   onAutoTileModeChange,
+  autoTileOverwrite,
+  onAutoTileOverwriteChange,
 }: ToolbarProps<T>) {
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
@@ -148,22 +153,36 @@ export function Toolbar<T extends Tool>({
              {selectedAction === 'auto-tile' && (
               <>
                 <Separator />
-                <div className="px-2 space-y-2">
-                    <h3 className="text-sm font-semibold text-muted-foreground">Auto-Tile Mode</h3>
-                    <RadioGroup value={autoTileMode} onValueChange={(v) => onAutoTileModeChange(v as AutoTileMode)}>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="9-tile" id="r1" />
-                            <Label htmlFor="r1">9-Tile (Simple)</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="13-tile" id="r2" />
-                            <Label htmlFor="r2">13-Tile (Interior Corners)</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="47-tile" id="r3" />
-                            <Label htmlFor="r3">47-Tile (Blob/Terrain)</Label>
-                        </div>
-                    </RadioGroup>
+                <div className="px-2 space-y-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground">Auto-Tile Settings</h3>
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground">Mode</h4>
+                      <RadioGroup value={autoTileMode} onValueChange={(v) => onAutoTileModeChange(v as AutoTileMode)}>
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="9-tile" id="r1" />
+                              <Label htmlFor="r1">9-Tile (Simple)</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="13-tile" id="r2" />
+                              <Label htmlFor="r2">13-Tile (Interior)</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="47-tile" id="r3" />
+                              <Label htmlFor="r3">47-Tile (Blob)</Label>
+                          </div>
+                      </RadioGroup>
+                    </div>
+                     <div className="space-y-2">
+                       <h4 className="text-xs font-medium text-muted-foreground">Behavior</h4>
+                       <div className="flex items-center justify-between rounded-lg border p-3">
+                          <Label htmlFor="autotile-overwrite">Overwrite</Label>
+                          <Switch 
+                            id="autotile-overwrite"
+                            checked={autoTileOverwrite}
+                            onCheckedChange={onAutoTileOverwriteChange}
+                          />
+                       </div>
+                     </div>
                 </div>
               </>
             )}

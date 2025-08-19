@@ -107,6 +107,7 @@ export default function Home() {
   const [scatterSet, setScatterSet] = useState<number[]>([]);
   const [autoTileSet, setAutoTileSet] = useState<number[]>([]);
   const [autoTileMode, setAutoTileMode] = useState<AutoTileMode>('9-tile');
+  const [autoTileOverwrite, setAutoTileOverwrite] = useState<boolean>(false);
   const [tool, setTool] = useState<Tool>('brush');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
@@ -914,6 +915,8 @@ export default function Home() {
                       onSprayDensityChange={setSprayDensity}
                       autoTileMode={autoTileMode}
                       onAutoTileModeChange={setAutoTileMode}
+                      autoTileOverwrite={autoTileOverwrite}
+                      onAutoTileOverwriteChange={setAutoTileOverwrite}
                     />
                   )}
                 </div>
@@ -956,6 +959,7 @@ export default function Home() {
                   playerPos={playerPos}
                   autoTileMode={autoTileMode}
                   autoTileSet={autoTileSet}
+                  autoTileOverwrite={autoTileOverwrite}
                   sprayRadius={sprayRadius}
                   sprayDensity={sprayDensity}
                   scatterSet={scatterSet}
