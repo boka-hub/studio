@@ -120,14 +120,17 @@ export const useProjects = () => {
       if (files.length === 0) return;
       
       const readFiles = files.map(file => {
-          return new Promise<{name: string, src: string} | null>((resolve) => {
+          return new Promise<{name: string, src: string, solid: boolean} | null>((resolve) => {
              const reader = new FileReader();
              reader.onload = async (e) => {
                 const src = e.target?.result as string;
                 if (await isTileTransparent(src)) {
                    resolve(null);
                 } else {
-                   resolve({ name: file.name.replace(/\.[^/.]+$/, ""), src });
+                   const solidMarker = "__solid-true";
+                   const isSolid = file.name.includes(solidMarker);
+                   const name = file.name.replace(/\.[^/.]+$/, "").replace(solidMarker, "");
+                   resolve({ name, src, solid: isSolid });
                 }
              };
              reader.onerror = () => resolve(null);
@@ -136,7 +139,7 @@ export const useProjects = () => {
       });
 
       Promise.all(readFiles).then(results => {
-          const newTilesData = results.filter((r): r is {name: string, src: string} => r !== null);
+          const newTilesData = results.filter((r): r is {name: string, src: string, solid: boolean} => r !== null);
           
           const skippedCount = files.length - newTilesData.length;
           if (skippedCount > 0) {
@@ -153,9 +156,10 @@ export const useProjects = () => {
 
                 let nextId = currentProject.tiles.length > 0 ? Math.max(...currentProject.tiles.map(t => t.id)) + 1 : 1;
                 const tilesWithIds: Tile[] = newTilesData.map((tile) => ({
-                    ...tile,
                     id: nextId++,
-                    solid: false,
+                    name: tile.name,
+                    src: tile.src,
+                    solid: tile.solid,
                 }));
                 const newTiles = [...currentProject.tiles, ...tilesWithIds];
 

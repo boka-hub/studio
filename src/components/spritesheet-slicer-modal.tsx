@@ -229,7 +229,11 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                                if(blob) {
                                    const index = y * cols + x;
                                    const tileInfo = tilesFromMetadata?.find((t: any) => t.index === index);
-                                   const tileName = tileInfo?.name || `${fileData.name}_${index}`;
+                                   let tileName = tileInfo?.name || `${fileData.name}_${index}`;
+                                   const isSolid = tileInfo?.solid === true;
+                                   if (isSolid) {
+                                      tileName += `__solid-true`;
+                                   }
                                    const newFile = new File([blob], `${tileName}.png`, { type: 'image/png' });
                                    allSlicedFiles.push(newFile);
                                }
