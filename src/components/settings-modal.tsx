@@ -242,13 +242,15 @@ Selection Order (based on a standard 47-tile atlas):
     },
 ];
 
+const B: React.FC<{ children: React.ReactNode }> = ({ children }) => <span className="font-semibold text-foreground/90">{children}</span>;
+
 const FormattedText: React.FC<{ text: string }> = ({ text }) => {
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return (
     <>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="font-semibold text-foreground/90">{part.slice(2, -2)}</strong>;
+          return <B key={i}>{part.slice(2, -2)}</B>;
         }
         return part;
       })}
@@ -327,43 +329,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                  <div className="space-y-3">
                     <h4 className="font-semibold">Step 1: Adding Tiles to Your Palette</h4>
                     <p className="text-muted-foreground">
-                        Your map is made of tiles, which live in the **Palette** on the right. To start, you need to add some images. You can do this by dragging files directly onto the application.
+                        Your map is made of tiles, which live in the <B>Palette</B> on the right. To start, you need to add some images. You can do this by dragging files directly onto the application.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li><span className="font-semibold text-foreground">For Individual Images:</span> Use the <span className="italic">Import Tiles</span> button (upload icon) in the header. Each image will become a single tile.</li>
-                        <li><span className="font-semibold text-foreground">For Spritesheets:</span> Use the <span className="italic">Slice Sheet</span> button (scissors icon). This opens the **Batch Slicer**, where you can specify tile dimensions (e.g., 16x16 pixels) to automatically cut up a sheet. You can also **drag-and-drop a spritesheet file** directly onto the app to open this tool.</li>
+                        <li><B>For Individual Images:</B> Use the <i className="italic">Import Tiles</i> button (upload icon) in the header. Each image will become a single tile.</li>
+                        <li><B>For Spritesheets:</B> Use the <i className="italic">Slice Sheet</i> button (scissors icon). This opens the <B>Batch Slicer</B>, where you can specify tile dimensions (e.g., 16x16 pixels) to automatically cut up a sheet. You can also <B>drag-and-drop a spritesheet file</B> directly onto the app to open this tool.</li>
                     </ul>
                 </div>
                 <div className="space-y-3">
                     <h4 className="font-semibold">Step 2: Drawing Your Map</h4>
                      <p className="text-muted-foreground">
-                        With tiles in your palette, you can now build your map on the central **Grid**. Select a tool from the **Toolbar** on the left.
+                        With tiles in your palette, you can now build your map on the central <B>Grid</B>. Select a tool from the <B>Toolbar</B> on the left.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                       <li>In the palette, **left-click** a tile to select it as your primary "brush" color. **Right-click** to select a secondary color for tools like Gradient and Noise.</li>
-                       <li>Use the <span className="font-semibold text-foreground">Brush</span> tool to paint tiles, and the <span className="font-semibold text-foreground">Eraser</span> to remove them.</li>
-                       <li>Experiment with other tools like <span className="font-semibold text-foreground">Fill</span>, <span className="font-semibold text-foreground">Shape Tool</span>, and the powerful <span className="font-semibold text-foreground">Auto-Tile</span> tool to build your world quickly.</li>
+                       <li>In the palette, <B>left-click</B> a tile to select it as your primary &quot;brush&quot; color. <B>Right-click</B> to select a secondary color for tools like Gradient and Noise.</li>
+                       <li>Use the <B>Brush</B> tool to paint tiles, and the <B>Eraser</B> to remove them.</li>
+                       <li>Experiment with other tools like <B>Fill</B>, <B>Shape Tool</B>, and the powerful <B>Auto-Tile</B> tool to build your world quickly.</li>
                     </ul>
                 </div>
                  <div className="space-y-3">
                     <h4 className="font-semibold">Step 3: Saving and Exporting Your Work</h4>
                      <p className="text-muted-foreground">
-                        All your changes are **auto-saved** to the current project in your browser. To export your assets for use in your game, use the buttons in the header.
+                        All your changes are <B>auto-saved</B> to the current project in your browser. To export your assets for use in your game, use the buttons in the header.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li><span className="font-semibold text-foreground">Export Map:</span> Saves the grid data as a comma-separated text file (.txt). Each number in the file corresponds to a tile's ID.</li>
-                        <li><span className="font-semibold text-foreground">Export Spritesheet:</span> This is the most powerful option. It compiles all your tiles back into a single spritesheet image and provides a companion **metadata .txt file**. This text file contains all the names, properties, and layout info for your tiles.</li>
+                        <li><B>Export Map:</B> Saves the grid data as a comma-separated text file (.txt). Each number in the file corresponds to a tile&apos;s ID.</li>
+                        <li><B>Export Spritesheet:</B> This is the most powerful option. It compiles all your tiles back into a single spritesheet image and provides a companion <B>metadata .txt file</B>. This text file contains all the names, properties, and layout info for your tiles.</li>
                     </ul>
                 </div>
                 <div className="space-y-3">
                     <h4 className="font-semibold">Step 4: Re-importing and Iterating</h4>
                      <p className="text-muted-foreground">
-                        To continue working on a project, you don't need to do anything—just open the app. To bring an exported spritesheet back into TileForge without losing your names and properties:
+                        To continue working on a project, you don&apos;t need to do anything—just open the app. To bring an exported spritesheet back into TileForge without losing your names and properties:
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li>Open the <span className="font-semibold text-foreground">Slice Sheet</span> tool.</li>
+                        <li>Open the <B>Slice Sheet</B> tool.</li>
                         <li>Drop in your spritesheet image file.</li>
-                        <li>Use the <span className="font-semibold text-foreground">"Add .txt Metadata"</span> button to manually select your corresponding metadata file. This will perfectly restore all your tiles, names, and settings.</li>
+                        <li>Use the <B>&quot;Add .txt Metadata&quot;</B> button to manually select your corresponding metadata file. This will perfectly restore all your tiles, names, and settings.</li>
                     </ul>
                 </div>
                 <div className="space-y-2 mt-6">
