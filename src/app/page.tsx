@@ -163,6 +163,13 @@ export default function Home() {
     }
   }, []);
 
+  const handleSettingsChange = useCallback((newSettings: AppSettings) => {
+    setSettings(newSettings);
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+    toast({ title: "Settings Updated", description: "Your changes have been applied."});
+  }, [toast]);
+
+
   // Sync grid size state when grid changes from project load
   useEffect(() => {
     setGridSize({ width: grid[0]?.length || INITIAL_GRID_SIZE, height: grid.length || INITIAL_GRID_SIZE });
@@ -1099,6 +1106,8 @@ export default function Home() {
          <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setSettingsOpen(false)}
+          settings={settings}
+          onSettingsChange={handleSettingsChange}
         />
 
         <StorageModal
@@ -1119,8 +1128,7 @@ export default function Home() {
           onImport={handleMetadataImport}
         />
         
-        {tileToDelete && (
-          <AlertDialog open={!!tileToDelete} onOpenChange={(open) => !open && setTileToDelete(null)}>
+        <AlertDialog open={!!tileToDelete} onOpenChange={(open) => !open && setTileToDelete(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
@@ -1134,7 +1142,6 @@ export default function Home() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        )}
         
         <AlertDialog open={isConfirmClearMapOpen} onOpenChange={setConfirmClearMapOpen}>
           <AlertDialogContent>

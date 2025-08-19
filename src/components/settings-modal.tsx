@@ -29,11 +29,12 @@ import type { AppSettings, ExportFormat } from '@/lib/types';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { useToast } from '@/hooks/use-toast';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  settings: AppSettings;
+  onSettingsChange: (settings: AppSettings) => void;
 }
 
 const shortcuts = [
@@ -178,7 +179,7 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Exporting",
         short: "Save your map and tiles to your computer.",
-        long: "Use the **Export Map** button to save your layout. The format (.txt or .json) can be configured in the app settings. Use the **Export Spritesheet** button to create a single image of all your tiles. This also generates a powerful companion metadata file containing all tile names, properties (like 'solid'), and layout info. This metadata file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
+        long: "Use the **Export...** button to save your layout. The format (.txt or .json) can be configured in the app settings. Exporting as a **Sheet** creates a single image of all your tiles and generates a powerful companion metadata file containing all tile names, properties (like 'solid'), and layout info. This metadata file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
     },
     {
         name: "Fill (Bucket)",
@@ -268,40 +269,24 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const SETTINGS_KEY = 'tileforge-app-settings';
-
-
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
-  const [settings, setSettings] = useState<AppSettings>({
-    layersEnabled: false,
-    exportFormat: 'txt',
-  });
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (isOpen && typeof window !== 'undefined') {
-        const savedSettings = window.localStorage.getItem(SETTINGS_KEY);
-        if (savedSettings) {
-            setSettings(JSON.parse(savedSettings));
-        }
-    }
-  }, [isOpen]);
-
-  const handleSettingsChange = (newSettings: Partial<AppSettings>) => {
-    const updatedSettings = { ...settings, ...newSettings };
-    setSettings(updatedSettings);
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(updatedSettings));
-    toast({ title: "Settings Saved", description: "Your changes have been saved and will be applied on the next reload."});
-  };
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings, onSettingsChange }) => {
 
   const handleReset = () => {
     if (typeof window !== 'undefined') {
         window.localStorage.removeItem('tileforge-projects');
         window.localStorage.removeItem('tileforge-panel-layout');
-        window.localStorage.removeItem(SETTINGS_KEY);
+        window.localStorage.removeItem('tileforge-app-settings');
         window.location.reload();
     }
   }
+  
+  const handleSettingToggle = (key: keyof AppSettings, value: boolean) => {
+    onSettingsChange({ ...settings, [key]: value });
+  };
+
+  const handleExportFormatChange = (value: ExportFormat) => {
+    onSettingsChange({ ...settings, exportFormat: value });
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -321,8 +306,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <TabsContent value="features" className="flex-grow overflow-hidden">
              <ScrollArea className="h-full">
                 <Accordion type="single" collapsible className="w-full p-4">
-                  {features.sort((a, b) => a.name.localeCompare(b.name)).map((feature) => (
-                     <AccordionItem value={`item-${feature.name}`} key={feature.name}>
+                  {features.sort((a, b) => a.name.localeCompare(b.name)).map((feature, i) => (
+                     <AccordionItem value={feature.name} key={feature.name}>
                         <AccordionTrigger className="text-left hover:no-underline">
                             <div className="flex flex-col gap-1">
                                 <p className="font-semibold">{feature.name}</p>
@@ -340,7 +325,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <TabsContent value="shortcuts" className="flex-grow overflow-hidden">
             <ScrollArea className="h-full">
               <div className="space-y-4 p-4">
-                {shortcuts.map((shortcut) => (
+                {shortcuts.map((shortcut, i) => (
                   <div key={shortcut.description} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
                     <p className="text-sm">{shortcut.description}</p>
                     <div className="flex items-center gap-1">
@@ -357,19 +342,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
              <div className="space-y-4">
                  <div className="space-y-2 p-4 border rounded-lg">
                     <h3 className="font-semibold text-lg">App Settings</h3>
-                    <p className="text-sm text-muted-foreground">Changes here will require a page reload to take full effect.</p>
+                    <p className="text-sm text-muted-foreground">Changes are applied immediately.</p>
                     <div className="space-y-4 pt-2">
                         <div className="flex items-center justify-between rounded-lg border p-3">
                             <Label htmlFor="layers-enabled">Enable Layers Panel</Label>
                             <Switch 
                                 id="layers-enabled"
                                 checked={settings.layersEnabled}
-                                onCheckedChange={(checked) => handleSettingsChange({ layersEnabled: checked })}
+                                onCheckedChange={(checked) => handleSettingToggle('layersEnabled', checked)}
                             />
                         </div>
                         <div className="space-y-3 rounded-lg border p-3">
                             <Label>Default Export Format</Label>
-                             <RadioGroup value={settings.exportFormat} onValueChange={(v: ExportFormat) => handleSettingsChange({ exportFormat: v })}>
+                             <RadioGroup value={settings.exportFormat} onValueChange={handleExportFormatChange}>
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="txt" id="r_txt" />
                                     <Label htmlFor="r_txt">.txt (Simple CSV for single layers)</Label>
