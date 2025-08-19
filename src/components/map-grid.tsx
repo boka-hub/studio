@@ -3,11 +3,12 @@ import React, { useState, useMemo, useCallback, MouseEvent } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape } from '@/lib/types';
+import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape, Layer } from '@/lib/types';
 import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
 
 interface MapGridProps {
-  grid: GridState;
+  layers: Layer[];
+  activeLayer: Layer | null;
   tiles: Tile[];
   tool: Tool;
   shape: Shape;
@@ -31,7 +32,8 @@ interface MapGridProps {
 const BASE_TILE_SIZE = 16;
 
 export const MapGrid: FC<MapGridProps> = ({ 
-  grid, 
+  layers,
+  activeLayer, 
   tiles, 
   tool,
   shape,
@@ -60,6 +62,7 @@ export const MapGrid: FC<MapGridProps> = ({
   const TILE_SIZE = useMemo(() => BASE_TILE_SIZE * zoom, [zoom]);
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter', 'select'].includes(tool);
+  const grid = activeLayer?.grid ?? [[]];
 
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
@@ -226,7 +229,7 @@ export const MapGrid: FC<MapGridProps> = ({
   }, [selectedTileId, secondarySelectedTileId, scatterSet, grid]);
 
   const handleMouseDown = (e: MouseEvent, row: number, col: number) => {
-    if (isPreviewMode) return;
+    if (isPreviewMode || !activeLayer) return;
     setIsDrawing(true);
     
     const isCtrlDrag = (e.ctrlKey || e.metaKey) && isBrushLikeTool;
@@ -245,7 +248,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseOver = (row: number, col: number) => {
-    if (!isDrawing || isPreviewMode) return;
+    if (!isDrawing || isPreviewMode || !activeLayer) return;
 
     if (isShapeDrag) {
         if(!startCell) return;
@@ -271,7 +274,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseUp = (row: number, col: number) => {
-    if (isPreviewMode || !isDrawing) return;
+    if (isPreviewMode || !isDrawing || !activeLayer) return;
 
     if (previewGrid) {
       onDrawCommit(previewGrid);
@@ -286,19 +289,29 @@ export const MapGrid: FC<MapGridProps> = ({
     setIsShapeDrag(false);
   };
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = (e: React.MouseEvent) => {
+    // This is the crucial check: if we're not dragging a file, we do nothing.
+    // This prevents the overlay from appearing for internal drags (like tile reordering).
     if (isDrawing) {
-      // Cancel the drawing if the mouse leaves the grid area while pressed
-      setIsDrawing(false);
-      setStartCell(null);
-      setPreviewGrid(null);
-      setPreviewSelection(null);
-      setIsShapeDrag(false);
+        const currentTarget = e.currentTarget;
+        setTimeout(() => {
+            if (currentTarget) {
+                const relatedTarget = e.relatedTarget as Node | null;
+                if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+                    setIsDrawing(false);
+                    setStartCell(null);
+                    setPreviewGrid(null);
+                    setPreviewSelection(null);
+                    setIsShapeDrag(false);
+                }
+            }
+        }, 50);
     }
   };
   
   const getCursorClass = () => {
     if (isPreviewMode) return 'cursor-none';
+    if (!activeLayer) return 'cursor-not-allowed';
     switch (tool) {
       case 'brush':
       case 'auto-tile':
@@ -322,18 +335,63 @@ export const MapGrid: FC<MapGridProps> = ({
   };
   
   const finalSelection = selection || previewSelection;
-  const gridToRender = previewGrid || grid;
+  const gridToRender = activeLayer ? (previewGrid || activeLayer.grid) : [[]];
   const gridHeight = gridToRender.length;
   const gridWidth = gridToRender[0]?.length || 0;
   const gridLineWidth = 1;
+
+  if (gridHeight === 0 || gridWidth === 0) {
+    return <div className="text-muted-foreground">No layers available or grid is empty.</div>
+  }
 
   return (
     <div
       className="relative flex items-center justify-center w-full h-full"
       onMouseLeave={handleMouseLeave}
     >
+        <div className="absolute inset-0 grid"
+            style={{
+                gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
+                gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
+                width: `${gridWidth * TILE_SIZE + gridWidth * gridLineWidth}px`,
+                height: `${gridHeight * TILE_SIZE + gridHeight * gridLineWidth}px`,
+                gap: `${gridLineWidth}px`,
+            }}
+        >
+            {/* Render all visible layers underneath the active one */}
+            {layers.filter(l => l.isVisible && l.id !== activeLayer?.id).map(layer => (
+                <div key={layer.id} className="absolute inset-0 pointer-events-none grid"
+                    style={{
+                        gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
+                        gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
+                        gap: `${gridLineWidth}px`,
+                        imageRendering: zoom < 1 ? 'auto' : 'pixelated',
+                    }}
+                >
+                    {layer.grid.map((row, rowIndex) =>
+                        row.map((tileId, colIndex) => {
+                            const tile = tileMap.get(tileId);
+                            return (
+                                <div key={`${layer.id}-${rowIndex}-${colIndex}`} className="relative bg-transparent">
+                                    {tile && tile.id !== 0 && (
+                                        <Image
+                                            src={tile.src}
+                                            alt={tile.name}
+                                            fill
+                                            sizes={`${TILE_SIZE}px`}
+                                            className="pointer-events-none object-cover"
+                                            unoptimized
+                                        />
+                                    )}
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            ))}
+        </div>
       <div
-        className={cn("bg-border p-px rounded-lg shadow-inner select-none", getCursorClass())}
+        className={cn("bg-transparent p-px rounded-lg shadow-inner select-none", getCursorClass())}
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
@@ -352,7 +410,10 @@ export const MapGrid: FC<MapGridProps> = ({
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
-                className="relative bg-card"
+                className={cn(
+                    "relative",
+                    activeLayer?.isVisible ? 'bg-card/50' : 'bg-card/20'
+                 )}
                 onMouseDown={(e) => handleMouseDown(e as unknown as MouseEvent, rowIndex, colIndex)}
                 onMouseOver={() => handleMouseOver(rowIndex, colIndex)}
                 onMouseUp={() => handleMouseUp(rowIndex, colIndex)}

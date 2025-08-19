@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import type { AppSettings, ExportFormat } from '@/lib/types';
+import { Label } from './ui/label';
+import { Switch } from './ui/switch';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { useToast } from '@/hooks/use-toast';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -173,7 +178,7 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Exporting",
         short: "Save your map and tiles to your computer.",
-        long: "Use the **Export Map** button to save your layout as a simple comma-separated .txt file. Use the **Export Spritesheet** button to create a single image of all your tiles. This also generates a powerful companion .txt metadata file containing all tile names, properties (like 'solid'), and layout info. This metadata file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
+        long: "Use the **Export Map** button to save your layout. The format (.txt or .json) can be configured in the app settings. Use the **Export Spritesheet** button to create a single image of all your tiles. This also generates a powerful companion metadata file containing all tile names, properties (like 'solid'), and layout info. This metadata file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
     },
     {
         name: "Fill (Bucket)",
@@ -188,7 +193,12 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Importing & Slicing",
         short: "Add new tiles and maps from files.",
-        long: "Use the **Import Tiles** button for individual images or the **Slice Sheet** button for spritesheets. The Batch Slicer can handle multiple sheets at once. For maps, use the **Import Map** button in the header. You can also **drag-and-drop** image files or map files (.txt) directly onto the application."
+        long: "Use the **Import Tiles** button for individual images or the **Slice Sheet** button for spritesheets. The Batch Slicer can handle multiple sheets at once. For maps, use the **Import Map** button in the header (this supports both single-layer .txt and multi-layer .json formats). You can also **drag-and-drop** image files or map files directly onto the application."
+    },
+    {
+        name: "Layers",
+        short: "Organize your map into multiple layers.",
+        long: "The layers feature can be enabled in the settings. When enabled, a new **Layers Panel** will appear on the left. You can add, delete, rename, and reorder layers. All drawing operations will apply only to the currently selected active layer. You can also toggle the visibility of each layer to focus on what you're working on. When exporting with layers enabled, it's best to use the **.json** format, which will save all your layer data."
     },
     {
         name: "Live Preview",
@@ -258,12 +268,37 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
+const SETTINGS_KEY = 'tileforge-app-settings';
+
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const [settings, setSettings] = useState<AppSettings>({
+    layersEnabled: false,
+    exportFormat: 'txt',
+  });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isOpen && typeof window !== 'undefined') {
+        const savedSettings = window.localStorage.getItem(SETTINGS_KEY);
+        if (savedSettings) {
+            setSettings(JSON.parse(savedSettings));
+        }
+    }
+  }, [isOpen]);
+
+  const handleSettingsChange = (newSettings: Partial<AppSettings>) => {
+    const updatedSettings = { ...settings, ...newSettings };
+    setSettings(updatedSettings);
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(updatedSettings));
+    toast({ title: "Settings Saved", description: "Your changes have been saved and will be applied on the next reload."});
+  };
+
   const handleReset = () => {
     if (typeof window !== 'undefined') {
         window.localStorage.removeItem('tileforge-projects');
         window.localStorage.removeItem('tileforge-panel-layout');
+        window.localStorage.removeItem(SETTINGS_KEY);
         window.location.reload();
     }
   }
@@ -309,8 +344,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   <div key={shortcut.description} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
                     <p className="text-sm">{shortcut.description}</p>
                     <div className="flex items-center gap-1">
-                      {shortcut.keys.map((key, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">{key}</Badge>
+                      {shortcut.keys.map((key) => (
+                        <Badge key={`${shortcut.description}-${key}`} variant="secondary" className="text-xs">{key}</Badge>
                       ))}
                     </div>
                   </div>
@@ -319,7 +354,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </ScrollArea>
           </TabsContent>
           <TabsContent value="about" className="flex-grow overflow-auto p-4 space-y-6">
-             <div className="space-y-6 text-sm">
+             <div className="space-y-4">
+                 <div className="space-y-2 p-4 border rounded-lg">
+                    <h3 className="font-semibold text-lg">App Settings</h3>
+                    <p className="text-sm text-muted-foreground">Changes here will require a page reload to take full effect.</p>
+                    <div className="space-y-4 pt-2">
+                        <div className="flex items-center justify-between rounded-lg border p-3">
+                            <Label htmlFor="layers-enabled">Enable Layers Panel</Label>
+                            <Switch 
+                                id="layers-enabled"
+                                checked={settings.layersEnabled}
+                                onCheckedChange={(checked) => handleSettingsChange({ layersEnabled: checked })}
+                            />
+                        </div>
+                        <div className="space-y-3 rounded-lg border p-3">
+                            <Label>Default Export Format</Label>
+                             <RadioGroup value={settings.exportFormat} onValueChange={(v: ExportFormat) => handleSettingsChange({ exportFormat: v })}>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="txt" id="r_txt" />
+                                    <Label htmlFor="r_txt">.txt (Simple CSV for single layers)</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="json" id="r_json" />
+                                    <Label htmlFor="r_json">.json (Complex, for layers and properties)</Label>
+                                </div>
+                            </RadioGroup>
+                        </div>
+                    </div>
+                 </div>
+
                 <div className="space-y-2">
                     <h3 className="font-semibold text-lg">Getting Started with TileForge</h3>
                     <p className="text-muted-foreground">
@@ -334,7 +397,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
                         <li><B>For Individual Images:</B> Use the <i className="italic">Import Tiles</i> button (upload icon) in the header. Each image will become a single tile.</li>
                         <li><B>For Spritesheets:</B> Use the <i className="italic">Slice Sheet</i> button (scissors icon). This opens the <B>Batch Slicer</B>, where you can specify tile dimensions to automatically cut up a sheet.</li>
-                         <li><B>For Existing Maps:</B> Use the <i className="italic">Import Map</i> button (file icon) to load a .txt file.</li>
+                         <li><B>For Existing Maps:</B> Use the <i className="italic">Import Map</i> button (file icon) to load a .txt or .json file.</li>
                     </ul>
                 </div>
                 <div className="space-y-3">
@@ -345,7 +408,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
                        <li>In the palette, <B>left-click</B> a tile to select it as your primary &quot;brush&quot; color. <B>Right-click</B> to select a secondary color for tools like Gradient and Noise.</li>
                        <li>Use the <B>Brush</B> tool to paint tiles, and the <B>Eraser</B> to remove them.</li>
-                       <li>Experiment with other tools like <B>Fill</B>, <B>Shape Tool</B>, and the powerful <B>Auto-Tile</B> tool to build your world quickly.</li>
+                       <li>If you have layers enabled, make sure you&apos;ve selected the correct layer in the <B>Layers Panel</B>!</li>
+                       <li>Experiment with other tools like <B>Fill</B>, <B>Shape Tool</B>, and the powerful <B>Auto-Tile</B> to build your world quickly.</li>
                     </ul>
                 </div>
                  <div className="space-y-3">
@@ -354,7 +418,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         All your changes are <B>auto-saved</B> to the current project in your browser. To export your assets for use in your game, use the buttons in the header.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li><B>Export Map:</B> Saves the grid data as a comma-separated text file (.txt). Each number in the file corresponds to a tile&apos;s ID.</li>
+                        <li><B>Export Map:</B> Saves the grid data as your chosen file type (.txt or .json). JSON is recommended for layered maps.</li>
                         <li><B>Export Spritesheet:</B> This is the most powerful option. It compiles all your tiles back into a single spritesheet image and provides a companion <B>metadata .txt file</B>. This text file contains all the names, properties, and layout info for your tiles.</li>
                     </ul>
                 </div>

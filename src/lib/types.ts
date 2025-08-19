@@ -5,6 +5,8 @@ export type Shape = 'rectangle' | 'circle' | 'line';
 
 export type AutoTileMode = '9-tile' | '13-tile' | '47-tile';
 
+export type ExportFormat = 'txt' | 'json';
+
 export interface Tile {
   id: number;
   name: string;
@@ -13,6 +15,13 @@ export interface Tile {
 }
 
 export type GridState = number[][];
+
+export interface Layer {
+    id: string;
+    name:string;
+    grid: GridState;
+    isVisible: boolean;
+}
 
 export interface Selection {
   minRow: number;
@@ -25,7 +34,9 @@ export interface Selection {
 export interface Project {
     id: string;
     name: string;
-    grid: GridState;
+    grid: GridState; // Kept for backwards compatibility during migration
+    layers: Layer[];
+    activeLayerId: string | null;
     tiles: Tile[];
     lastModified: number;
 }
@@ -33,6 +44,11 @@ export interface Project {
 export interface ProjectsState {
     projects: Project[];
     currentProjectId: string | null;
+}
+
+export interface AppSettings {
+    layersEnabled: boolean;
+    exportFormat: ExportFormat;
 }
 
 export interface TileImportData {

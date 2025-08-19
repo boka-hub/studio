@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Tile } from '@/lib/types';
+import type { Tile, AppSettings, Layer } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Download, FileImage, FileText } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
@@ -21,9 +21,11 @@ interface ExportTilesModalProps {
   isOpen: boolean;
   onClose: () => void;
   tiles: Tile[];
+  layers: Layer[];
+  settings: AppSettings;
 }
 
-export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, tiles }) => {
+export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, tiles, layers, settings }) => {
   const [columns, setColumns] = useState(8);
   const [gap, setGap] = useState(0);
   const [tileWidth, setTileWidth] = useState(16);
@@ -132,6 +134,31 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     toast({ title: 'Metadata Downloaded', description: `${filename} has been downloaded.` });
   }, [downloadMetadata, toast, getBaseFilename]);
 
+  const handleExportMap = () => {
+    let blob: Blob;
+    let filename: string;
+
+    if (settings.exportFormat === 'json') {
+      const jsonData = {
+        tiles: tiles.map(({id, name, solid}) => ({id, name, solid})),
+        layers: layers.map(({id, name, grid, isVisible}) => ({id, name, grid, isVisible})),
+        tileWidth: tileWidth,
+        tileHeight: tileHeight,
+      };
+      blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      filename = 'tileforge-map.json';
+    } else {
+      // Default to .txt format for single layer
+      const mapData = layers[0]?.grid.map(row => row.join(',')).join('\n') || '';
+      blob = new Blob([mapData], { type: 'text/plain' });
+      filename = 'tileforge-map.txt';
+    }
+    
+    downloadFile(blob, filename);
+    toast({ title: 'Map Exported', description: `Your map has been saved as ${filename}` });
+  };
+
+
   const handleExportSpritesheet = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -176,13 +203,23 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Export Spritesheet & Tiles</DialogTitle>
+          <DialogTitle>Export Spritesheet & Map</DialogTitle>
           <DialogDescription>
-            Configure and export your tile palette. Exporting as a Sheet also saves a metadata file.
+            Configure and export your assets. Exporting as a Sheet also saves a metadata file.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] -mx-6 px-6">
           <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Map Export</h4>
+               <Button type="button" variant="outline" onClick={handleExportMap} className="w-full">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Map as .{settings.exportFormat}
+              </Button>
+            </div>
+             <div className="space-y-2">
+              <h4 className="font-medium leading-none">Spritesheet Export</h4>
+            </div>
             <div className="space-y-2">
               <h4 className="font-medium leading-none">Spritesheet Preview</h4>
               <div className="rounded-md border bg-muted/50 p-2 overflow-auto max-h-64">

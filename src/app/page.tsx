@@ -49,13 +49,14 @@ import {
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
+import { LayersPanel } from '@/components/layers-panel';
 import { TilePalette } from '@/components/tile-palette';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
 import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, TileImportData } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, TileImportData, Layer, AppSettings, ExportFormat } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -76,6 +77,7 @@ import { MapGrid } from '@/components/map-grid';
 import { isTileTransparent } from '@/lib/utils';
 
 const INITIAL_GRID_SIZE = 32;
+const SETTINGS_KEY = 'tileforge-app-settings';
 
 const createEmptyGrid = (width: number, height: number): GridState =>
   Array(height)
@@ -91,7 +93,7 @@ export default function Home() {
     renameProject,
     projects,
     isLoading,
-    updateGrid,
+    updateGridInLayer,
     updateTiles,
     remapGrid,
     addTiles,
@@ -100,9 +102,16 @@ export default function Home() {
     redo,
     canUndo,
     canRedo,
+    addLayer,
+    deleteLayer,
+    selectLayer,
+    renameLayer,
+    toggleLayerVisibility,
   } = useProjects();
   
-  const { grid, tiles } = currentProject;
+  const { tiles, layers, activeLayerId } = currentProject;
+  const activeLayer = layers.find(l => l.id === activeLayerId) || null;
+  const grid = activeLayer?.grid ?? [[]];
 
   const [gridSize, setGridSize] = useState({ width: grid[0]?.length || INITIAL_GRID_SIZE, height: grid.length || INITIAL_GRID_SIZE });
 
@@ -132,6 +141,7 @@ export default function Home() {
   const [dragFileType, setDragFileType] = useState<'image' | 'map' | 'other' | null>(null);
   const [isPreviewMode, setPreviewMode] = useState(false);
   const [playerPos, setPlayerPos] = useState({ row: 0, col: 0 });
+  const [settings, setSettings] = useState<AppSettings>({ layersEnabled: false, exportFormat: 'txt' });
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
@@ -143,6 +153,15 @@ export default function Home() {
   const mapImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<any>(null);
   const rightPanelRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const savedSettings = window.localStorage.getItem(SETTINGS_KEY);
+        if (savedSettings) {
+            setSettings(JSON.parse(savedSettings));
+        }
+    }
+  }, []);
 
   // Sync grid size state when grid changes from project load
   useEffect(() => {
@@ -179,6 +198,7 @@ export default function Home() {
   }, []);
 
   const handleGridResize = useCallback((newWidth: number, newHeight: number) => {
+    if (!activeLayer) return;
     const oldGrid = grid;
     const oldHeight = oldGrid.length;
     const oldWidth = oldGrid[0]?.length || 0;
@@ -189,11 +209,11 @@ export default function Home() {
         newGrid[r][c] = oldGrid[r][c];
       }
     }
-    updateGrid(newGrid);
+    updateGridInLayer(activeLayer.id, newGrid);
     setGridSize({ width: newGrid[0]?.length || 0, height: newGrid.length || 0 });
     setSelection(null);
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
-  }, [grid, updateGrid, toast]);
+  }, [grid, activeLayer, updateGridInLayer, toast]);
   
   const handleRenameTile = useCallback((tileId: number, newName: string) => {
     const tileBeingRenamed = tiles.find(t => t.id === tileId);
@@ -219,6 +239,10 @@ export default function Home() {
     updateTiles(newTiles);
   }, [tiles, updateTiles]);
 
+  const openDeleteTileDialog = (tile: Tile) => {
+    setTileToDelete(tile);
+  };
+  
   const confirmDeleteTile = useCallback(() => {
     if (!tileToDelete) return;
     
@@ -286,37 +310,32 @@ export default function Home() {
     setSlicerInitialFiles(files);
     setSlicerOpen(true);
   }, []);
-
-  const handleExportMap = useCallback(() => {
-    const mapData = grid.map(row => row.join(',')).join('\n');
-    const blob = new Blob([mapData], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'tileforge-map.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({ title: 'Map Exported', description: 'Your map has been saved as tileforge-map.txt' });
-  },[grid, toast]);
   
     const handleImportMap = useCallback((file: File) => {
-        if (!file || !file.type.startsWith('text/')) {
-            toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop a valid .txt map file.' });
-            return;
-        }
+        if (!file) return;
 
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const content = e.target?.result as string;
-                const newGrid = content
-                    .split('\n')
-                    .map(row => row.trim())
-                    .filter(row => row)
-                    .map(row => row.split(',').map(cell => parseInt(cell, 10) || 0));
+                let newGrid: GridState;
 
+                if (file.name.endsWith('.json')) {
+                    const mapData = JSON.parse(content);
+                    // For now, just import the grid of the first layer from a JSON file
+                    // A more advanced implementation could handle multiple layers.
+                    newGrid = mapData.layers[0]?.grid;
+                     if (!newGrid) {
+                        throw new Error('JSON map file is missing layer data.');
+                    }
+                } else { // Assume .txt
+                    newGrid = content
+                        .split('\n')
+                        .map(row => row.trim())
+                        .filter(row => row)
+                        .map(row => row.split(',').map(cell => parseInt(cell, 10) || 0));
+                }
+                
                 if (newGrid.length === 0 || newGrid[0].length === 0) {
                     throw new Error('Map file is empty or invalid.');
                 }
@@ -325,15 +344,17 @@ export default function Home() {
                     throw new Error('Map rows have inconsistent lengths.');
                 }
 
-                updateGrid(newGrid);
-                toast({ title: 'Map Imported', description: `Successfully loaded map from ${file.name}` });
+                if(activeLayer) {
+                  updateGridInLayer(activeLayer.id, newGrid);
+                  toast({ title: 'Map Imported', description: `Successfully loaded map into current layer from ${file.name}` });
+                }
             } catch (error: any) {
                 console.error("Failed to parse map file", error);
                 toast({ variant: 'destructive', title: 'Import Failed', description: error.message || 'Could not parse the map file.' });
             }
         };
         reader.readAsText(file);
-    }, [toast, updateGrid]);
+    }, [toast, updateGridInLayer, activeLayer]);
 
   const handleMapFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -344,6 +365,7 @@ export default function Home() {
   }, [handleImportMap]);
 
   const handleCellAction = useCallback((row: number, col: number) => {
+      if (!activeLayer) return;
       let newGrid = grid.map(r => [...r]);
       
       // Handle tools that are just simple clicks and don't use the preview system.
@@ -420,16 +442,17 @@ export default function Home() {
       }
       
       // If we reach here, it means a tool that doesn't use the preview system modified the grid.
-      updateGrid(newGrid);
+      updateGridInLayer(activeLayer.id, newGrid);
       setSelection(null);
     },
-    [grid, selectedTileId, tiles, toast, tool, updateGrid]
+    [grid, selectedTileId, tiles, toast, tool, activeLayer, updateGridInLayer]
   );
   
   const handleDrawCommit = useCallback((newGridState: GridState) => {
-    updateGrid(newGridState);
+    if (!activeLayer) return;
+    updateGridInLayer(activeLayer.id, newGridState);
     setSelection(null);
-  }, [updateGrid]);
+  }, [updateGridInLayer, activeLayer]);
   
   const handleSelectionCommit = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
     const minRow = Math.min(start.row, end.row);
@@ -450,7 +473,7 @@ export default function Home() {
 
 
   const applyToSelection = useCallback((callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
-     if (!selection) return;
+     if (!selection || !activeLayer) return;
 
     const newGrid = grid.map((r, rowIndex) => {
         if (rowIndex < selection.minRow || rowIndex > selection.maxRow) {
@@ -467,8 +490,8 @@ export default function Home() {
         });
     });
 
-    updateGrid(newGrid);
-  }, [selection, grid, updateGrid]);
+    updateGridInLayer(activeLayer.id, newGrid);
+  }, [selection, grid, activeLayer, updateGridInLayer]);
 
   const handleFillSelection = useCallback(() => {
     applyToSelection(() => selectedTileId);
@@ -540,7 +563,7 @@ export default function Home() {
   }, [grid, selection, toast]);
 
   const handlePasteSelection = useCallback(() => {
-    if (!selection || !clipboard) return;
+    if (!selection || !clipboard || !activeLayer) return;
     
     const newGrid = grid.map(r => [...r]);
     const pasteStartRow = selection.minRow;
@@ -556,9 +579,9 @@ export default function Home() {
             }
         }
     }
-    updateGrid(newGrid);
+    updateGridInLayer(activeLayer.id, newGrid);
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-  }, [grid, selection, clipboard, toast, updateGrid]);
+  }, [grid, selection, clipboard, toast, activeLayer, updateGridInLayer]);
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -567,14 +590,15 @@ export default function Home() {
     setDragFileType(null);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const filesArray = Array.from(e.dataTransfer.files);
       if (dragFileType === 'image') {
-        const imageFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+        const imageFiles = filesArray.filter(file => file.type.startsWith('image/'));
         if (imageFiles.length > 0) openSlicer(imageFiles);
       } else if (dragFileType === 'map') {
-        const mapFile = Array.from(e.dataTransfer.files).find(file => file.type === 'text/plain' || file.name.endsWith('.txt'));
+        const mapFile = filesArray.find(file => file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.json'));
         if (mapFile) handleImportMap(mapFile);
       } else {
-        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Please drop an image or a .txt map file.' });
+        toast({ variant: 'destructive', title: 'Invalid File Type', description: 'Please drop an image or a map file (.txt, .json).' });
       }
       e.dataTransfer.clearData();
     }
@@ -584,8 +608,6 @@ export default function Home() {
     e.preventDefault();
     e.stopPropagation();
 
-    // This is the crucial check: if we're not dragging a file, we do nothing.
-    // This prevents the overlay from appearing for internal drags (like tile reordering).
     if (!e.dataTransfer.types.includes('Files')) {
         return;
     }
@@ -598,7 +620,7 @@ export default function Home() {
         if (firstItem.kind === 'file') {
             if (firstItem.type.startsWith('image/')) {
                 setDragFileType('image');
-            } else if (firstItem.type === 'text/plain' || firstItem.type === 'application/octet-stream') {
+            } else if (firstItem.type === 'text/plain' || firstItem.name.endsWith('.txt') || firstItem.name.endsWith('.json')) {
                 setDragFileType('map');
             } else {
                 setDragFileType('other');
@@ -607,11 +629,11 @@ export default function Home() {
     }
   }, [isDragging]);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const currentTarget = e.currentTarget;
-    // Check if the mouse is leaving the window or moving to a child element
+    
     setTimeout(() => {
         if (currentTarget) {
             const relatedTarget = e.relatedTarget as Node | null;
@@ -620,8 +642,8 @@ export default function Home() {
                 setDragFileType(null);
             }
         }
-    }, 50); // A small delay helps prevent flicker
-  }, []);
+    }, 50);
+  };
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
@@ -662,7 +684,7 @@ export default function Home() {
       else if (e.key === 'v' && selection && clipboard) handlePasteSelection();
       else if (e.key === 'z') undo();
       else if (e.key === 'y') redo();
-      else if (e.key === 's') handleExportMap();
+      else if (e.key === 's') setExportOpen(true);
       else if (e.key === '=') setZoom(z => Math.min(z + 0.1, 2));
       else if (e.key === '-') setZoom(z => Math.max(z - 0.1, 0.1));
       else if (e.key === '0') setZoom(1);
@@ -684,7 +706,7 @@ export default function Home() {
         setTool(keyMap[e.key]);
       }
     }
-  }, [clipboard, grid, handleCopySelection, handleExportMap, handleDeleteSelection, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast, undo, redo]);
+  }, [clipboard, grid, handleCopySelection, handleDeleteSelection, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast, undo, redo]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -697,10 +719,10 @@ export default function Home() {
       setSelection(null);
     }
     const toolsWithSettings: Tool[] = ['spray', 'shape', 'gradient', 'noise', 'scatter', 'auto-tile'];
-    if (toolsWithSettings.includes(newTool)) {
+    if (toolsWithSettings.includes(newTool) || settings.layersEnabled) {
       leftPanelRef.current?.expand();
     }
-  }, []);
+  }, [settings.layersEnabled]);
 
   const togglePreviewMode = useCallback(() => {
     const newPreviewState = !isPreviewMode;
@@ -732,13 +754,15 @@ export default function Home() {
   }, [grid, isPreviewMode, tiles, toast]);
   
   const handleClearMap = useCallback(() => {
-    updateGrid(createEmptyGrid(gridSize.width, gridSize.height));
+    if (!activeLayer) return;
+    updateGridInLayer(activeLayer.id, createEmptyGrid(gridSize.width, gridSize.height));
     setConfirmClearMapOpen(false);
     toast({ title: "Map Cleared", description: "The grid has been reset."});
-  }, [gridSize, toast, updateGrid]);
+  }, [gridSize, toast, updateGridInLayer, activeLayer]);
   
   const handleClearPalette = useCallback(() => {
-    updateGrid(createEmptyGrid(gridSize.width, gridSize.height), true);
+    if(!activeLayer) return;
+    updateGridInLayer(activeLayer.id, createEmptyGrid(gridSize.width, gridSize.height), true);
     updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
 
     setSelectedTileId(0);
@@ -746,7 +770,7 @@ export default function Home() {
     setScatterSet([]);
     setConfirmClearPaletteOpen(false);
     toast({ title: "Palette Cleared", description: "All tiles have been removed."});
-  }, [gridSize, toast, updateGrid, updateTiles]);
+  }, [gridSize, toast, updateGridInLayer, updateTiles, activeLayer]);
   
   const onToggleScatterTile = useCallback((id: number) => {
     setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
@@ -780,8 +804,7 @@ export default function Home() {
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: FileJson2, label: 'Import Metadata', onClick: () => setMetadataModalOpen(true) },
     { icon: FileUp, label: 'Import Map', onClick: () => mapImportRef.current?.click() },
-    { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
-    { icon: Download, label: 'Export Map', onClick: handleExportMap },
+    { icon: Package, label: 'Export...', onClick: () => setExportOpen(true) },
   ];
   
   const projectActions = [
@@ -847,7 +870,7 @@ export default function Home() {
             <div className="text-center p-8 bg-background/80 rounded-lg">
               {isImage ? <Upload className="h-16 w-16 mx-auto text-primary" /> : <FileText className="h-16 w-16 mx-auto text-primary" />}
               <h2 className="text-2xl font-bold mt-4">Drop to {isImage ? 'Upload' : 'Import'}</h2>
-              <p className="text-muted-foreground">{isImage ? 'Drop image(s) to open in the Batch Slicer.' : 'Drop a .txt file to load a map.'}</p>
+              <p className="text-muted-foreground">{isImage ? 'Drop image(s) to open in the Batch Slicer.' : 'Drop a map file to load.'}</p>
             </div>
         </div>
     );
@@ -876,7 +899,7 @@ export default function Home() {
       >
        {isDragging && renderDragOverlay()}
         <Header 
-            title="TileForge"
+            title={currentProject.name}
             icon={ToyBrick} 
             actionGroups={[headerActions, projectActions, gameplayActions]}
             onTitleClick={() => setSettingsOpen(true)}
@@ -916,6 +939,18 @@ export default function Home() {
                       onAutoTileOverwriteChange={setAutoTileOverwrite}
                       shape={shape}
                       onShapeChange={setShape}
+                      layersEnabled={settings.layersEnabled}
+                      layersPanel={
+                        <LayersPanel
+                            layers={layers}
+                            activeLayerId={activeLayerId}
+                            onAddLayer={addLayer}
+                            onDeleteLayer={deleteLayer}
+                            onSelectLayer={selectLayer}
+                            onRenameLayer={renameLayer}
+                            onToggleVisibility={toggleLayerVisibility}
+                        />
+                      }
                     />
                   )}
                 </div>
@@ -945,7 +980,8 @@ export default function Home() {
             <Panel defaultSize={panelLayout[1]} minSize={30}>
               <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full">
                 <MapGrid
-                  grid={grid}
+                  layers={layers}
+                  activeLayer={activeLayer}
                   tiles={tiles}
                   onCellAction={handleCellAction}
                   onDrawCommit={handleDrawCommit}
@@ -997,10 +1033,7 @@ export default function Home() {
                           onToggleAutoTile={onToggleAutoTile}
                           onClearAutoTileSet={onClearAutoTileSet}
                           onRenameTile={handleRenameTile}
-                          onDeleteTile={(tileId) => {
-                            const tile = tiles.find(t => t.id === tileId);
-                            if(tile) setTileToDelete(tile);
-                          }}
+                          onDeleteTile={openDeleteTileDialog}
                           onToggleSolid={handleToggleSolid}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
@@ -1044,7 +1077,7 @@ export default function Home() {
           type="file"
           ref={mapImportRef}
           onChange={handleMapFileSelect}
-          accept=".txt,text/plain"
+          accept=".txt,text/plain,.json"
           className="hidden"
           aria-hidden="true"
         />
@@ -1059,6 +1092,8 @@ export default function Home() {
           isOpen={isExportOpen}
           onClose={() => setExportOpen(false)}
           tiles={tiles.filter((t) => t.id !== 0)}
+          layers={layers}
+          settings={settings}
         />
         
          <SettingsModal
@@ -1106,7 +1141,7 @@ export default function Home() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will clear the entire map grid, replacing all tiles with empty space. This can be undone.
+                This action will clear the entire map grid on the current layer, replacing all tiles with empty space. This can be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1135,7 +1170,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
-
-    

@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Project, GridState, Tile, ProjectsState, TileImportData } from '@/lib/types';
+import type { Project, GridState, Tile, ProjectsState, TileImportData, Layer } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useHistoryState } from './use-history-state';
 import { isTileTransparent } from '@/lib/utils';
@@ -8,18 +8,44 @@ import { isTileTransparent } from '@/lib/utils';
 const STORAGE_KEY = 'tileforge-projects';
 const INITIAL_GRID_SIZE = 32;
 
-const createNewProject = (name: string): Project => ({
-  id: `proj_${new Date().getTime()}_${Math.random()}`,
-  name,
-  grid: createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE),
-  tiles: [{ id: 0, name: 'Empty', src: '', solid: false }],
-  lastModified: Date.now(),
+const createNewLayer = (name: string, grid: GridState): Layer => ({
+    id: `layer_${new Date().getTime()}_${Math.random()}`,
+    name,
+    grid,
+    isVisible: true,
 });
 
 const createEmptyGrid = (width: number, height: number): GridState =>
   Array(height)
     .fill(null)
     .map(() => Array(width).fill(0));
+
+const createNewProject = (name: string): Project => {
+    const defaultLayer = createNewLayer("Background", createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE));
+    return {
+      id: `proj_${new Date().getTime()}_${Math.random()}`,
+      name,
+      grid: [] , // Obsolete, kept for migration
+      layers: [defaultLayer],
+      activeLayerId: defaultLayer.id,
+      tiles: [{ id: 0, name: 'Empty', src: '', solid: false }],
+      lastModified: Date.now(),
+    };
+};
+
+// This function migrates an old project structure to the new layered structure
+const migrateProject = (project: Project): Project => {
+    if (project.layers && project.layers.length > 0 && project.activeLayerId) {
+        return project; // Already has layers, no migration needed
+    }
+    const firstLayer = createNewLayer("Background", project.grid || createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE));
+    return {
+        ...project,
+        layers: [firstLayer],
+        activeLayerId: firstLayer.id,
+    };
+};
+
 
 export const useProjects = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -54,15 +80,17 @@ export const useProjects = () => {
       }
 
       if (savedState && Array.isArray(savedState.projects) && savedState.projects.length > 0 && savedState.currentProjectId) {
-         let projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId);
+         
+         const migratedProjects = savedState.projects.map(migrateProject);
+
+         let projectToLoad = migratedProjects.find(p => p.id === savedState.currentProjectId);
          
          if (!projectToLoad) {
-            // If the saved currentProjectId is invalid, fall back to the most recently modified project.
-            projectToLoad = [...savedState.projects].sort((a,b) => b.lastModified - a.lastModified)[0];
+            projectToLoad = [...migratedProjects].sort((a,b) => b.lastModified - a.lastModified)[0];
          }
          
          resetHistory({
-           projects: savedState.projects,
+           projects: migratedProjects,
            currentProjectId: projectToLoad.id,
          });
       } else {
@@ -83,7 +111,11 @@ export const useProjects = () => {
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
         try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            const stateToSave = {
+                ...state,
+                projects: state.projects.map(({grid, ...p}) => p) // Remove obsolete grid property before saving
+            };
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
         } catch (error) {
             console.error("Failed to save projects to localStorage", error);
         }
@@ -103,17 +135,24 @@ export const useProjects = () => {
         }
     }, batch)
   }, [setProjectState]);
-
-  const updateGrid = useCallback((grid: GridState, batch = false) => {
-      modifyCurrentProject(() => ({ grid }), batch);
+  
+  const updateGridInLayer = useCallback((layerId: string, grid: GridState, batch = false) => {
+      modifyCurrentProject(project => {
+        const newLayers = project.layers.map(l => l.id === layerId ? {...l, grid} : l);
+        return { layers: newLayers };
+      }, batch);
   }, [modifyCurrentProject]);
+
 
   const remapGrid = useCallback((remap: { [oldId: number]: number }) => {
     modifyCurrentProject(project => {
-        const newGrid = project.grid.map(row => 
-            row.map(cell => remap[cell] ?? cell)
-        );
-        return { grid: newGrid };
+        const newLayers = project.layers.map(layer => ({
+            ...layer,
+            grid: layer.grid.map(row => 
+                row.map(cell => remap[cell] ?? cell)
+            )
+        }));
+        return { layers: newLayers };
     });
   }, [modifyCurrentProject]);
 
@@ -180,8 +219,11 @@ export const useProjects = () => {
     const deleteTile = useCallback((tileId: number) => {
         modifyCurrentProject(project => {
             const newTiles = project.tiles.filter(t => t.id !== tileId);
-            const newGrid = project.grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)));
-            return { tiles: newTiles, grid: newGrid };
+            const newLayers = project.layers.map(layer => ({
+                ...layer,
+                grid: layer.grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)))
+            }));
+            return { tiles: newTiles, layers: newLayers };
         });
     }, [modifyCurrentProject]);
 
@@ -201,7 +243,9 @@ export const useProjects = () => {
         const newProject: Project = {
           id: `proj_${new Date().getTime()}_${Math.random()}`,
           name,
-          grid: JSON.parse(JSON.stringify(current.grid)),
+          grid: [], // Obsolete
+          layers: JSON.parse(JSON.stringify(current.layers)),
+          activeLayerId: current.activeLayerId,
           tiles: JSON.parse(JSON.stringify(current.tiles)),
           lastModified: Date.now(),
         };
@@ -226,7 +270,7 @@ export const useProjects = () => {
             const sortedProjects = [...remainingProjects].sort((a,b) => b.lastModified - a.lastModified);
             newCurrentId = sortedProjects[0].id;
         }
-        resetHistory({ projects: remainingProjects, currentProjectId: newCurrentId });
+        resetHistory({ projects: remainingProjects, currentProjectId: newCurrentId! });
     }
     toast({ title: 'Project Deleted'});
   }, [projects, currentProjectId, resetHistory, toast]);
@@ -237,6 +281,49 @@ export const useProjects = () => {
         projects: currentState.projects.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p),
     }));
   }, [setProjectState]);
+  
+    // Layer Management
+  const addLayer = useCallback(() => {
+    modifyCurrentProject(project => {
+        const { width, height } = project.layers[0] ? { width: project.layers[0].grid[0].length, height: project.layers[0].grid.length } : { width: INITIAL_GRID_SIZE, height: INITIAL_GRID_SIZE };
+        const newLayer = createNewLayer(`Layer ${project.layers.length + 1}`, createEmptyGrid(width, height));
+        return { 
+            layers: [...project.layers, newLayer],
+            activeLayerId: newLayer.id,
+        };
+    });
+  }, [modifyCurrentProject]);
+
+  const deleteLayer = useCallback((layerId: string) => {
+    modifyCurrentProject(project => {
+        if (project.layers.length <= 1) {
+            toast({ variant: 'destructive', title: 'Cannot Delete', description: 'You must have at least one layer.' });
+            return {};
+        }
+        const newLayers = project.layers.filter(l => l.id !== layerId);
+        let newActiveLayerId = project.activeLayerId;
+        if (project.activeLayerId === layerId) {
+            newActiveLayerId = newLayers[newLayers.length - 1]?.id ?? null;
+        }
+        return { layers: newLayers, activeLayerId: newActiveLayerId };
+    });
+  }, [modifyCurrentProject, toast]);
+  
+  const selectLayer = useCallback((layerId: string) => {
+    modifyCurrentProject(() => ({ activeLayerId: layerId }));
+  }, [modifyCurrentProject]);
+
+  const renameLayer = useCallback((layerId: string, newName: string) => {
+    modifyCurrentProject(project => ({
+        layers: project.layers.map(l => l.id === layerId ? { ...l, name: newName } : l)
+    }));
+  }, [modifyCurrentProject]);
+
+  const toggleLayerVisibility = useCallback((layerId: string) => {
+    modifyCurrentProject(project => ({
+        layers: project.layers.map(l => l.id === layerId ? { ...l, isVisible: !l.isVisible } : l)
+    }), true); // Batch update for visibility toggle
+  }, [modifyCurrentProject]);
 
   return {
     projects,
@@ -246,7 +333,7 @@ export const useProjects = () => {
     saveProject,
     deleteProject,
     renameProject,
-    updateGrid,
+    updateGridInLayer,
     remapGrid,
     updateTiles,
     addTiles,
@@ -255,5 +342,11 @@ export const useProjects = () => {
     redo,
     canUndo,
     canRedo,
+    // Layer actions
+    addLayer,
+    deleteLayer,
+    selectLayer,
+    renameLayer,
+    toggleLayerVisibility,
   };
 };

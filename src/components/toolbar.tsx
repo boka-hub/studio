@@ -49,6 +49,8 @@ interface ToolbarProps<T extends Tool> {
   onAutoTileOverwriteChange: (overwrite: boolean) => void;
   shape: Shape;
   onShapeChange: (shape: Shape) => void;
+  layersPanel: React.ReactNode;
+  layersEnabled: boolean;
 }
 
 export function Toolbar<T extends Tool>({
@@ -72,6 +74,8 @@ export function Toolbar<T extends Tool>({
   onAutoTileOverwriteChange,
   shape,
   onShapeChange,
+  layersPanel,
+  layersEnabled,
 }: ToolbarProps<T>) {
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
@@ -123,6 +127,12 @@ export function Toolbar<T extends Tool>({
         </div>
         {!isCollapsed && (
           <>
+            {layersEnabled && (
+                <>
+                    <Separator />
+                    {layersPanel}
+                </>
+            )}
             {selectedAction === 'shape' && (
                <>
                 <Separator />
