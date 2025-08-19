@@ -88,7 +88,10 @@ export const MapGrid: FC<MapGridProps> = ({
               return newGrid;
           }
           const originalTile = newGrid[row][col];
-          if (!autoTileOverwrite && originalTile !== 0 && !autoTileSet.includes(originalTile)) {
+          const autoTileSet_ = new Set(autoTileSet);
+          
+          // Respect the overwrite toggle
+          if (!autoTileOverwrite && originalTile !== 0 && !autoTileSet_.has(originalTile)) {
               return newGrid;
           }
           
@@ -106,7 +109,8 @@ export const MapGrid: FC<MapGridProps> = ({
                   const nc = col + c_offset;
                   
                   if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                      if (autoTileSet.includes(newGrid[nr][nc]) || (nr === row && nc === col)) {
+                      const neighborTile = newGrid[nr][nc];
+                      if (autoTileSet_.has(neighborTile) || (autoTileOverwrite && (nr !== row || nc !== col)) || (neighborTile === 0)) {
                            const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
                            newGrid[nr][nc] = newTileId;
                       }
@@ -348,5 +352,3 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
-
-    
