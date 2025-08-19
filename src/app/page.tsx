@@ -445,11 +445,18 @@ export default function Home() {
   
   const handleInvertSelection = useCallback(() => {
     if (selectedTileId === 0) {
-      toast({ variant: 'destructive', title: 'Invert Failed', description: 'Cannot invert with Empty tile. Please select a tile.' });
+      toast({
+        variant: 'destructive',
+        title: 'Invert Failed',
+        description: 'Cannot invert with an empty tile. Please select a valid tile from the palette first.',
+      });
       return;
     }
-    applyToSelection((cell) => cell === selectedTileId ? 0 : selectedTileId);
-    toast({ title: 'Selection Inverted', description: 'Tiles in the selected area have been inverted.' });
+    applyToSelection((cell) => (cell === selectedTileId ? 0 : selectedTileId));
+    toast({
+      title: 'Selection Inverted',
+      description: 'Tiles in the selected area have been inverted.',
+    });
   }, [applyToSelection, selectedTileId, toast]);
   
   const handleMirrorHorizontal = useCallback(() => {
@@ -481,8 +488,8 @@ export default function Home() {
 
     const copiedData = grid
       .slice(selection.minRow, selection.maxRow + 1)
-      .map((row, rIndex) => row.slice(selection.minCol, selection.maxCol + 1)
-        .map((cell, cIndex) => {
+      .map((row, rIndex) =>
+        row.slice(selection.minCol, selection.maxCol + 1).map((cell, cIndex) => {
           // If using magic wand, only copy the selected cells
           if (selection.selectedCells && selection.selectedCells[selection.minRow + rIndex][selection.minCol + cIndex] === 0) {
             return -1; // Use -1 to represent a non-copied cell
@@ -490,7 +497,7 @@ export default function Home() {
           return cell;
         })
       );
-    
+
     setClipboard(copiedData);
     toast({ title: 'Selection Copied', description: 'The selected area has been copied to the clipboard.' });
   }, [grid, selection, toast]);
