@@ -224,14 +224,16 @@ export default function Home() {
     if (selectedTileId === tileToDelete.id) setSelectedTileId(0);
     if (secondarySelectedTileId === tileToDelete.id) setSecondarySelectedTileId(0);
     setScatterSet(s => s.filter(id => id !== tileToDelete.id));
-    setAutoTileSet(a => a.filter(id => id !== tileToDelete.id));
+    if (autoTileSet.includes(tileToDelete.id)) {
+      setAutoTileSet([]);
+    }
 
     toast({ 
       title: 'Tile Deleted', 
       description: `Tile "${tileToDelete.name}" has been removed.`,
     });
     setTileToDelete(null);
-  }, [tileToDelete, selectedTileId, secondarySelectedTileId, deleteTile, toast]);
+  }, [tileToDelete, selectedTileId, secondarySelectedTileId, autoTileSet, deleteTile, toast]);
 
   const handleQueueTileDelete = useCallback((tileId: number) => {
     const tile = tiles.find(t => t.id === tileId);
