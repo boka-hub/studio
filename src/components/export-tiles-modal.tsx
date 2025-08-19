@@ -108,10 +108,11 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   }, []);
 
   const downloadMetadata = useCallback((filename: string) => {
+    const numCols = Math.max(1, Math.min(columns, tilesToExport.length));
     const metadata = {
       tileWidth,
       tileHeight,
-      columns: Math.min(columns > 0 ? columns : 1, tilesToExport.length),
+      columns: numCols,
       gap,
       tiles: tilesToExport.map((tile, index) => ({
         id: tile.id,
