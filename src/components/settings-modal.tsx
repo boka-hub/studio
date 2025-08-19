@@ -286,8 +286,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <TabsContent value="features" className="flex-grow overflow-hidden">
              <ScrollArea className="h-full">
                 <Accordion type="single" collapsible className="w-full p-4">
-                  {features.sort((a, b) => a.name.localeCompare(b.name)).map((feature, index) => (
-                     <AccordionItem value={`item-${index}`} key={index}>
+                  {features.sort((a, b) => a.name.localeCompare(b.name)).map((feature) => (
+                     <AccordionItem value={`item-${feature.name}`} key={feature.name}>
                         <AccordionTrigger className="text-left hover:no-underline">
                             <div className="flex flex-col gap-1">
                                 <p className="font-semibold">{feature.name}</p>
@@ -305,8 +305,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <TabsContent value="shortcuts" className="flex-grow overflow-hidden">
             <ScrollArea className="h-full">
               <div className="space-y-4 p-4">
-                {shortcuts.map((shortcut, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                {shortcuts.map((shortcut) => (
+                  <div key={shortcut.description} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
                     <p className="text-sm">{shortcut.description}</p>
                     <div className="flex items-center gap-1">
                       {shortcut.keys.map((key, i) => (
