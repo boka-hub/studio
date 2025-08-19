@@ -128,7 +128,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, tileId: number) => {
-    if (searchQuery || isCollapsed) {
+    if (isCollapsed || searchQuery) {
         e.preventDefault();
         return;
     }
@@ -171,15 +171,16 @@ export const TilePalette: FC<TilePaletteProps> = ({
     
     handleDragLeave(e);
 
+    // IMPORTANT: Always use the original `tiles` array for reordering logic, not `filteredTiles`.
     const emptyTile = tiles.find(t => t.id === 0);
-    const currentTiles = tiles.filter(t => t.id !== 0);
+    const reorderableTiles = tiles.filter(t => t.id !== 0);
 
-    const draggedIndex = currentTiles.findIndex(t => t.id === draggedTileId);
-    const dropIndex = currentTiles.findIndex(t => t.id === dropTileId);
+    const draggedIndex = reorderableTiles.findIndex(t => t.id === draggedTileId);
+    const dropIndex = reorderableTiles.findIndex(t => t.id === dropTileId);
 
     if (draggedIndex === -1 || dropIndex === -1) return;
 
-    const reordered = Array.from(currentTiles);
+    const reordered = Array.from(reorderableTiles);
     const [draggedItem] = reordered.splice(draggedIndex, 1);
     reordered.splice(dropIndex, 0, draggedItem);
     
