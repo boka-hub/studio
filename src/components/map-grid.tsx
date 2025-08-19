@@ -141,7 +141,7 @@ export const MapGrid: FC<MapGridProps> = ({
       if(currentShape === 'rectangle') {
         for (let r = minRow; r <= maxRow; r++) {
           for (let c = minCol; c <= maxCol; c++) {
-            if (r < grid.length && c < grid[0].length) {
+            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
               newGrid[r][c] = tileId;
             }
           }
@@ -156,7 +156,7 @@ export const MapGrid: FC<MapGridProps> = ({
                const dx = (c - centerX) / radiusX;
                const dy = (r - centerY) / radiusY;
                if ((dx * dx) + (dy * dy) <= 1) {
-                  if (r < grid.length && c < grid[0].length) {
+                  if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
                     newGrid[r][c] = tileId;
                   }
                }
