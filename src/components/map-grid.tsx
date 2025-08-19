@@ -83,40 +83,39 @@ export const MapGrid: FC<MapGridProps> = ({
             }
         }
       } else if (tool === 'auto-tile') {
-          const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
-          if (autoTileSet.length !== requiredTiles[autoTileMode]) {
-              return newGrid;
-          }
-          const originalTile = newGrid[row][col];
-          const autoTileSet_ = new Set(autoTileSet);
-          
-          // Respect the overwrite toggle
-          if (!autoTileOverwrite && originalTile !== 0 && !autoTileSet_.has(originalTile)) {
-              return newGrid;
-          }
-          
-          const getTileIdFunc = {
-              '9-tile': getAutoTileId9,
-              '13-tile': getAutoTileId13,
-              '47-tile': getAutoTileId47,
-          }[autoTileMode];
+        const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
+        if (autoTileSet.length !== requiredTiles[autoTileMode]) {
+          return newGrid;
+        }
 
-          newGrid[row][col] = autoTileMode === '9-tile' ? autoTileSet[4] : autoTileSet[autoTileSet.length - 1];
+        const autoTileSet_ = new Set(autoTileSet);
+        const getTileIdFunc = {
+          '9-tile': getAutoTileId9,
+          '13-tile': getAutoTileId13,
+          '47-tile': getAutoTileId47,
+        }[autoTileMode];
 
-          for (let r_offset = -1; r_offset <= 1; r_offset++) {
-              for (let c_offset = -1; c_offset <= 1; c_offset++) {
-                  const nr = row + r_offset;
-                  const nc = col + c_offset;
-                  
-                  if(nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                      const neighborTile = newGrid[nr][nc];
-                      if (autoTileSet_.has(neighborTile) || (autoTileOverwrite && (nr !== row || nc !== col)) || (neighborTile === 0)) {
-                           const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
-                           newGrid[nr][nc] = newTileId;
-                      }
-                  }
+        // Place the center tile at the click point to start
+        const centerIndex = autoTileMode === '9-tile' ? 4 : autoTileMode === '13-tile' ? 12 : 44;
+        newGrid[row][col] = autoTileSet[centerIndex];
+
+        // Update neighbors
+        for (let r_offset = -1; r_offset <= 1; r_offset++) {
+          for (let c_offset = -1; c_offset <= 1; c_offset++) {
+            const nr = row + r_offset;
+            const nc = col + c_offset;
+
+            if (nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
+              const neighborTile = newGrid[nr][nc];
+              const isNeighborAutoTile = autoTileSet_.has(neighborTile);
+              
+              if (isNeighborAutoTile || (autoTileOverwrite && (nr !== row || nc !== col)) || neighborTile === 0) {
+                 const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
+                 newGrid[nr][nc] = newTileId;
               }
+            }
           }
+        }
       }
       return newGrid;
   }, [tool, selectedTileId, autoTileMode, autoTileSet, sprayRadius, sprayDensity, autoTileOverwrite]);
@@ -128,11 +127,8 @@ export const MapGrid: FC<MapGridProps> = ({
     if (isShapeTool) {
         setStartCell({ row, col });
         setPreviewSelection(null);
-        if (tool !== 'select') {
-            setPreviewGrid(grid.map(r => [...r]));
-        }
     } else if (isBrushLikeTool) {
-        const newPreviewGrid = performPreviewAction(grid.map(r => [...r]), row, col);
+        const newPreviewGrid = performPreviewAction(grid, row, col);
         setPreviewGrid(newPreviewGrid);
     } else {
         // For simple click tools like Fill, Picker, Magic Wand
@@ -146,8 +142,7 @@ export const MapGrid: FC<MapGridProps> = ({
     if (isBrushLikeTool) {
         setPreviewGrid(currentPreview => {
             if (!currentPreview) return null;
-            const newPreviewGrid = performPreviewAction(currentPreview, row, col);
-            return newPreviewGrid;
+            return performPreviewAction(currentPreview, row, col);
         });
     } else if (startCell && isShapeTool) {
         const minRow = Math.min(startCell.row, row);
@@ -161,7 +156,6 @@ export const MapGrid: FC<MapGridProps> = ({
         }
 
         const newPreviewGrid = grid.map(r => [...r]);
-        // This part seems to duplicate onShapeDraw logic, but it's for live preview
         if (tool === 'rectangle') {
             for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
@@ -191,7 +185,7 @@ export const MapGrid: FC<MapGridProps> = ({
                 }
             }
         } else if (tool === 'scatter') {
-             if (scatterSet.length === 0) return;
+             if (scatterSet.length === 0) return newPreviewGrid;
              for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
                     if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
