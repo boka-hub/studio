@@ -163,11 +163,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     
     // Export Individual Tiles
     tilesToExport.forEach(tile => {
-        let baseName = tile.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        if (tile.solid) {
-            baseName += `__solid-true`;
-        }
-        const filename = `${baseName}.png`;
+        const filename = `${tile.name}.png`;
         downloadFile(tile.src, filename);
     });
 

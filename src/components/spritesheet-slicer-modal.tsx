@@ -372,7 +372,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                     <FileJson2 className="h-4 w-4 text-green-600 dark:text-green-500" />
                     <AlertTitle className="text-green-800 dark:text-green-500">Metadata Detected!</AlertTitle>
                     <AlertDescription>
-                      Tile names and dimensions have been automatically configured.
+                      Tile names and properties have been automatically configured.
                     </AlertDescription>
                   </Alert>
                 )}
