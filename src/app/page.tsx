@@ -16,8 +16,6 @@ import {
   PaintBucket,
   PanelLeft,
   PanelRight,
-  RectangleHorizontal,
-  Lasso,
   FileCheck,
   Copy,
   ClipboardPaste,
@@ -46,6 +44,7 @@ import {
   Shapes,
   Circle,
   Slash,
+  Lasso,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
