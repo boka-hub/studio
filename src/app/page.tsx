@@ -68,6 +68,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -236,13 +237,6 @@ export default function Home() {
     });
     setTileToDelete(null);
   }, [tileToDelete, selectedTileId, secondarySelectedTileId, autoTileSet, deleteTile, toast]);
-
-  const handleQueueTileDelete = useCallback((tileId: number) => {
-    const tile = tiles.find(t => t.id === tileId);
-    if(tile) {
-      setTileToDelete(tile);
-    }
-  }, [tiles]);
   
   const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
     updateTiles(reorderedTiles, false);
@@ -1003,7 +997,10 @@ export default function Home() {
                           onToggleAutoTile={onToggleAutoTile}
                           onClearAutoTileSet={onClearAutoTileSet}
                           onRenameTile={handleRenameTile}
-                          onDeleteTile={handleQueueTileDelete}
+                          onDeleteTile={(tileId) => {
+                            const tile = tiles.find(t => t.id === tileId);
+                            if(tile) setTileToDelete(tile);
+                          }}
                           onToggleSolid={handleToggleSolid}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
@@ -1086,21 +1083,23 @@ export default function Home() {
           tiles={tiles}
           onImport={handleMetadataImport}
         />
-
-        <AlertDialog open={!!tileToDelete} onOpenChange={() => setTileToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will remove the tile &quot;{tileToDelete?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setTileToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDeleteTile}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        
+        {tileToDelete && (
+          <AlertDialog open={!!tileToDelete} onOpenChange={(open) => !open && setTileToDelete(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove the tile &quot;{tileToDelete?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setTileToDelete(null)}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDeleteTile}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
         
         <AlertDialog open={isConfirmClearMapOpen} onOpenChange={setConfirmClearMapOpen}>
           <AlertDialogContent>

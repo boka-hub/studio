@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { X, Shield, ShieldOff, Search, Dices, Wand } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 interface TilePaletteProps {
   tiles: Tile[];
@@ -73,11 +74,6 @@ export const TilePalette: FC<TilePaletteProps> = ({
     setEditingName('');
   };
   
-  const handleDelete = (e: React.MouseEvent, tileId: number) => {
-    e.stopPropagation();
-    onDeleteTile(tileId);
-  }
-
   const handleToggleSolid = (e: React.MouseEvent, tileId: number) => {
     e.stopPropagation();
     onToggleSolid(tileId);
@@ -307,22 +303,40 @@ export const TilePalette: FC<TilePaletteProps> = ({
                                 <p>{tile.solid ? "Make Passable" : "Make Solid"}</p>
                               </TooltipContent>
                             </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="destructive"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={(e) => handleDelete(e, tile.id)}
-                                  aria-label={`Delete tile ${tile.name}`}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="left">
-                                <p>Delete Tile</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            
+                            <AlertDialog>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button 
+                                      variant="destructive"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={(e) => e.stopPropagation()}
+                                      aria-label={`Delete tile ${tile.name}`}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  <p>Delete Tile</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will remove the tile &quot;{tile?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => onDeleteTile(tile.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+
                           </div>
                        )}
                     </div>
