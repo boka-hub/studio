@@ -54,7 +54,13 @@ export const useProjects = () => {
       }
 
       if (savedState && Array.isArray(savedState.projects) && savedState.projects.length > 0 && savedState.currentProjectId) {
-         const projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId) || savedState.projects.sort((a,b) => b.lastModified - a.lastModified)[0];
+         let projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId);
+         
+         if (!projectToLoad) {
+            // If the saved currentProjectId is invalid, fall back to the most recently modified project.
+            projectToLoad = [...savedState.projects].sort((a,b) => b.lastModified - a.lastModified)[0];
+         }
+         
          resetHistory({
            projects: savedState.projects,
            currentProjectId: projectToLoad.id,
