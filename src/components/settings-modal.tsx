@@ -42,8 +42,8 @@ const shortcuts = [
     { keys: ['L'], description: 'Select Gradient Tool' },
     { keys: ['N'], description: 'Select Noise Tool' },
     { keys: ['C'], description: 'Select Scatter Tool' },
-    { keys: ['M'], description: 'Select/Lasso Tool' },
-    { keys: ['W'], description: 'Select Magic Wand Tool' },
+    { keys: ['M'], 'description': 'Select/Lasso Tool' },
+    { keys: ['W'], 'description': 'Select Magic Wand Tool' },
     { keys: ['Ctrl', 'C'], description: 'Copy selection to clipboard' },
     { keys: ['Ctrl', 'V'], description: 'Paste from clipboard to selection' },
     { keys: ['Delete'], description: 'Delete tiles within a selection' },
@@ -163,17 +163,17 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Clearing & Resetting",
         short: "Quickly clear your workspace.",
-        long: "The header contains buttons to 'Clear Map' (erases the grid but keeps your tiles) and 'Clear Palette' (deletes all tiles and the map). Both actions have confirmation dialogs. To completely reset the entire application and delete all saved projects, you can use the 'Reset Project' button found in the 'About' tab of this settings window."
+        long: "The header contains buttons to **Clear Map** (erases the grid but keeps your tiles) and **Clear Palette** (deletes all tiles and the map). Both actions have confirmation dialogs. To completely reset the entire application and delete all saved projects, you can use the **Reset Project** button found in the **About** tab of this settings window."
     },
     {
         name: "Eraser",
         short: "Removes tiles from the grid.",
-        long: "The eraser sets any tile it touches back to the transparent 'Empty' state (which has an ID of 0). You can click a single tile to erase it, or click and drag to clear a larger area."
+        long: "The eraser sets any tile it touches back to the transparent **Empty** state (which has an ID of 0). You can click a single tile to erase it, or click and drag to clear a larger area."
     },
     {
         name: "Exporting",
         short: "Save your map and tiles to your computer.",
-        long: "Use 'Export Map' to save your layout as a simple .txt file. Use 'Export Spritesheet' to create a single image of all your tiles. This also generates a powerful companion .txt metadata file containing all tile names, properties (like 'solid'), and layout info. This file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
+        long: "Use **Export Map** to save your layout as a simple .txt file. Use **Export Spritesheet** to create a single image of all your tiles. This also generates a powerful companion .txt metadata file containing all tile names, properties (like 'solid'), and layout info. This file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
     },
     {
         name: "Fill (Bucket)",
@@ -188,17 +188,17 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Importing & Slicing",
         short: "Add new tiles from images and spritesheets.",
-        long: "Use 'Import Tiles' for individual images or 'Slice Sheet' for spritesheets. The Batch Slicer handles multiple sheets at once. For lossless re-importing, use the manual 'Add .txt Metadata' button inside the slicer to associate your exported metadata file with its spritesheet. This guarantees all your original names and settings are preserved."
+        long: "Use **Import Tiles** for individual images or **Slice Sheet** for spritesheets. The Batch Slicer handles multiple sheets at once. For lossless re-importing, use the manual **Add .txt Metadata** button inside the slicer to associate your exported metadata file with its spritesheet. This guarantees all your original names and settings are preserved."
     },
     {
         name: "Live Preview",
         short: "A simple mode to test your map's collisions.",
-        long: "Click the 'Play' icon in the header to enter Live Preview mode. A player indicator will appear on the map. You can move it around with the arrow keys. The player will not be able to move onto any tiles that you have marked as 'Solid' in the palette, allowing you to quickly test the collidable areas of your map. Press 'Escape' to exit."
+        long: "Click the **Play** icon in the header to enter Live Preview mode. A player indicator will appear on the map. You can move it around with the arrow keys. The player will not be able to move onto any tiles that you have marked as **Solid** in the palette, allowing you to quickly test the collidable areas of your map. Press 'Escape' to exit."
     },
     {
         name: "Magic Wand",
         short: "Selects a connected area of identical tiles.",
-        long: "A very powerful selection tool. Click on any tile, and the magic wand will automatically select all adjacent tiles of the same type, no matter how complex the shape is. This is perfect for selecting an entire river, forest, or room floor with a single click. You can then use the 'Selection' actions on it."
+        long: "A very powerful selection tool. Click on any tile, and the magic wand will automatically select all adjacent tiles of the same type, no matter how complex the shape is. This is perfect for selecting an entire river, forest, or room floor with a single click. You can then use the **Selection** actions on it."
     },
     {
         name: "Noise",
@@ -213,7 +213,7 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Project Management",
         short: "Save and load multiple maps.",
-        long: "All of your work is automatically saved in your browser. Use the 'Manage Projects' button (database icon) to open the project manager. Here you can: 'Save as New Project' to create a snapshot of your current map, 'Load' a different project, 'Rename' existing ones, or 'Delete' projects you no longer need. The app will always auto-load the last project you worked on."
+        long: "All of your work is automatically saved in your browser. Use the **Manage Projects** button (database icon) to open the project manager. Here you can: **Save as New Project** to create a snapshot of your current map, **Load** a different project, **Rename** existing ones, or **Delete** projects you no longer need. The app will always auto-load the last project you worked on."
     },
     {
         name: "Scatter",
@@ -223,7 +223,7 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Select (Lasso)",
         short: "Selects a rectangular area of your map.",
-        long: "Click and drag to draw a rectangular selection box. Once an area is selected, you can perform special actions on it using the 'Selection' tools in the toolbar (like Fill, Copy, Paste, etc.). Press the 'Escape' key to clear your selection."
+        long: "Click and drag to draw a rectangular selection box. Once an area is selected, you can perform special actions on it using the **Selection** tools in the toolbar (like Fill, Copy, Paste, etc.). Press the 'Escape' key to clear your selection."
     },
     {
         name: "Selection Actions",
@@ -233,14 +233,29 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Shape Tool",
         short: "Draws geometric shapes like rectangles, circles, and lines.",
-        long: "This tool allows you to draw predefined geometric shapes. Select the primary shape type (Rectangle, Circle, or Line) from the toolbar. Click and hold to set the starting point, drag your mouse to define the size and orientation, and release to draw the shape. Shapes are filled with your currently selected primary tile."
+        long: "This tool allows you to draw predefined geometric shapes. Select the primary shape type (**Rectangle**, **Circle**, or **Line**) from the toolbar. Click and hold to set the starting point, drag your mouse to define the size and orientation, and release to draw the shape. Shapes are filled with your currently selected primary tile."
     },
     {
         name: "Spray",
         short: "Scatters the selected tile in a random pattern.",
-        long: "This tool helps create a more natural, randomized look. When you click and drag, the spray tool applies your primary tile in a circular area, but only to a random subset of cells. You can adjust the 'Radius' and 'Density' of the spray in the toolbar. Great for things like grass, flowers, or rubble."
+        long: "This tool helps create a more natural, randomized look. When you click and drag, the spray tool applies your primary tile in a circular area, but only to a random subset of cells. You can adjust the **Radius** and **Density** of the spray in the toolbar. Great for things like grass, flowers, or rubble."
     },
 ];
+
+const FormattedText: React.FC<{ text: string }> = ({ text }) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} className="font-semibold text-foreground/90">{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      })}
+    </>
+  );
+};
+
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const handleReset = () => {
@@ -278,7 +293,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                             </div>
                         </AccordionTrigger>
                         <AccordionContent className="text-sm text-muted-foreground whitespace-pre-line">
-                          {feature.long}
+                          <FormattedText text={feature.long} />
                         </AccordionContent>
                       </AccordionItem>
                   ))}
