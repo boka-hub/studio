@@ -80,10 +80,10 @@ export const useProjects = () => {
             window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (error) {
             console.error("Failed to save projects to localStorage", error);
-            toast({ variant: 'destructive', title: 'Save Error', description: 'Could not save your changes.' });
+            // Using a console.error instead of a toast to avoid dependency loop
         }
     }
-  }, [state, isLoading, toast]);
+  }, [state, isLoading]);
 
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     setProjectState(currentState => {
@@ -264,5 +264,3 @@ export const useProjects = () => {
     canRedo,
   };
 };
-
-    
