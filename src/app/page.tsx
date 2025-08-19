@@ -45,6 +45,7 @@ import {
   Wand,
   Shapes,
   Circle,
+  Slash,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -476,14 +477,15 @@ export default function Home() {
   }, [selection, grid, applyToSelection, toast]);
 
   const handleCopySelection = useCallback(() => {
-    if (!selection?.selectedCells) return;
+    if (!selection) return;
 
     const copiedData = grid
       .slice(selection.minRow, selection.maxRow + 1)
       .map((row, rIndex) => row.slice(selection.minCol, selection.maxCol + 1)
         .map((cell, cIndex) => {
+          // If using magic wand, only copy the selected cells
           if (selection.selectedCells && selection.selectedCells[selection.minRow + rIndex][selection.minCol + cIndex] === 0) {
-            return -1;
+            return -1; // Use -1 to represent a non-copied cell
           }
           return cell;
         })
