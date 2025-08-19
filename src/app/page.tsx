@@ -589,6 +589,7 @@ export default function Home() {
     e.preventDefault();
     e.stopPropagation();
     const currentTarget = e.currentTarget;
+    // Check if the mouse is leaving the window or moving to a child element
     setTimeout(() => {
         if (currentTarget) {
             const relatedTarget = e.relatedTarget as Node | null;
@@ -597,7 +598,7 @@ export default function Home() {
                 setDragFileType(null);
             }
         }
-    }, 50);
+    }, 50); // A small delay helps prevent flicker
   }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {

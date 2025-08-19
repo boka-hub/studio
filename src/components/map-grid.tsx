@@ -57,7 +57,7 @@ export const MapGrid: FC<MapGridProps> = ({
   const [previewSelection, setPreviewSelection] = useState<Selection | null>(null);
   const [isShapeDrag, setIsShapeDrag] = useState(false);
   
-  const TILE_SIZE = BASE_TILE_SIZE * zoom;
+  const TILE_SIZE = useMemo(() => BASE_TILE_SIZE * zoom, [zoom]);
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter', 'select'].includes(tool);
 
@@ -273,14 +273,13 @@ export const MapGrid: FC<MapGridProps> = ({
   const handleMouseUp = (row: number, col: number) => {
     if (isPreviewMode || !isDrawing) return;
 
-    setIsDrawing(false);
-    
     if (previewGrid) {
       onDrawCommit(previewGrid);
     } else if (startCell && tool === 'select') {
       onSelectionCommit(startCell, { row, col });
     }
 
+    setIsDrawing(false);
     setStartCell(null);
     setPreviewGrid(null);
     setPreviewSelection(null);
