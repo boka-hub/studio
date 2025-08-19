@@ -289,14 +289,12 @@ export const MapGrid: FC<MapGridProps> = ({
 
   const handleMouseLeave = () => {
     if (isDrawing) {
-        if (previewGrid) {
-            onDrawCommit(previewGrid);
-        }
-        setIsDrawing(false);
-        setStartCell(null);
-        setPreviewGrid(null);
-        setPreviewSelection(null);
-        setIsShapeDrag(false);
+      // Cancel the drawing if the mouse leaves the grid area while pressed
+      setIsDrawing(false);
+      setStartCell(null);
+      setPreviewGrid(null);
+      setPreviewSelection(null);
+      setIsShapeDrag(false);
     }
   };
   
