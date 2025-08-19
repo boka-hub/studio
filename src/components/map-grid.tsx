@@ -162,6 +162,34 @@ export const MapGrid: FC<MapGridProps> = ({
                }
             }
           }
+      } else if (currentShape === 'line') {
+          // Bresenham's line algorithm
+          let x0 = start.col;
+          let y0 = start.row;
+          let x1 = end.col;
+          let y1 = end.row;
+
+          const dx = Math.abs(x1 - x0);
+          const sx = x0 < x1 ? 1 : -1;
+          const dy = -Math.abs(y1 - y0);
+          const sy = y0 < y1 ? 1 : -1;
+          let err = dx + dy;
+
+          while (true) {
+              if (y0 >= 0 && y0 < grid.length && x0 >= 0 && x0 < grid[0].length) {
+                  newGrid[y0][x0] = tileId;
+              }
+              if (x0 === x1 && y0 === y1) break;
+              let e2 = 2 * err;
+              if (e2 >= dy) {
+                  err += dy;
+                  x0 += sx;
+              }
+              if (e2 <= dx) {
+                  err += dx;
+                  y0 += sy;
+              }
+          }
       }
     } else if (drawTool === 'gradient') {
         const width = maxCol - minCol + 1;
@@ -195,7 +223,7 @@ export const MapGrid: FC<MapGridProps> = ({
         }
     }
     return newGrid;
-  }, [selectedTileId, secondarySelectedTileId, scatterSet]);
+  }, [selectedTileId, secondarySelectedTileId, scatterSet, grid]);
 
   const handleMouseDown = (e: MouseEvent, row: number, col: number) => {
     if (isPreviewMode) return;

@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ZoomIn, ZoomOut, Maximize, RectangleHorizontal, Circle } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, RectangleHorizontal, Circle, Slash } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Selection, Tool, AutoTileMode, Shape } from '@/lib/types';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -128,12 +128,15 @@ export function Toolbar<T extends Tool>({
                 <Separator />
                 <div className="px-2 space-y-2">
                     <h3 className="text-sm font-semibold text-muted-foreground">Shape Settings</h3>
-                     <ToggleGroup type="single" value={shape} onValueChange={(value: Shape) => value && onShapeChange(value)} className="w-full grid grid-cols-2">
+                     <ToggleGroup type="single" value={shape} onValueChange={(value: Shape) => value && onShapeChange(value)} className="w-full grid grid-cols-3">
                         <ToggleGroupItem value="rectangle" aria-label="Draw a rectangle">
                             <RectangleHorizontal className="h-4 w-4" />
                         </ToggleGroupItem>
                         <ToggleGroupItem value="circle" aria-label="Draw a circle">
                             <Circle className="h-4 w-4" />
+                        </ToggleGroupItem>
+                         <ToggleGroupItem value="line" aria-label="Draw a line">
+                            <Slash className="h-4 w-4" />
                         </ToggleGroupItem>
                     </ToggleGroup>
                 </div>
