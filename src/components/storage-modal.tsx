@@ -55,13 +55,18 @@ export const StorageModal: React.FC<StorageModalProps> = ({
   const { toast } = useToast();
 
   const handleSave = () => {
-    if (!newProjectName.trim()) {
+    const trimmedName = newProjectName.trim();
+    if (!trimmedName) {
       toast({ variant: 'destructive', title: 'Save Failed', description: 'Project name cannot be empty.' });
       return;
     }
-    onSaveProject(newProjectName);
+    if (projects.some(p => p.name === trimmedName)) {
+      toast({ variant: 'destructive', title: 'Save Failed', description: 'A project with that name already exists.' });
+      return;
+    }
+    onSaveProject(trimmedName);
     setNewProjectName('');
-    toast({ title: 'Project Saved!', description: `"${newProjectName}" has been saved.`});
+    toast({ title: 'Project Saved!', description: `"${trimmedName}" has been saved.`});
   };
 
   const handleLoad = (id: string) => {
@@ -87,13 +92,23 @@ export const StorageModal: React.FC<StorageModalProps> = ({
   };
 
   const confirmRename = () => {
-    if (editingProjectId && editingName.trim()) {
-      onRenameProject(editingProjectId, editingName.trim());
-      toast({ title: 'Project Renamed', description: `Project has been renamed to "${editingName}".`});
-      cancelEditing();
-    } else {
+    if (!editingProjectId) return;
+    
+    const trimmedName = editingName.trim();
+    if (!trimmedName) {
        toast({ variant: 'destructive', title: 'Rename Failed', description: 'Project name cannot be empty.' });
+       return;
     }
+    
+    // Check if another project (not the one being edited) already has the new name
+    if (projects.some(p => p.id !== editingProjectId && p.name === trimmedName)) {
+        toast({ variant: 'destructive', title: 'Rename Failed', description: 'Another project already has that name.' });
+        return;
+    }
+
+    onRenameProject(editingProjectId, trimmedName);
+    toast({ title: 'Project Renamed', description: `Project has been renamed to "${trimmedName}".`});
+    cancelEditing();
   };
 
 
