@@ -258,7 +258,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
               </Button>
                <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tilesToExport.length === 0} className="col-span-1">
                   <FileText className="mr-2 h-4 w-4" />
-                  .txt
+                  Metadata
               </Button>
               <Button type="button" variant="secondary" onClick={onClose} className="col-span-1">Cancel</Button>
               <Button type="button" onClick={handleExportSpritesheet} disabled={tilesToExport.length === 0} className="col-span-1">
