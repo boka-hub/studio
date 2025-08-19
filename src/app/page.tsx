@@ -43,6 +43,8 @@ import {
   Dices,
   FileText,
   Wand,
+  Shapes,
+  Circle,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -52,7 +54,7 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -108,6 +110,7 @@ export default function Home() {
   const [autoTileMode, setAutoTileMode] = useState<AutoTileMode>('9-tile');
   const [autoTileOverwrite, setAutoTileOverwrite] = useState<boolean>(false);
   const [tool, setTool] = useState<Tool>('brush');
+  const [shape, setShape] = useState<Shape>('rectangle');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
   const [isSlicerOpen, setSlicerOpen] = useState(false);
@@ -214,14 +217,13 @@ export default function Home() {
 
   const confirmDeleteTile = useCallback(() => {
     if (!tileToDelete) return;
-    const tileId = tileToDelete.id;
     
-    deleteTile(tileId);
+    deleteTile(tileToDelete.id);
     
-    if (selectedTileId === tileId) setSelectedTileId(0);
-    if (secondarySelectedTileId === tileId) setSecondarySelectedTileId(0);
-    setScatterSet(s => s.filter(id => id !== tileId));
-    setAutoTileSet(a => a.filter(id => id !== tileId));
+    if (selectedTileId === tileToDelete.id) setSelectedTileId(0);
+    if (secondarySelectedTileId === tileToDelete.id) setSecondarySelectedTileId(0);
+    setScatterSet(s => s.filter(id => id !== tileToDelete.id));
+    setAutoTileSet(a => a.filter(id => id !== tileToDelete.id));
 
     toast({ 
       title: 'Tile Deleted', 
@@ -303,15 +305,7 @@ export default function Home() {
         reader.readAsText(file);
     }, [toast, updateGrid]);
 
-  const handleCellAction = useCallback(
-    (row: number, col: number, gridState?: GridState) => {
-      // If a full grid state is passed, it means we're committing a change from a preview (brush, eraser, etc.).
-      if (gridState) {
-        updateGrid(gridState);
-        setSelection(null);
-        return;
-      }
-      
+  const handleCellAction = useCallback((row: number, col: number) => {
       let newGrid = grid.map(r => [...r]);
       
       // Handle tools that are just simple clicks and don't use the preview system.
@@ -394,72 +388,28 @@ export default function Home() {
     [grid, selectedTileId, tiles, toast, tool, updateGrid]
   );
   
-  const handleShapeDraw = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
+  const handleDrawCommit = useCallback((newGridState: GridState) => {
+    updateGrid(newGridState);
+    setSelection(null);
+  }, [updateGrid]);
+  
+  const handleSelectionCommit = useCallback((start: {row: number, col: number}, end: {row: number, col: number}) => {
     const minRow = Math.min(start.row, end.row);
     const maxRow = Math.max(start.row, end.row);
     const minCol = Math.min(start.col, end.col);
     const maxCol = Math.max(start.col, end.col);
 
-    if (tool === 'select') {
-      const selectedCellsGrid = createEmptyGrid(grid[0].length, grid.length);
-        for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
-                if (r < grid.length && c < grid[0].length) {
-                    selectedCellsGrid[r][c] = 1;
-                }
-            }
-        }
-      setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
-      return;
-    }
+    const selectedCellsGrid = createEmptyGrid(grid[0].length, grid.length);
+      for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+              if (r < grid.length && c < grid[0].length) {
+                  selectedCellsGrid[r][c] = 1;
+              }
+          }
+      }
+    setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
+  }, [grid]);
 
-    setSelection(null);
-    let newGrid = grid.map(r => [...r]);
-
-    if (tool === 'rectangle') {
-        for (let r = minRow; r <= maxRow; r++) {
-          for (let c = minCol; c <= maxCol; c++) {
-            if (r < grid.length && c < grid[0].length) {
-              newGrid[r][c] = selectedTileId;
-            }
-          }
-        }
-    } else if (tool === 'gradient') {
-        const width = maxCol - minCol + 1;
-        for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
-                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                    const step = (c - minCol) / Math.max(1, width - 1);
-                    const threshold = (r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25);
-                    newGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
-                }
-            }
-        }
-    } else if (tool === 'noise') {
-        for (let r = minRow; r <= maxRow; r++) {
-          for (let c = minCol; c <= maxCol; c++) {
-            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                const random = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453;
-                newGrid[r][c] = (random - Math.floor(random)) < 0.5 ? selectedTileId : secondarySelectedTileId;
-            }
-          }
-        }
-    } else if (tool === 'scatter') {
-        if (scatterSet.length === 0) {
-            toast({ variant: 'destructive', title: 'Scatter Failed', description: 'Your scatter set is empty. Click tiles in the palette to add them.' });
-            return;
-        }
-        for (let r = minRow; r <= maxRow; r++) {
-          for (let c = minCol; c <= maxCol; c++) {
-            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                const randomIndex = Math.floor(Math.random() * scatterSet.length);
-                newGrid[r][c] = scatterSet[randomIndex];
-            }
-          }
-        }
-    }
-    updateGrid(newGrid);
-  }, [grid, selectedTileId, secondarySelectedTileId, tool, scatterSet, toast, updateGrid]);
 
   const applyToSelection = useCallback((callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection) return;
@@ -679,7 +629,7 @@ export default function Home() {
     } else {
        const keyMap: { [key: string]: Tool } = {
         'b': 'brush', 'e': 'eraser', 'p': 'picker', 'g': 'fill',
-        'r': 'rectangle', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
+        'r': 'shape', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
         'l': 'gradient', 'n': 'noise', 'c': 'scatter', 'a': 'auto-tile',
       };
 
@@ -699,7 +649,7 @@ export default function Home() {
     if (newTool !== 'select' && newTool !== 'magic-wand') {
       setSelection(null);
     }
-    const toolsWithSettings: Tool[] = ['spray', 'rectangle', 'gradient', 'noise', 'scatter', 'auto-tile'];
+    const toolsWithSettings: Tool[] = ['spray', 'shape', 'gradient', 'noise', 'scatter', 'auto-tile'];
     if (toolsWithSettings.includes(newTool)) {
       leftPanelRef.current?.expand();
     }
@@ -770,7 +720,7 @@ export default function Home() {
     fill: { icon: PaintBucket, label: 'Fill (G)'},
     spray: { icon: SprayCan, label: 'Spray (S)' },
     'auto-tile': { icon: Wand, label: 'Auto-Tile (A)' },
-    rectangle: { icon: RectangleHorizontal, label: 'Rectangle (R)' },
+    shape: { icon: Shapes, label: 'Shape (R)' },
     gradient: { icon: Layers, label: 'Gradient (L)' },
     noise: { icon: Waves, label: 'Noise (N)' },
     scatter: { icon: Dices, label: 'Scatter (C)'},
@@ -916,6 +866,8 @@ export default function Home() {
                       onAutoTileModeChange={setAutoTileMode}
                       autoTileOverwrite={autoTileOverwrite}
                       onAutoTileOverwriteChange={setAutoTileOverwrite}
+                      shape={shape}
+                      onShapeChange={setShape}
                     />
                   )}
                 </div>
@@ -948,8 +900,10 @@ export default function Home() {
                   grid={grid}
                   tiles={tiles}
                   onCellAction={handleCellAction}
-                  onShapeDraw={handleShapeDraw}
+                  onDrawCommit={handleDrawCommit}
+                  onSelectionCommit={handleSelectionCommit}
                   tool={tool}
+                  shape={shape}
                   zoom={zoom}
                   selectedTileId={selectedTileId}
                   secondarySelectedTileId={secondarySelectedTileId}

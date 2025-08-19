@@ -8,11 +8,12 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, RectangleHorizontal, Circle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Selection, Tool, AutoTileMode } from '@/lib/types';
+import type { Selection, Tool, AutoTileMode, Shape } from '@/lib/types';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Switch } from './ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface Action<T extends string> {
   icon: ElementType;
@@ -46,6 +47,8 @@ interface ToolbarProps<T extends Tool> {
   onAutoTileModeChange: (mode: AutoTileMode) => void;
   autoTileOverwrite: boolean;
   onAutoTileOverwriteChange: (overwrite: boolean) => void;
+  shape: Shape;
+  onShapeChange: (shape: Shape) => void;
 }
 
 export function Toolbar<T extends Tool>({
@@ -67,6 +70,8 @@ export function Toolbar<T extends Tool>({
   onAutoTileModeChange,
   autoTileOverwrite,
   onAutoTileOverwriteChange,
+  shape,
+  onShapeChange,
 }: ToolbarProps<T>) {
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
@@ -118,6 +123,22 @@ export function Toolbar<T extends Tool>({
         </div>
         {!isCollapsed && (
           <>
+            {selectedAction === 'shape' && (
+               <>
+                <Separator />
+                <div className="px-2 space-y-2">
+                    <h3 className="text-sm font-semibold text-muted-foreground">Shape Settings</h3>
+                     <ToggleGroup type="single" value={shape} onValueChange={(value: Shape) => value && onShapeChange(value)} className="w-full grid grid-cols-2">
+                        <ToggleGroupItem value="rectangle" aria-label="Draw a rectangle">
+                            <RectangleHorizontal className="h-4 w-4" />
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="circle" aria-label="Draw a circle">
+                            <Circle className="h-4 w-4" />
+                        </ToggleGroupItem>
+                    </ToggleGroup>
+                </div>
+              </>
+            )}
             {selectedAction === 'spray' && (
               <>
                 <Separator />

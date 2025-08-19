@@ -1,17 +1,19 @@
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, MouseEvent } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { GridState, Tile, Tool, Selection, AutoTileMode } from '@/lib/types';
+import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape } from '@/lib/types';
 import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
 
 interface MapGridProps {
   grid: GridState;
   tiles: Tile[];
   tool: Tool;
-  onCellAction: (row: number, col: number, newGrid?: GridState) => void;
-  onShapeDraw: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
+  shape: Shape;
+  onCellAction: (row: number, col: number) => void;
+  onDrawCommit: (newGrid: GridState) => void;
+  onSelectionCommit: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
   zoom?: number;
   selectedTileId: number;
   secondarySelectedTileId: number;
@@ -31,9 +33,11 @@ const BASE_TILE_SIZE = 16;
 export const MapGrid: FC<MapGridProps> = ({ 
   grid, 
   tiles, 
-  tool, 
+  tool,
+  shape,
   onCellAction, 
-  onShapeDraw, 
+  onDrawCommit,
+  onSelectionCommit,
   zoom = 1, 
   selectedTileId, 
   secondarySelectedTileId, 
@@ -51,16 +55,17 @@ export const MapGrid: FC<MapGridProps> = ({
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
   const [previewSelection, setPreviewSelection] = useState<Selection | null>(null);
+  const [isShapeDrag, setIsShapeDrag] = useState(false);
   
   const TILE_SIZE = BASE_TILE_SIZE * zoom;
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
-  const isShapeTool = ['rectangle', 'gradient', 'noise', 'scatter', 'select'].includes(tool);
+  const isShapeTool = ['shape', 'gradient', 'noise', 'scatter', 'select'].includes(tool);
 
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
   }, [tiles]);
   
-  const performPreviewAction = useCallback((gridState: GridState, row: number, col: number) => {
+  const performFreeformDraw = useCallback((gridState: GridState, row: number, col: number): GridState => {
       let newGrid = gridState.map(r => [...r]);
       if (tool === 'brush') {
           if (newGrid[row][col] === selectedTileId) return newGrid;
@@ -95,11 +100,9 @@ export const MapGrid: FC<MapGridProps> = ({
           '47-tile': getAutoTileId47,
         }[autoTileMode];
 
-        // Place the center tile at the click point to start
-        const centerIndex = autoTileMode === '9-tile' ? 4 : autoTileMode === '13-tile' ? 12 : 44;
+        const centerIndex = autoTileMode === '9-tile' ? 4 : autoTileMode === '13-tile' ? 12 : 2;
         newGrid[row][col] = autoTileSet[centerIndex];
 
-        // Update neighbors
         for (let r_offset = -1; r_offset <= 1; r_offset++) {
           for (let c_offset = -1; c_offset <= 1; c_offset++) {
             const nr = row + r_offset;
@@ -120,15 +123,92 @@ export const MapGrid: FC<MapGridProps> = ({
       return newGrid;
   }, [tool, selectedTileId, autoTileMode, autoTileSet, sprayRadius, sprayDensity, autoTileOverwrite]);
 
-  const handleMouseDown = (row: number, col: number) => {
+  const performShapeDraw = useCallback((gridState: GridState, start: {row: number, col: number}, end: {row: number, col: number}, currentTool: Tool, currentShape: Shape): GridState => {
+    let newGrid = gridState.map(r => [...r]);
+    const minRow = Math.min(start.row, end.row);
+    const maxRow = Math.max(start.row, end.row);
+    const minCol = Math.min(start.col, end.col);
+    const maxCol = Math.max(start.col, end.col);
+
+    let drawTool = currentTool;
+    // For Ctrl+Drag, the "tool" is brush/eraser, but we want to draw a shape
+    if (currentTool === 'brush' || currentTool === 'eraser' || currentTool === 'auto-tile') {
+      drawTool = 'shape'; 
+    }
+    const tileId = currentTool === 'eraser' ? 0 : selectedTileId;
+
+    if (drawTool === 'shape') {
+      if(currentShape === 'rectangle') {
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (r < grid.length && c < grid[0].length) {
+              newGrid[r][c] = tileId;
+            }
+          }
+        }
+      } else if (currentShape === 'circle') {
+          const centerX = (minCol + maxCol) / 2;
+          const centerY = (minRow + maxRow) / 2;
+          const radiusX = (maxCol - minCol) / 2;
+          const radiusY = (maxRow - minRow) / 2;
+          for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+               const dx = (c - centerX) / radiusX;
+               const dy = (r - centerY) / radiusY;
+               if ((dx * dx) + (dy * dy) <= 1) {
+                  if (r < grid.length && c < grid[0].length) {
+                    newGrid[r][c] = tileId;
+                  }
+               }
+            }
+          }
+      }
+    } else if (drawTool === 'gradient') {
+        const width = maxCol - minCol + 1;
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    const step = (c - minCol) / Math.max(1, width - 1);
+                    const threshold = ((r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25));
+                    newGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
+                }
+            }
+        }
+    } else if (drawTool === 'noise') {
+        for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    const random = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453;
+                    newGrid[r][c] = (random - Math.floor(random)) < 0.5 ? selectedTileId : secondarySelectedTileId;
+                }
+            }
+        }
+    } else if (drawTool === 'scatter') {
+         if (scatterSet.length === 0) return newGrid;
+         for (let r = minRow; r <= maxRow; r++) {
+            for (let c = minCol; c <= maxCol; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    const randomIndex = Math.floor(Math.random() * scatterSet.length);
+                    newGrid[r][c] = scatterSet[randomIndex];
+                }
+            }
+        }
+    }
+    return newGrid;
+  }, [selectedTileId, secondarySelectedTileId, scatterSet]);
+
+  const handleMouseDown = (e: MouseEvent, row: number, col: number) => {
     if (isPreviewMode) return;
     setIsDrawing(true);
     
-    if (isShapeTool) {
+    const isCtrlDrag = (e.ctrlKey || e.metaKey) && isBrushLikeTool;
+    setIsShapeDrag(isCtrlDrag || isShapeTool);
+
+    if (isCtrlDrag || isShapeTool) {
         setStartCell({ row, col });
         setPreviewSelection(null);
     } else if (isBrushLikeTool) {
-        const newPreviewGrid = performPreviewAction(grid, row, col);
+        const newPreviewGrid = performFreeformDraw(grid, row, col);
         setPreviewGrid(newPreviewGrid);
     } else {
         // For simple click tools like Fill, Picker, Magic Wand
@@ -139,63 +219,26 @@ export const MapGrid: FC<MapGridProps> = ({
   const handleMouseOver = (row: number, col: number) => {
     if (!isDrawing || isPreviewMode) return;
 
-    if (isBrushLikeTool) {
-        setPreviewGrid(currentPreview => {
-            if (!currentPreview) return null;
-            return performPreviewAction(currentPreview, row, col);
-        });
-    } else if (startCell && isShapeTool) {
+    if (isShapeDrag) {
+        if(!startCell) return;
         const minRow = Math.min(startCell.row, row);
         const maxRow = Math.max(startCell.row, row);
         const minCol = Math.min(startCell.col, col);
         const maxCol = Math.max(startCell.col, col);
-        
+
         if (tool === 'select') {
              setPreviewSelection({ minRow, minCol, maxRow, maxCol, selectedCells: undefined });
              return;
         }
 
-        const newPreviewGrid = grid.map(r => [...r]);
-        if (tool === 'rectangle') {
-            for (let r = minRow; r <= maxRow; r++) {
-                for (let c = minCol; c <= maxCol; c++) {
-                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                        newPreviewGrid[r][c] = selectedTileId;
-                    }
-                }
-            }
-        } else if (tool === 'gradient') {
-            const width = maxCol - minCol + 1;
-            for (let r = minRow; r <= maxRow; r++) {
-                for (let c = minCol; c <= maxCol; c++) {
-                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                        const step = (c - minCol) / Math.max(1, width - 1);
-                        const threshold = ((r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25));
-                        newPreviewGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
-                    }
-                }
-            }
-        } else if (tool === 'noise') {
-            for (let r = minRow; r <= maxRow; r++) {
-                for (let c = minCol; c <= maxCol; c++) {
-                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                        const random = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453;
-                        newPreviewGrid[r][c] = (random - Math.floor(random)) < 0.5 ? selectedTileId : secondarySelectedTileId;
-                    }
-                }
-            }
-        } else if (tool === 'scatter') {
-             if (scatterSet.length === 0) return newPreviewGrid;
-             for (let r = minRow; r <= maxRow; r++) {
-                for (let c = minCol; c <= maxCol; c++) {
-                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                        const randomIndex = Math.floor(Math.random() * scatterSet.length);
-                        newPreviewGrid[r][c] = scatterSet[randomIndex];
-                    }
-                }
-            }
-        }
+        const newPreviewGrid = performShapeDraw(grid, startCell, {row, col}, tool, shape);
         setPreviewGrid(newPreviewGrid);
+
+    } else if (isBrushLikeTool) {
+        setPreviewGrid(currentPreview => {
+            if (!currentPreview) return null;
+            return performFreeformDraw(currentPreview, row, col);
+        });
     }
   };
 
@@ -204,28 +247,28 @@ export const MapGrid: FC<MapGridProps> = ({
 
     setIsDrawing(false);
     
-    // If there's a preview grid, commit it. This handles brush-like tools & some shape tools.
     if (previewGrid) {
-      onCellAction(row, col, previewGrid);
-    } else if (startCell && isShapeTool) { // Handle shape tools that only update selection preview (like 'select')
-      onShapeDraw(startCell, { row, col });
+      onDrawCommit(previewGrid);
+    } else if (startCell && tool === 'select') {
+      onSelectionCommit(startCell, { row, col });
     }
-    // Simple click tools were already handled on mouse down.
 
     setStartCell(null);
     setPreviewGrid(null);
     setPreviewSelection(null);
+    setIsShapeDrag(false);
   };
 
   const handleMouseLeave = () => {
     if (isDrawing) {
         if (previewGrid) {
-            onCellAction(0, 0, previewGrid); // Coords don't matter, we pass the whole grid
+            onDrawCommit(previewGrid);
         }
         setIsDrawing(false);
         setStartCell(null);
         setPreviewGrid(null);
         setPreviewSelection(null);
+        setIsShapeDrag(false);
     }
   };
   
@@ -242,7 +285,7 @@ export const MapGrid: FC<MapGridProps> = ({
       case 'fill':
       case 'magic-wand':
         return 'cursor-pointer';
-      case 'rectangle':
+      case 'shape':
       case 'gradient':
       case 'noise':
       case 'scatter':
@@ -285,7 +328,7 @@ export const MapGrid: FC<MapGridProps> = ({
               <div
                 key={`${rowIndex}-${colIndex}`}
                 className="relative bg-card"
-                onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+                onMouseDown={(e) => handleMouseDown(e as unknown as MouseEvent, rowIndex, colIndex)}
                 onMouseOver={() => handleMouseOver(rowIndex, colIndex)}
                 onMouseUp={() => handleMouseUp(rowIndex, colIndex)}
                 style={{ width: TILE_SIZE, height: TILE_SIZE }}

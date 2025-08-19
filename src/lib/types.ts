@@ -1,5 +1,7 @@
 
-export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'rectangle' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile';
+export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile';
+
+export type Shape = 'rectangle' | 'circle';
 
 export type AutoTileMode = '9-tile' | '13-tile' | '47-tile';
 
