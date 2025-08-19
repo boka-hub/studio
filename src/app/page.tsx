@@ -45,6 +45,7 @@ import {
   Circle,
   Slash,
   Lasso,
+  FileUp,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -137,6 +138,7 @@ export default function Home() {
   const { toast } = useToast();
 
   const tileImportRef = useRef<HTMLInputElement>(null);
+  const mapImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<any>(null);
   const rightPanelRef = useRef<any>(null);
 
@@ -310,6 +312,14 @@ export default function Home() {
         };
         reader.readAsText(file);
     }, [toast, updateGrid]);
+
+  const handleMapFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleImportMap(file);
+    }
+    event.target.value = '';
+  }, [handleImportMap]);
 
   const handleCellAction = useCallback((row: number, col: number) => {
       let newGrid = grid.map(r => [...r]);
@@ -746,6 +756,7 @@ export default function Home() {
     { icon: Upload, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
     { icon: FileJson2, label: 'Import Metadata', onClick: () => setMetadataModalOpen(true) },
+    { icon: FileUp, label: 'Import Map', onClick: () => mapImportRef.current?.click() },
     { icon: Package, label: 'Export Spritesheet', onClick: () => setExportOpen(true) },
     { icon: Download, label: 'Export Map', onClick: handleExportMap },
   ];
@@ -1002,6 +1013,15 @@ export default function Home() {
           className="hidden"
           aria-hidden="true"
         />
+
+        <input
+          type="file"
+          ref={mapImportRef}
+          onChange={handleMapFileSelect}
+          accept=".txt,text/plain"
+          className="hidden"
+          aria-hidden="true"
+        />
         
         <SpritesheetSlicerModal
           isOpen={isSlicerOpen}
@@ -1087,5 +1107,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
