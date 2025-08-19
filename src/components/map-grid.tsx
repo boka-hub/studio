@@ -166,8 +166,8 @@ export const MapGrid: FC<MapGridProps> = ({
           // Bresenham's line algorithm
           let x0 = start.col;
           let y0 = start.row;
-          let x1 = end.col;
-          let y1 = end.row;
+          const x1 = end.col;
+          const y1 = end.row;
 
           const dx = Math.abs(x1 - x0);
           const sx = x0 < x1 ? 1 : -1;
@@ -180,12 +180,14 @@ export const MapGrid: FC<MapGridProps> = ({
                   newGrid[y0][x0] = tileId;
               }
               if (x0 === x1 && y0 === y1) break;
-              let e2 = 2 * err;
+              const e2 = 2 * err;
               if (e2 >= dy) {
+                  if (x0 === x1) break;
                   err += dy;
                   x0 += sx;
               }
               if (e2 <= dx) {
+                  if (y0 === y1) break;
                   err += dx;
                   y0 += sy;
               }
