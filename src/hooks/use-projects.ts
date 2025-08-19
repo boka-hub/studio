@@ -121,61 +121,60 @@ export const useProjects = () => {
       modifyCurrentProject(() => ({ tiles }), batch);
   }, [modifyCurrentProject]);
   
-  const addTiles = useCallback((tileData: TileImportData[]) => {
-      if (tileData.length === 0) return;
-      
-      const readFiles = tileData.map(data => {
-          return new Promise<{name: string, src: string, solid: boolean} | null>((resolve) => {
-             const reader = new FileReader();
-             reader.onload = async (e) => {
-                const src = e.target?.result as string;
-                if (await isTileTransparent(src)) {
-                   resolve(null);
-                } else {
-                   const name = data.file.name.replace(/\.[^/.]+$/, "");
-                   resolve({ name, src, solid: data.isSolid });
-                }
-             };
-             reader.onerror = () => resolve(null);
-             reader.readAsDataURL(data.file);
-          });
-      });
+  const addTiles = useCallback(async (tileData: TileImportData[]) => {
+    if (tileData.length === 0) return;
 
-      Promise.all(readFiles).then(results => {
-          const newTilesData = results.filter((r): r is {name: string, src: string, solid: boolean} => r !== null);
-          
-          const skippedCount = tileData.length - newTilesData.length;
-          if (skippedCount > 0) {
-            toast({
-                title: 'Transparent Tiles Skipped',
-                description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
-            });
-          }
+    const readFiles = tileData.map(data => {
+        return new Promise<{name: string, src: string, solid: boolean} | null>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+            const src = e.target?.result as string;
+            if (await isTileTransparent(src)) {
+                resolve(null);
+            } else {
+                const name = data.file.name.replace(/\.[^/.]+$/, "");
+                resolve({ name, src, solid: data.isSolid });
+            }
+            };
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(data.file);
+        });
+    });
 
-          if (newTilesData.length > 0) {
-              setProjectState(currentState => {
-                const currentProject = currentState.projects.find(p => p.id === currentState.currentProjectId);
-                if (!currentProject) return currentState;
+    const results = await Promise.all(readFiles);
+    const newTilesData = results.filter((r): r is {name: string, src: string, solid: boolean} => r !== null);
+    
+    const skippedCount = tileData.length - newTilesData.length;
+    if (skippedCount > 0) {
+    toast({
+        title: 'Transparent Tiles Skipped',
+        description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
+    });
+    }
 
-                let nextId = currentProject.tiles.length > 0 ? Math.max(...currentProject.tiles.map(t => t.id)) + 1 : 1;
-                const tilesWithIds: Tile[] = newTilesData.map((tile) => ({
-                    id: nextId++,
-                    name: tile.name,
-                    src: tile.src,
-                    solid: tile.solid,
-                }));
-                const newTiles = [...currentProject.tiles, ...tilesWithIds];
+    if (newTilesData.length > 0) {
+        setProjectState(currentState => {
+        const currentProject = currentState.projects.find(p => p.id === currentState.currentProjectId);
+        if (!currentProject) return currentState;
 
-                const updatedProjects = currentState.projects.map(p => p.id === currentState.currentProjectId ? {...p, tiles: newTiles, lastModified: Date.now()} : p);
-                return { ...currentState, projects: updatedProjects };
-              });
-              
-              toast({
-                  title: 'Tiles Added',
-                  description: `${newTilesData.length} new tile(s) have been added to the palette.`,
-              });
-          }
-      });
+        let nextId = currentProject.tiles.length > 0 ? Math.max(...currentProject.tiles.map(t => t.id)) + 1 : 1;
+        const tilesWithIds: Tile[] = newTilesData.map((tile) => ({
+            id: nextId++,
+            name: tile.name,
+            src: tile.src,
+            solid: tile.solid,
+        }));
+        const newTiles = [...currentProject.tiles, ...tilesWithIds];
+
+        const updatedProjects = currentState.projects.map(p => p.id === currentState.currentProjectId ? {...p, tiles: newTiles, lastModified: Date.now()} : p);
+        return { ...currentState, projects: updatedProjects };
+        });
+        
+        toast({
+            title: 'Tiles Added',
+            description: `${newTilesData.length} new tile(s) have been added to the palette.`,
+        });
+    }
   }, [setProjectState, toast]);
 
     const deleteTile = useCallback((tileId: number) => {
@@ -188,16 +187,11 @@ export const useProjects = () => {
 
 
   const loadProject = useCallback((id: string) => {
-    setProjectState(currentState => {
-      if (currentState.projects.some(p => p.id === id)) {
-        resetHistory({
-            projects: currentState.projects,
-            currentProjectId: id,
-        });
-      }
-      return currentState;
+    resetHistory({
+        projects: state.projects,
+        currentProjectId: id,
     });
-  }, [resetHistory, setProjectState]);
+  }, [resetHistory, state.projects]);
 
   const saveProject = useCallback((name: string) => {
     setProjectState(currentState => {
@@ -221,26 +215,21 @@ export const useProjects = () => {
   }, [setProjectState, toast]);
 
   const deleteProject = useCallback((id: string) => {
-    setProjectState(currentState => {
-        const remainingProjects = currentState.projects.filter(p => p.id !== id);
-        
-        if (remainingProjects.length === 0) {
-            const newDefault = createNewProject('New Project');
-            resetHistory({ projects: [newDefault], currentProjectId: newDefault.id });
-            return { projects: [newDefault], currentProjectId: newDefault.id };
-        }
-        
-        let newCurrentId = currentState.currentProjectId;
-        if (currentState.currentProjectId === id) {
+    const remainingProjects = projects.filter(p => p.id !== id);
+    
+    if (remainingProjects.length === 0) {
+        const newDefault = createNewProject('New Project');
+        resetHistory({ projects: [newDefault], currentProjectId: newDefault.id });
+    } else {
+        let newCurrentId = currentProjectId;
+        if (currentProjectId === id) {
             const sortedProjects = [...remainingProjects].sort((a,b) => b.lastModified - a.lastModified);
             newCurrentId = sortedProjects[0].id;
         }
-        
         resetHistory({ projects: remainingProjects, currentProjectId: newCurrentId });
-        return { projects: remainingProjects, currentProjectId: newCurrentId };
-    });
+    }
     toast({ title: 'Project Deleted'});
-  }, [toast, resetHistory, setProjectState]);
+  }, [projects, currentProjectId, resetHistory, toast]);
 
   const renameProject = useCallback((id: string, newName: string) => {
     setProjectState(currentState => ({
