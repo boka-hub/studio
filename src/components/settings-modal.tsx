@@ -173,7 +173,7 @@ Selection Order (based on a standard 47-tile atlas):
     {
         name: "Exporting",
         short: "Save your map and tiles to your computer.",
-        long: "Use **Export Map** to save your layout as a simple .txt file. Use **Export Spritesheet** to create a single image of all your tiles. This also generates a powerful companion .txt metadata file containing all tile names, properties (like 'solid'), and layout info. This file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
+        long: "Use the **Export Map** button to save your layout as a simple comma-separated .txt file. Use the **Export Spritesheet** button to create a single image of all your tiles. This also generates a powerful companion .txt metadata file containing all tile names, properties (like 'solid'), and layout info. This metadata file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
     },
     {
         name: "Fill (Bucket)",
@@ -187,8 +187,8 @@ Selection Order (based on a standard 47-tile atlas):
     },
     {
         name: "Importing & Slicing",
-        short: "Add new tiles from images and spritesheets.",
-        long: "Use **Import Tiles** for individual images or **Slice Sheet** for spritesheets. The Batch Slicer handles multiple sheets at once. For lossless re-importing, use the manual **Add .txt Metadata** button inside the slicer to associate your exported metadata file with its spritesheet. This guarantees all your original names and settings are preserved."
+        short: "Add new tiles and maps from files.",
+        long: "Use the **Import Tiles** button for individual images or the **Slice Sheet** button for spritesheets. The Batch Slicer can handle multiple sheets at once. For maps, use the **Import Map** button in the header. You can also **drag-and-drop** image files or map files (.txt) directly onto the application."
     },
     {
         name: "Live Preview",
@@ -327,13 +327,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </p>
                 </div>
                  <div className="space-y-3">
-                    <h4 className="font-semibold">Step 1: Adding Tiles to Your Palette</h4>
+                    <h4 className="font-semibold">Step 1: Adding Assets to Your Project</h4>
                     <p className="text-muted-foreground">
-                        Your map is made of tiles, which live in the <B>Palette</B> on the right. To start, you need to add some images. You can do this by dragging files directly onto the application.
+                        Your map is made of tiles, which live in the <B>Palette</B> on the right. You can import tiles, spritesheets, and existing maps. You can do this by using the header buttons or by dragging files directly onto the application.
                     </p>
                     <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
                         <li><B>For Individual Images:</B> Use the <i className="italic">Import Tiles</i> button (upload icon) in the header. Each image will become a single tile.</li>
-                        <li><B>For Spritesheets:</B> Use the <i className="italic">Slice Sheet</i> button (scissors icon). This opens the <B>Batch Slicer</B>, where you can specify tile dimensions (e.g., 16x16 pixels) to automatically cut up a sheet. You can also <B>drag-and-drop a spritesheet file</B> directly onto the app to open this tool.</li>
+                        <li><B>For Spritesheets:</B> Use the <i className="italic">Slice Sheet</i> button (scissors icon). This opens the <B>Batch Slicer</B>, where you can specify tile dimensions to automatically cut up a sheet.</li>
+                         <li><B>For Existing Maps:</B> Use the <i className="italic">Import Map</i> button (file icon) to load a .txt file.</li>
                     </ul>
                 </div>
                 <div className="space-y-3">
