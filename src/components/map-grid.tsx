@@ -80,6 +80,11 @@ export const MapGrid: FC<MapGridProps> = ({
       let newGrid = gridState.map(r => [...r]);
       const endCoords = { row, col };
 
+      // Boundary check to prevent crashes
+      if (row < 0 || row >= newGrid.length || col < 0 || col >= newGrid[0]?.length) {
+          return newGrid;
+      }
+
       if (currentTool === 'brush') {
           if (newGrid[row][col] !== selectedTileId) newGrid[row][col] = selectedTileId;
       } else if (currentTool === 'eraser') {
@@ -212,6 +217,10 @@ export const MapGrid: FC<MapGridProps> = ({
     setIsDrawing(true);
     setStartCell({ row, col });
     setCurrentCell({ row, col });
+
+    if (isBrushLikeTool) {
+      setPreviewGrid(performDraw(grid, row, col, tool));
+    }
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>, row: number, col: number) => {
@@ -290,7 +299,6 @@ export const MapGrid: FC<MapGridProps> = ({
     };
   }
 
-  const gridToRender = activeLayer ? (previewGrid || activeLayer.grid) : [[]];
   const gridLineWidth = 1;
 
   if (gridHeight === 0 || gridWidth === 0) {
@@ -305,13 +313,13 @@ export const MapGrid: FC<MapGridProps> = ({
             className={cn(
               "absolute inset-0 grid bg-transparent",
               isInteractive ? getCursorClass() : 'pointer-events-none',
-              isInteractive && 'z-10'
             )}
             style={{
                 gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
                 gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
                 gap: `${gridLineWidth}px`,
                 imageRendering: zoom < 1 ? 'auto' : 'pixelated',
+                zIndex: layer.id === activeLayer?.id ? 10 : 1,
             }}
             onMouseDown={(e) => isInteractive && handleMouseDown(e, Math.floor(e.nativeEvent.offsetY / (TILE_SIZE + gridLineWidth)), Math.floor(e.nativeEvent.offsetX / (TILE_SIZE + gridLineWidth)))}
             onMouseMove={(e) => isInteractive && handleMouseMove(e, Math.floor(e.nativeEvent.offsetY / (TILE_SIZE + gridLineWidth)), Math.floor(e.nativeEvent.offsetX / (TILE_SIZE + gridLineWidth)))}
@@ -357,21 +365,15 @@ export const MapGrid: FC<MapGridProps> = ({
 
   return (
     <div
-      className="relative p-px rounded-lg shadow-inner select-none"
+      className="relative p-px rounded-lg shadow-inner select-none bg-muted/20"
       style={{
           width: `${gridWidth * TILE_SIZE + gridWidth * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + gridHeight * gridLineWidth}px`,
       }}
     >
-        {/* Render all visible layers, sorted by order */}
+        {/* Render all visible layers */}
         {layers
           .map((layer, index) => ({ layer, index })) // Keep original index for stable sort
-          .sort((a, b) => {
-              // Bring active layer to the top of the sorting
-              if (a.layer.id === activeLayer?.id) return 1;
-              if (b.layer.id === activeLayer?.id) return -1;
-              return a.index - b.index; // Maintain original order for others
-          })
           .map(({ layer }) => 
             layer.isVisible && renderLayer(layer, layer.id === activeLayer?.id)
           )
