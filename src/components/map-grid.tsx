@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, MouseEvent, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, MouseEvent } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -76,14 +76,31 @@ export const MapGrid: FC<MapGridProps> = ({
     row: number, 
     col: number, 
     currentTool: Tool,
+    isCtrlPressed: boolean,
     startCoords?: {row: number, col: number} | null
     ): GridState => {
-      let newGrid = gridState.map(r => [...r]);
-      const endCoords = { row, col };
-
-      if (!newGrid || !newGrid[row] || newGrid[row][col] === undefined) {
+      if (!gridState || !gridState[row] || gridState[row][col] === undefined) {
           return gridState;
       }
+      let newGrid = gridState.map(r => [...r]);
+      const endCoords = { row, col };
+      
+      // Ctrl override for rectangle drawing
+      if (isCtrlPressed && startCoords) {
+        const minRow = Math.min(startCoords.row, endCoords.row);
+        const maxRow = Math.max(startCoords.row, endCoords.row);
+        const minCol = Math.min(startCoords.col, endCoords.col);
+        const maxCol = Math.max(startCoords.col, endCoords.col);
+        const tileId = tool === 'eraser' ? 0 : selectedTileId;
+        
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) newGrid[r][c] = tileId;
+          }
+        }
+        return newGrid;
+      }
+
 
       if (currentTool === 'brush') {
           if (newGrid[row][col] !== selectedTileId) newGrid[row][col] = selectedTileId;
@@ -235,8 +252,10 @@ export const MapGrid: FC<MapGridProps> = ({
     setStartCell(coords);
     setCurrentCell(coords);
     
-    if (isBrushLikeTool) {
-      setPreviewGrid(performDraw(grid, coords.row, coords.col, tool));
+    const isCtrlPressed = e.ctrlKey || e.metaKey;
+
+    if (isBrushLikeTool || isShapeTool || isCtrlPressed) {
+      setPreviewGrid(performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, coords));
     }
   };
 
@@ -247,11 +266,13 @@ export const MapGrid: FC<MapGridProps> = ({
 
     if (currentCell && currentCell.row === coords.row && currentCell.col === coords.col) return;
     setCurrentCell(coords);
+    
+    const isCtrlPressed = e.ctrlKey || e.metaKey;
 
-    if (isBrushLikeTool) {
-      setPreviewGrid(prev => performDraw(prev || grid, coords.row, coords.col, tool));
+    if (isBrushLikeTool || isCtrlPressed) {
+      setPreviewGrid(prev => performDraw(prev || grid, coords.row, coords.col, tool, isCtrlPressed, startCell));
     } else if (isShapeTool && startCell) {
-      setPreviewGrid(performDraw(grid, coords.row, coords.col, tool, startCell));
+      setPreviewGrid(performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, startCell));
     }
   };
 
@@ -263,13 +284,14 @@ export const MapGrid: FC<MapGridProps> = ({
     
     setIsDrawing(false);
     const isClick = startCell && startCell.row === coords.row && startCell.col === coords.col;
+    const isCtrlPressed = e.ctrlKey || e.metaKey;
 
-    if (tool === 'picker' || tool === 'fill' || tool === 'magic-wand') {
+    if (!isCtrlPressed && (tool === 'picker' || tool === 'fill' || tool === 'magic-wand')) {
       if(isClick) onCellAction(coords.row, coords.col);
-    } else if (tool === 'select' && startCell) {
+    } else if (!isCtrlPressed && tool === 'select' && startCell) {
       onSelectionCommit(startCell, coords);
     } else {
-        const finalGrid = previewGrid || performDraw(grid, coords.row, coords.col, tool, startCell);
+        const finalGrid = previewGrid || performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
         onDrawCommit(finalGrid);
     }
     

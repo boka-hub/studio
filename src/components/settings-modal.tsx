@@ -50,6 +50,7 @@ const shortcuts = [
     { keys: ['C'], description: 'Select Scatter Tool' },
     { keys: ['M'], 'description': 'Select/Lasso Tool' },
     { keys: ['W'], 'description': 'Select Magic Wand Tool' },
+    { keys: ['Ctrl', 'Drag'], description: 'Draw rectangle with current tile (overrides tool)' },
     { keys: ['Ctrl', 'C'], description: 'Copy selection to clipboard' },
     { keys: ['Ctrl', 'V'], description: 'Paste from clipboard to selection' },
     { keys: ['Delete'], description: 'Delete tiles within a selection' },
@@ -225,6 +226,11 @@ Selection Order (based on a standard 47-tile atlas):
         name: "Project Management",
         short: "Save and load multiple maps.",
         long: "All of your work is automatically saved in your browser. Use the **Manage Projects** button (database icon) to open the project manager. Here you can: **Save as New Project** to create a snapshot of your current map, **Load** a different project, **Rename** existing ones, or **Delete** projects you no longer need. The app will always auto-load the last project you worked on."
+    },
+     {
+        name: "Rectangle Shortcut",
+        short: "Quickly draw a rectangle with any tool.",
+        long: "Hold down the **Ctrl** key (or **Cmd** on Mac) and click-and-drag to draw a rectangle filled with your primary tile. This will override your currently selected tool. If you have the **Eraser** selected, it will draw a rectangle of empty tiles instead. This is a great way to quickly block out large areas or clear sections without switching tools."
     },
     {
         name: "Scatter",
