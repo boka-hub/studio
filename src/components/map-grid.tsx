@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, MouseEvent } from 'react';
+import React, { useState, useMemo, useCallback, MouseEvent, useEffect } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -55,33 +55,38 @@ export const MapGrid: FC<MapGridProps> = ({
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
+  const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
-  const [previewSelection, setPreviewSelection] = useState<Selection | null>(null);
-  const [isShapeDrag, setIsShapeDrag] = useState(false);
   
   const TILE_SIZE = useMemo(() => BASE_TILE_SIZE * zoom, [zoom]);
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
-  const isShapeTool = ['shape', 'gradient', 'noise', 'scatter', 'select'].includes(tool);
+  const isShapeTool = ['shape', 'gradient', 'noise', 'scatter'].includes(tool);
   const grid = activeLayer?.grid ?? [[]];
 
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
   }, [tiles]);
-  
-  const performFreeformDraw = useCallback((gridState: GridState, row: number, col: number): GridState => {
+
+  const performDraw = useCallback((
+    gridState: GridState, 
+    row: number, 
+    col: number, 
+    currentTool: Tool,
+    startCoords?: {row: number, col: number} | null
+    ): GridState => {
       let newGrid = gridState.map(r => [...r]);
-      if (tool === 'brush') {
-          if (newGrid[row][col] === selectedTileId) return newGrid;
-          newGrid[row][col] = selectedTileId;
-      } else if (tool === 'eraser') {
-          if (newGrid[row][col] === 0) return newGrid;
-          newGrid[row][col] = 0;
-      } else if (tool === 'spray') {
-         for (let r = -sprayRadius; r <= sprayRadius; r++) {
-            for (let c = -sprayRadius; c <= sprayRadius; c++) {
-                if (r * r + c * c <= sprayRadius * sprayRadius) {
-                    const targetRow = row + r;
-                    const targetCol = col + c;
+      const endCoords = { row, col };
+
+      if (currentTool === 'brush') {
+          if (newGrid[row][col] !== selectedTileId) newGrid[row][col] = selectedTileId;
+      } else if (currentTool === 'eraser') {
+          if (newGrid[row][col] !== 0) newGrid[row][col] = 0;
+      } else if (currentTool === 'spray') {
+         for (let r_offset = -sprayRadius; r_offset <= sprayRadius; r_offset++) {
+            for (let c_offset = -c_offset; c_offset <= sprayRadius; c_offset++) {
+                if (r_offset * r_offset + c_offset * c_offset <= sprayRadius * sprayRadius) {
+                    const targetRow = row + r_offset;
+                    const targetCol = col + c_offset;
                     if (targetRow >= 0 && targetRow < newGrid.length && targetCol >= 0 && targetCol < newGrid[0].length) {
                         if (Math.random() < sprayDensity) {
                             newGrid[targetRow][targetCol] = selectedTileId;
@@ -122,219 +127,167 @@ export const MapGrid: FC<MapGridProps> = ({
             }
           }
         }
-      }
-      return newGrid;
-  }, [tool, selectedTileId, autoTileMode, autoTileSet, sprayRadius, sprayDensity, autoTileOverwrite]);
-
-  const performShapeDraw = useCallback((gridState: GridState, start: {row: number, col: number}, end: {row: number, col: number}, currentTool: Tool, currentShape: Shape): GridState => {
-    let newGrid = gridState.map(r => [...r]);
-    const minRow = Math.min(start.row, end.row);
-    const maxRow = Math.max(start.row, end.row);
-    const minCol = Math.min(start.col, end.col);
-    const maxCol = Math.max(start.col, end.col);
-
-    let drawTool = currentTool;
-    // For Ctrl+Drag, the "tool" is brush/eraser, but we want to draw a shape
-    if (currentTool === 'brush' || currentTool === 'eraser' || currentTool === 'auto-tile') {
-      drawTool = 'shape'; 
-    }
-    const tileId = currentTool === 'eraser' ? 0 : selectedTileId;
-
-    if (drawTool === 'shape') {
-      if(currentShape === 'rectangle') {
-        for (let r = minRow; r <= maxRow; r++) {
-          for (let c = minCol; c <= maxCol; c++) {
-            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-              newGrid[r][c] = tileId;
+      } else if (isShapeTool && startCoords) {
+        const minRow = Math.min(startCoords.row, endCoords.row);
+        const maxRow = Math.max(startCoords.row, endCoords.row);
+        const minCol = Math.min(startCoords.col, endCoords.col);
+        const maxCol = Math.max(startCoords.col, endCoords.col);
+        const tileId = selectedTileId;
+        
+        if (currentTool === 'shape') {
+          if (shape === 'rectangle') {
+            for (let r = minRow; r <= maxRow; r++) {
+              for (let c = minCol; c <= maxCol; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) newGrid[r][c] = tileId;
+              }
             }
-          }
-        }
-      } else if (currentShape === 'circle') {
-          const centerX = (minCol + maxCol) / 2;
-          const centerY = (minRow + maxRow) / 2;
-          const radiusX = (maxCol - minCol) / 2;
-          const radiusY = (maxRow - minRow) / 2;
-          for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
-               const dx = (c - centerX) / radiusX;
-               const dy = (r - centerY) / radiusY;
-               if ((dx * dx) + (dy * dy) <= 1) {
-                  if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                    newGrid[r][c] = tileId;
-                  }
-               }
-            }
-          }
-      } else if (currentShape === 'line') {
-          // Bresenham's line algorithm
-          let x0 = start.col;
-          let y0 = start.row;
-          const x1 = end.col;
-          const y1 = end.row;
-
-          const dx = Math.abs(x1 - x0);
-          const sx = x0 < x1 ? 1 : -1;
-          const dy = -Math.abs(y1 - y0);
-          const sy = y0 < y1 ? 1 : -1;
-          let err = dx + dy;
-
-          while (true) {
-              if (y0 >= 0 && y0 < grid.length && x0 >= 0 && x0 < grid[0].length) {
-                  newGrid[y0][x0] = tileId;
+          } else if (shape === 'circle') {
+              const centerX = (minCol + maxCol) / 2;
+              const centerY = (minRow + maxRow) / 2;
+              const radiusX = (maxCol - minCol) / 2;
+              const radiusY = (maxRow - minRow) / 2;
+              for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                   const dx = radiusX === 0 ? 0 : (c - centerX) / radiusX;
+                   const dy = radiusY === 0 ? 0 : (r - centerY) / radiusY;
+                   if ((dx * dx) + (dy * dy) <= 1) {
+                      if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) newGrid[r][c] = tileId;
+                   }
+                }
               }
-              if (x0 === x1 && y0 === y1) break;
-              const e2 = 2 * err;
-              if (e2 >= dy) {
-                  err += dy;
-                  x0 += sx;
-              }
-              if (e2 <= dx) {
-                  err += dx;
-                  y0 += sy;
+          } else if (shape === 'line') {
+              let x0 = startCoords.col; let y0 = startCoords.row;
+              const x1 = endCoords.col; const y1 = endCoords.row;
+              const dx = Math.abs(x1 - x0); const sx = x0 < x1 ? 1 : -1;
+              const dy = -Math.abs(y1 - y0); const sy = y0 < y1 ? 1 : -1;
+              let err = dx + dy;
+              while (true) {
+                  if (y0 >= 0 && y0 < grid.length && x0 >= 0 && x0 < grid[0].length) newGrid[y0][x0] = tileId;
+                  if (x0 === x1 && y0 === y1) break;
+                  const e2 = 2 * err;
+                  if (e2 >= dy) { err += dy; x0 += sx; }
+                  if (e2 <= dx) { err += dx; y0 += sy; }
               }
           }
-      }
-    } else if (drawTool === 'gradient') {
-        const width = maxCol - minCol + 1;
-        for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
-                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                    const step = (c - minCol) / Math.max(1, width - 1);
-                    const threshold = ((r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25));
-                    newGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
+        } else if (currentTool === 'gradient') {
+            const width = maxCol - minCol + 1;
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                        const step = (c - minCol) / Math.max(1, width - 1);
+                        const threshold = ((r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25));
+                        newGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
+                    }
                 }
             }
-        }
-    } else if (drawTool === 'noise') {
-        for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
-                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                    const random = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453;
-                    newGrid[r][c] = (random - Math.floor(random)) < 0.5 ? selectedTileId : secondarySelectedTileId;
+        } else if (currentTool === 'noise') {
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                        newGrid[r][c] = Math.random() < 0.5 ? selectedTileId : secondarySelectedTileId;
+                    }
                 }
             }
-        }
-    } else if (drawTool === 'scatter') {
-         if (scatterSet.length === 0) return newGrid;
-         for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
-                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
-                    const randomIndex = Math.floor(Math.random() * scatterSet.length);
-                    newGrid[r][c] = scatterSet[randomIndex];
+        } else if (currentTool === 'scatter') {
+             if (scatterSet.length === 0) return newGrid;
+             for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                        const randomIndex = Math.floor(Math.random() * scatterSet.length);
+                        newGrid[r][c] = scatterSet[randomIndex];
+                    }
                 }
             }
         }
     }
     return newGrid;
-  }, [selectedTileId, secondarySelectedTileId, scatterSet, grid]);
+  }, [tool, shape, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite, grid]);
 
   const handleMouseDown = (e: MouseEvent, row: number, col: number) => {
-    if (isPreviewMode || !activeLayer) return;
+    if (isPreviewMode || !activeLayer || e.button !== 0) return;
+    e.preventDefault();
     setIsDrawing(true);
-    
-    const isCtrlDrag = (e.ctrlKey || e.metaKey) && isBrushLikeTool;
-    setIsShapeDrag(isCtrlDrag || isShapeTool);
+    setStartCell({ row, col });
+    setCurrentCell({ row, col });
 
-    if (isCtrlDrag || isShapeTool) {
-        setStartCell({ row, col });
-        setPreviewSelection(null);
-    } else if (isBrushLikeTool) {
-        const newPreviewGrid = performFreeformDraw(grid, row, col);
-        setPreviewGrid(newPreviewGrid);
-    } else {
-        // For simple click tools like Fill, Picker, Magic Wand
-        onCellAction(row, col);
+    if (isBrushLikeTool) {
+      setPreviewGrid(performDraw(grid, row, col, tool));
     }
   };
 
-  const handleMouseOver = (row: number, col: number) => {
-    if (!isDrawing || isPreviewMode || !activeLayer) return;
+  const handleMouseMove = (row: number, col: number) => {
+    if (!isDrawing || !activeLayer) return;
 
-    if (isShapeDrag) {
-        if(!startCell) return;
-        const minRow = Math.min(startCell.row, row);
-        const maxRow = Math.max(startCell.row, row);
-        const minCol = Math.min(startCell.col, col);
-        const maxCol = Math.max(startCell.col, col);
+    if (currentCell && currentCell.row === row && currentCell.col === col) return;
+    setCurrentCell({ row, col });
 
-        if (tool === 'select') {
-             setPreviewSelection({ minRow, minCol, maxRow, maxCol, selectedCells: undefined });
-             return;
-        }
-
-        const newPreviewGrid = performShapeDraw(grid, startCell, {row, col}, tool, shape);
-        setPreviewGrid(newPreviewGrid);
-
-    } else if (isBrushLikeTool) {
-        setPreviewGrid(currentPreview => {
-            if (!currentPreview) return null;
-            return performFreeformDraw(currentPreview, row, col);
-        });
+    if (isBrushLikeTool) {
+      setPreviewGrid(prevGrid => performDraw(prevGrid || grid, row, col, tool));
+    } else if (isShapeTool && startCell) {
+      setPreviewGrid(performDraw(grid, row, col, tool, startCell));
     }
   };
 
   const handleMouseUp = (row: number, col: number) => {
-    if (isPreviewMode || !isDrawing || !activeLayer) return;
+    if (!isDrawing || !activeLayer) return;
 
-    if (previewGrid) {
-      onDrawCommit(previewGrid);
-    } else if (startCell && tool === 'select') {
+    const isClick = startCell && startCell.row === row && startCell.col === col;
+
+    if (tool === 'picker' || tool === 'fill' || tool === 'magic-wand') {
+      if(isClick) onCellAction(row, col);
+    } else if (tool === 'select' && startCell) {
       onSelectionCommit(startCell, { row, col });
+    } else if (previewGrid) {
+      onDrawCommit(previewGrid);
+    } else if (isClick && (isBrushLikeTool || isShapeTool)) {
+      // Handle single click for brush-like and shape tools
+      onDrawCommit(performDraw(grid, row, col, tool, {row, col}));
     }
 
+    // Reset drawing state
     setIsDrawing(false);
     setStartCell(null);
+    setCurrentCell(null);
     setPreviewGrid(null);
-    setPreviewSelection(null);
-    setIsShapeDrag(false);
   };
-
-  const handleMouseLeave = (e: React.MouseEvent) => {
-    // This is the crucial check: if we're not dragging a file, we do nothing.
-    // This prevents the overlay from appearing for internal drags (like tile reordering).
-    if (isDrawing) {
-        const currentTarget = e.currentTarget;
-        setTimeout(() => {
-            if (currentTarget) {
-                const relatedTarget = e.relatedTarget as Node | null;
-                if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-                    setIsDrawing(false);
-                    setStartCell(null);
-                    setPreviewGrid(null);
-                    setPreviewSelection(null);
-                    setIsShapeDrag(false);
-                }
-            }
-        }, 50);
+  
+  const handleMouseLeave = () => {
+    if (isDrawing && previewGrid) {
+      onDrawCommit(previewGrid);
     }
+    setIsDrawing(false);
+    setStartCell(null);
+    setCurrentCell(null);
+    setPreviewGrid(null);
   };
   
   const getCursorClass = () => {
     if (isPreviewMode) return 'cursor-none';
     if (!activeLayer) return 'cursor-not-allowed';
     switch (tool) {
-      case 'brush':
-      case 'auto-tile':
-      case 'spray':
+      case 'brush': case 'auto-tile': case 'spray':
         return 'cursor-cell';
       case 'eraser':
         return 'cursor-crosshair';
-      case 'picker':
-      case 'fill':
-      case 'magic-wand':
+      case 'picker': case 'fill': case 'magic-wand':
         return 'cursor-pointer';
-      case 'shape':
-      case 'gradient':
-      case 'noise':
-      case 'scatter':
-      case 'select':
+      case 'shape': case 'gradient': case 'noise': case 'scatter': case 'select':
         return 'cursor-crosshair';
       default:
         return 'cursor-default';
     }
   };
   
-  const finalSelection = selection || previewSelection;
+  let selectionToRender = selection;
+  if (isDrawing && tool === 'select' && startCell && currentCell) {
+    selectionToRender = {
+      minRow: Math.min(startCell.row, currentCell.row),
+      maxRow: Math.max(startCell.row, currentCell.row),
+      minCol: Math.min(startCell.col, currentCell.col),
+      maxCol: Math.max(startCell.col, currentCell.col),
+    };
+  }
+
   const gridToRender = activeLayer ? (previewGrid || activeLayer.grid) : [[]];
   const gridHeight = gridToRender.length;
   const gridWidth = gridToRender[0]?.length || 0;
@@ -415,7 +368,7 @@ export const MapGrid: FC<MapGridProps> = ({
                     activeLayer?.isVisible ? 'bg-card/50' : 'bg-card/20'
                  )}
                 onMouseDown={(e) => handleMouseDown(e as unknown as MouseEvent, rowIndex, colIndex)}
-                onMouseOver={() => handleMouseOver(rowIndex, colIndex)}
+                onMouseMove={() => handleMouseMove(rowIndex, colIndex)}
                 onMouseUp={() => handleMouseUp(rowIndex, colIndex)}
                 style={{ width: TILE_SIZE, height: TILE_SIZE }}
               >
@@ -460,14 +413,14 @@ export const MapGrid: FC<MapGridProps> = ({
           </div>
         )}
       </div>
-       {finalSelection && !finalSelection.selectedCells && !isPreviewMode && (
+       {selectionToRender && !selectionToRender.selectedCells && !isPreviewMode && (
         <div
           className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
           style={{
-            left: `${finalSelection.minCol * (TILE_SIZE + gridLineWidth)}px`,
-            top: `${finalSelection.minRow * (TILE_SIZE + gridLineWidth)}px`,
-            width: `${(finalSelection.maxCol - finalSelection.minCol + 1) * TILE_SIZE + (finalSelection.maxCol - finalSelection.minCol) * gridLineWidth}px`,
-            height: `${(finalSelection.maxRow - finalSelection.minRow + 1) * TILE_SIZE + (finalSelection.maxRow - finalSelection.minRow) * gridLineWidth}px`,
+            left: `${selectionToRender.minCol * (TILE_SIZE + gridLineWidth)}px`,
+            top: `${selectionToRender.minRow * (TILE_SIZE + gridLineWidth)}px`,
+            width: `${(selectionToRender.maxCol - selectionToRender.minCol + 1) * TILE_SIZE + (selectionToRender.maxCol - selectionToRender.minCol) * gridLineWidth}px`,
+            height: `${(selectionToRender.maxRow - selectionToRender.minRow + 1) * TILE_SIZE + (selectionToRender.maxRow - selectionToRender.minRow) * gridLineWidth}px`,
             boxSizing: 'content-box',
           }}
         />
