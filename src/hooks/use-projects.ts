@@ -325,6 +325,10 @@ export const useProjects = () => {
     }), true); // Batch update for visibility toggle
   }, [modifyCurrentProject]);
 
+  const reorderLayers = useCallback((newLayers: Layer[]) => {
+      modifyCurrentProject(() => ({ layers: newLayers }));
+  }, [modifyCurrentProject]);
+
   return {
     projects,
     currentProject,
@@ -348,5 +352,6 @@ export const useProjects = () => {
     selectLayer,
     renameLayer,
     toggleLayerVisibility,
+    reorderLayers,
   };
 };

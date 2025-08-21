@@ -107,6 +107,7 @@ export default function Home() {
     selectLayer,
     renameLayer,
     toggleLayerVisibility,
+    reorderLayers,
   } = useProjects();
   
   const { tiles, layers, activeLayerId } = currentProject;
@@ -957,6 +958,7 @@ export default function Home() {
                             onSelectLayer={selectLayer}
                             onRenameLayer={renameLayer}
                             onToggleVisibility={toggleLayerVisibility}
+                            onReorderLayers={reorderLayers}
                         />
                       }
                     />

@@ -351,17 +351,7 @@ export const MapGrid: FC<MapGridProps> = ({
     return (
         <div
             key={layer.id}
-            className={cn(
-              "absolute inset-0 grid bg-transparent",
-              isInteractive ? getCursorClass() : 'pointer-events-none',
-            )}
-            style={{
-                gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
-                gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
-                gap: `${gridLineWidth}px`,
-                imageRendering: zoom < 1 ? 'auto' : 'pixelated',
-                zIndex: layer.id === activeLayer?.id ? 10 : 1,
-            }}
+            className="absolute inset-0 grid bg-transparent"
         >
             {gridData.map((row, rowIndex) =>
                 row.map((tileId, colIndex) => {
@@ -402,10 +392,17 @@ export const MapGrid: FC<MapGridProps> = ({
 
   return (
     <div
-      className="relative p-px rounded-lg shadow-inner select-none bg-muted/20"
+      className={cn(
+        "relative p-px rounded-lg shadow-inner select-none bg-muted/20",
+        getCursorClass()
+      )}
       style={{
           width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
+          gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
+          gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
+          gap: `${gridLineWidth}px`,
+          imageRendering: zoom < 1 ? 'auto' : 'pixelated',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -415,20 +412,32 @@ export const MapGrid: FC<MapGridProps> = ({
         {layers
           .map((layer, index) => ({ layer, index }))
           .sort((a,b) => a.index - b.index) 
-          .map(({ layer }) => 
-            layer.isVisible && renderLayer(layer, layer.id === activeLayer?.id)
+          .map(({ layer, index }) => 
+            layer.isVisible && (
+            <div
+                key={layer.id}
+                className="absolute inset-0"
+                style={{
+                  zIndex: index,
+                  pointerEvents: layer.id === activeLayer?.id ? 'auto' : 'none'
+                }}
+              >
+               {renderLayer(layer, layer.id === activeLayer?.id)}
+            </div>
+            )
           )
         }
        
        {isPreviewMode && (
           <div 
-            className="absolute flex items-center justify-center pointer-events-none z-20"
+            className="absolute flex items-center justify-center pointer-events-none"
             style={{
               left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
               top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
               width: `${TILE_SIZE}px`,
               height: `${TILE_SIZE}px`,
               transition: 'left 150ms ease-out, top 150ms ease-out',
+              zIndex: layers.length + 1,
             }}
           >
             <div 
@@ -444,13 +453,14 @@ export const MapGrid: FC<MapGridProps> = ({
 
        {selectionToRender && !selectionToRender.selectedCells && !isPreviewMode && (
         <div
-          className="absolute border-2 border-dashed border-blue-500 pointer-events-none z-20"
+          className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
           style={{
             left: `${selectionToRender.minCol * (TILE_SIZE + gridLineWidth)}px`,
             top: `${selectionToRender.minRow * (TILE_SIZE + gridLineWidth)}px`,
             width: `${(selectionToRender.maxCol - selectionToRender.minCol + 1) * (TILE_SIZE + gridLineWidth) - gridLineWidth}px`,
             height: `${(selectionToRender.maxRow - selectionToRender.minRow + 1) * (TILE_SIZE + gridLineWidth) - gridLineWidth}px`,
             boxSizing: 'content-box',
+            zIndex: layers.length + 2,
           }}
         />
       )}

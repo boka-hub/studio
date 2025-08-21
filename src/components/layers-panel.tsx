@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Layer } from '@/lib/types';
-import { PlusCircle, Eye, EyeOff, Trash2, Edit, Check, X } from 'lucide-react';
+import { PlusCircle, Eye, EyeOff, Trash2, Edit, Check, X, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -26,6 +26,7 @@ interface LayersPanelProps {
   onSelectLayer: (id: string) => void;
   onRenameLayer: (id: string, newName: string) => void;
   onToggleVisibility: (id: string) => void;
+  onReorderLayers: (layers: Layer[]) => void;
 }
 
 export const LayersPanel: React.FC<LayersPanelProps> = ({
@@ -36,9 +37,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onSelectLayer,
   onRenameLayer,
   onToggleVisibility,
+  onReorderLayers,
 }) => {
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
+
+  const dragTargetRef = useRef<HTMLDivElement | null>(null);
 
   const startEditing = (layer: Layer) => {
     setEditingLayerId(layer.id);
@@ -59,6 +64,66 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
     cancelEditing();
   };
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, layerId: string) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedLayerId(layerId);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (dragTargetRef.current) {
+        dragTargetRef.current.style.borderBottom = '';
+        dragTargetRef.current.style.borderTop = '';
+    }
+    const targetElement = e.currentTarget as HTMLDivElement;
+    dragTargetRef.current = targetElement;
+    
+    const rect = targetElement.getBoundingClientRect();
+    const isAfter = e.clientY > rect.top + rect.height / 2;
+
+    if(isAfter) {
+        targetElement.style.borderBottom = '2px solid hsl(var(--primary))';
+    } else {
+        targetElement.style.borderTop = '2px solid hsl(var(--primary))';
+    }
+  };
+
+  const handleDragLeave = () => {
+     if (dragTargetRef.current) {
+        dragTargetRef.current.style.borderBottom = '';
+        dragTargetRef.current.style.borderTop = '';
+        dragTargetRef.current = null;
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropLayerId: string) => {
+    e.preventDefault();
+    handleDragLeave();
+
+    if (draggedLayerId === null || draggedLayerId === dropLayerId) {
+      setDraggedLayerId(null);
+      return;
+    }
+    
+    const reordered = Array.from(layers);
+    const draggedIndex = layers.findIndex(l => l.id === draggedLayerId);
+    const dropIndex = layers.findIndex(l => l.id === dropLayerId);
+
+    const [draggedItem] = reordered.splice(draggedIndex, 1);
+    reordered.splice(dropIndex, 0, draggedItem);
+    
+    onReorderLayers(reordered.reverse());
+    setDraggedLayerId(null);
+  };
+
+  const handleDragEnd = () => {
+    handleDragLeave();
+    setDraggedLayerId(null);
+  };
+
+  // Layers are rendered from top to bottom, but z-index wise they go from bottom to top.
+  // We reverse the array for display so that the "top" layer (rendered last) is at the top of the list.
+  const displayLayers = [...layers].reverse();
 
   return (
     <div className="px-2 space-y-2">
@@ -70,15 +135,23 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
       </div>
       <ScrollArea className="h-48 border rounded-md">
         <div className="p-1 space-y-1">
-          {layers.map(layer => (
+          {displayLayers.map(layer => (
             <div
               key={layer.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, layer.id)}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, layer.id)}
+              onDragEnd={handleDragEnd}
               className={cn(
-                'flex items-center p-1.5 rounded-md cursor-pointer hover:bg-muted',
-                activeLayerId === layer.id && 'bg-secondary hover:bg-secondary'
+                'flex items-center p-1.5 rounded-md cursor-pointer transition-opacity border-y-2 border-transparent',
+                activeLayerId === layer.id && 'bg-secondary hover:bg-secondary',
+                draggedLayerId === layer.id ? 'opacity-50' : 'opacity-100'
               )}
               onClick={() => onSelectLayer(layer.id)}
             >
+              <GripVertical className="h-4 w-4 mr-2 text-muted-foreground cursor-move" />
              {editingLayerId === layer.id ? (
                 <div className="flex-grow flex items-center gap-1">
                     <Input 
