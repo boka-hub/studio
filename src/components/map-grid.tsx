@@ -374,6 +374,7 @@ export const MapGrid: FC<MapGridProps> = ({
         {/* Render all visible layers */}
         {layers
           .map((layer, index) => ({ layer, index })) // Keep original index for stable sort
+          .sort((a,b) => a.index - b.index) // Sort layers by their original order
           .map(({ layer }) => 
             layer.isVisible && renderLayer(layer, layer.id === activeLayer?.id)
           )
