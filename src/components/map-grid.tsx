@@ -292,7 +292,7 @@ export const MapGrid: FC<MapGridProps> = ({
       onSelectionCommit(startCell, coords);
     } else {
         const finalGrid = previewGrid || performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
-        onDrawCommit(finalGrid);
+        if (finalGrid) onDrawCommit(finalGrid);
     }
     
     setStartCell(null);
@@ -346,46 +346,41 @@ export const MapGrid: FC<MapGridProps> = ({
     return <div className="text-muted-foreground">No layers available or grid is empty.</div>
   }
 
-  const renderLayer = (layer: Layer, isInteractive: boolean) => {
+  const renderLayerGrid = (layer: Layer, isInteractive: boolean) => {
     const gridData = (isInteractive && previewGrid) ? previewGrid : layer.grid;
-    return (
-        <div
-            key={layer.id}
-            className="absolute inset-0 grid bg-transparent"
-        >
-            {gridData.map((row, rowIndex) =>
-                row.map((tileId, colIndex) => {
-                    const tile = tileMap.get(tileId);
-                    const isCellSelectedByWand = selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
+    if (!gridData || gridData.length === 0 || gridData[0].length === 0) return null;
 
-                    return (
-                        <div
-                            key={`${layer.id}-${rowIndex}-${colIndex}`}
-                            className={cn(
-                                "relative",
-                                layer.id === activeLayer?.id && layer.isVisible ? 'bg-card/50' : 'bg-transparent'
-                            )}
-                            style={{ width: TILE_SIZE, height: TILE_SIZE }}
-                        >
-                            {tile && tile.id !== 0 && (
-                                <Image
-                                    src={tile.src}
-                                    alt={tile.name}
-                                    fill
-                                    sizes={`${TILE_SIZE}px`}
-                                    className="pointer-events-none object-cover"
-                                    unoptimized
-                                    data-ai-hint="pixel art tile"
-                                />
-                            )}
-                            {isInteractive && isCellSelectedByWand && (
-                                <div className="absolute inset-0 bg-blue-500/30 pointer-events-none" />
-                            )}
-                        </div>
-                    );
-                })
-            )}
-        </div>
+    return gridData.map((row, rowIndex) =>
+        row.map((tileId, colIndex) => {
+            const tile = tileMap.get(tileId);
+            const isCellSelectedByWand = selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
+
+            return (
+                <div
+                    key={`${layer.id}-${rowIndex}-${colIndex}`}
+                    className={cn(
+                        "relative",
+                        layer.id === activeLayer?.id && layer.isVisible ? 'bg-card/50' : 'bg-transparent'
+                    )}
+                    style={{ width: TILE_SIZE, height: TILE_SIZE }}
+                >
+                    {tile && tile.id !== 0 && (
+                        <Image
+                            src={tile.src}
+                            alt={tile.name}
+                            fill
+                            sizes={`${TILE_SIZE}px`}
+                            className="pointer-events-none object-cover"
+                            unoptimized
+                            data-ai-hint="pixel art tile"
+                        />
+                    )}
+                    {isInteractive && isCellSelectedByWand && (
+                        <div className="absolute inset-0 bg-blue-500/30 pointer-events-none" />
+                    )}
+                </div>
+            );
+        })
     );
   };
 
@@ -393,7 +388,7 @@ export const MapGrid: FC<MapGridProps> = ({
   return (
     <div
       className={cn(
-        "relative p-px rounded-lg shadow-inner select-none bg-muted/20",
+        "relative p-px rounded-lg shadow-inner select-none bg-muted/20 grid",
         getCursorClass()
       )}
       style={{
@@ -416,13 +411,15 @@ export const MapGrid: FC<MapGridProps> = ({
             layer.isVisible && (
             <div
                 key={layer.id}
-                className="absolute inset-0"
-                style={{
+                className="absolute inset-0 grid"
+                 style={{
+                  gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
+                  gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                   zIndex: index,
                   pointerEvents: layer.id === activeLayer?.id ? 'auto' : 'none'
                 }}
               >
-               {renderLayer(layer, layer.id === activeLayer?.id)}
+               {renderLayerGrid(layer, layer.id === activeLayer?.id)}
             </div>
             )
           )
