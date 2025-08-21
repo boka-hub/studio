@@ -61,8 +61,11 @@ export const MapGrid: FC<MapGridProps> = ({
   const TILE_SIZE = useMemo(() => BASE_TILE_SIZE * zoom, [zoom]);
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter'].includes(tool);
+  
   const grid = activeLayer?.grid ?? [[]];
-
+  const gridHeight = grid.length;
+  const gridWidth = grid[0]?.length || 0;
+  
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
   }, [tiles]);
@@ -203,62 +206,61 @@ export const MapGrid: FC<MapGridProps> = ({
     return newGrid;
   }, [tool, shape, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite, grid]);
 
-  const handleMouseDown = (e: MouseEvent, row: number, col: number) => {
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>, row: number, col: number) => {
     if (isPreviewMode || !activeLayer || e.button !== 0) return;
     e.preventDefault();
     setIsDrawing(true);
     setStartCell({ row, col });
     setCurrentCell({ row, col });
-
-    if (isBrushLikeTool) {
-      setPreviewGrid(performDraw(grid, row, col, tool));
-    }
   };
 
-  const handleMouseMove = (row: number, col: number) => {
-    if (!isDrawing || !activeLayer) return;
-
-    if (currentCell && currentCell.row === row && currentCell.col === col) return;
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>, row: number, col: number) => {
+    if (!isDrawing || !activeLayer || !currentCell) return;
+    if (currentCell.row === row && currentCell.col === col) return;
+    
     setCurrentCell({ row, col });
 
     if (isBrushLikeTool) {
-      setPreviewGrid(prevGrid => performDraw(prevGrid || grid, row, col, tool));
+      setPreviewGrid(prev => performDraw(prev || grid, row, col, tool));
     } else if (isShapeTool && startCell) {
       setPreviewGrid(performDraw(grid, row, col, tool, startCell));
     }
   };
 
-  const handleMouseUp = (row: number, col: number) => {
+  const handleMouseUp = (e: MouseEvent<HTMLDivElement>, row: number, col: number) => {
     if (!isDrawing || !activeLayer) return;
 
-    const isClick = startCell && startCell.row === row && startCell.col === col;
+    setIsDrawing(false);
+    const endCell = { row, col };
+    const isClick = startCell && startCell.row === endCell.row && startCell.col === endCell.col;
 
     if (tool === 'picker' || tool === 'fill' || tool === 'magic-wand') {
       if(isClick) onCellAction(row, col);
     } else if (tool === 'select' && startCell) {
-      onSelectionCommit(startCell, { row, col });
-    } else if (previewGrid) {
-      onDrawCommit(previewGrid);
-    } else if (isClick && (isBrushLikeTool || isShapeTool)) {
-      // Handle single click for brush-like and shape tools
-      onDrawCommit(performDraw(grid, row, col, tool, {row, col}));
+      onSelectionCommit(startCell, endCell);
+    } else {
+        const finalGrid = previewGrid || performDraw(grid, row, col, tool, startCell);
+        onDrawCommit(finalGrid);
     }
-
+    
     // Reset drawing state
-    setIsDrawing(false);
     setStartCell(null);
     setCurrentCell(null);
     setPreviewGrid(null);
   };
   
-  const handleMouseLeave = () => {
-    if (isDrawing && previewGrid) {
-      onDrawCommit(previewGrid);
+  const handleMouseLeave = (e: MouseEvent<HTMLDivElement>) => {
+    if (isDrawing && activeLayer) {
+        setIsDrawing(false);
+        if (previewGrid) {
+           onDrawCommit(previewGrid);
+        } else if (tool === 'select' && startCell && currentCell) {
+           onSelectionCommit(startCell, currentCell);
+        }
+        setStartCell(null);
+        setCurrentCell(null);
+        setPreviewGrid(null);
     }
-    setIsDrawing(false);
-    setStartCell(null);
-    setCurrentCell(null);
-    setPreviewGrid(null);
   };
   
   const getCursorClass = () => {
@@ -289,111 +291,96 @@ export const MapGrid: FC<MapGridProps> = ({
   }
 
   const gridToRender = activeLayer ? (previewGrid || activeLayer.grid) : [[]];
-  const gridHeight = gridToRender.length;
-  const gridWidth = gridToRender[0]?.length || 0;
   const gridLineWidth = 1;
 
   if (gridHeight === 0 || gridWidth === 0) {
     return <div className="text-muted-foreground">No layers available or grid is empty.</div>
   }
 
-  return (
-    <div
-      className="relative flex items-center justify-center w-full h-full"
-      onMouseLeave={handleMouseLeave}
-    >
-        <div className="absolute inset-0 grid"
+  const renderLayer = (layer: Layer, isInteractive: boolean) => {
+    const gridData = (isInteractive && previewGrid) ? previewGrid : layer.grid;
+    return (
+        <div
+            key={layer.id}
+            className={cn(
+              "absolute inset-0 grid bg-transparent",
+              isInteractive ? getCursorClass() : 'pointer-events-none',
+              isInteractive && 'z-10'
+            )}
             style={{
                 gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
                 gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
-                width: `${gridWidth * TILE_SIZE + gridWidth * gridLineWidth}px`,
-                height: `${gridHeight * TILE_SIZE + gridHeight * gridLineWidth}px`,
                 gap: `${gridLineWidth}px`,
+                imageRendering: zoom < 1 ? 'auto' : 'pixelated',
             }}
+            onMouseDown={(e) => isInteractive && handleMouseDown(e, Math.floor(e.nativeEvent.offsetY / (TILE_SIZE + gridLineWidth)), Math.floor(e.nativeEvent.offsetX / (TILE_SIZE + gridLineWidth)))}
+            onMouseMove={(e) => isInteractive && handleMouseMove(e, Math.floor(e.nativeEvent.offsetY / (TILE_SIZE + gridLineWidth)), Math.floor(e.nativeEvent.offsetX / (TILE_SIZE + gridLineWidth)))}
+            onMouseUp={(e) => isInteractive && handleMouseUp(e, Math.floor(e.nativeEvent.offsetY / (TILE_SIZE + gridLineWidth)), Math.floor(e.nativeEvent.offsetX / (TILE_SIZE + gridLineWidth)))}
+            onMouseLeave={isInteractive ? handleMouseLeave : undefined}
         >
-            {/* Render all visible layers underneath the active one */}
-            {layers.filter(l => l.isVisible && l.id !== activeLayer?.id).map(layer => (
-                <div key={layer.id} className="absolute inset-0 pointer-events-none grid"
-                    style={{
-                        gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
-                        gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
-                        gap: `${gridLineWidth}px`,
-                        imageRendering: zoom < 1 ? 'auto' : 'pixelated',
-                    }}
-                >
-                    {layer.grid.map((row, rowIndex) =>
-                        row.map((tileId, colIndex) => {
-                            const tile = tileMap.get(tileId);
-                            return (
-                                <div key={`${layer.id}-${rowIndex}-${colIndex}`} className="relative bg-transparent">
-                                    {tile && tile.id !== 0 && (
-                                        <Image
-                                            src={tile.src}
-                                            alt={tile.name}
-                                            fill
-                                            sizes={`${TILE_SIZE}px`}
-                                            className="pointer-events-none object-cover"
-                                            unoptimized
-                                        />
-                                    )}
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
-            ))}
+            {gridData.map((row, rowIndex) =>
+                row.map((tileId, colIndex) => {
+                    const tile = tileMap.get(tileId);
+                    const isCellSelectedByWand = selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
+
+                    return (
+                        <div
+                            key={`${layer.id}-${rowIndex}-${colIndex}`}
+                            className={cn(
+                                "relative",
+                                layer.id === activeLayer?.id && layer.isVisible ? 'bg-card/50' : 'bg-transparent'
+                            )}
+                            style={{ width: TILE_SIZE, height: TILE_SIZE }}
+                        >
+                            {tile && tile.id !== 0 && (
+                                <Image
+                                    src={tile.src}
+                                    alt={tile.name}
+                                    fill
+                                    sizes={`${TILE_SIZE}px`}
+                                    className="pointer-events-none object-cover"
+                                    unoptimized
+                                    data-ai-hint="pixel art tile"
+                                />
+                            )}
+                            {isInteractive && isCellSelectedByWand && (
+                                <div className="absolute inset-0 bg-blue-500/30 pointer-events-none" />
+                            )}
+                        </div>
+                    );
+                })
+            )}
         </div>
-      <div
-        className={cn("bg-transparent p-px rounded-lg shadow-inner select-none", getCursorClass())}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
-          gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
+    );
+  };
+
+
+  return (
+    <div
+      className="relative p-px rounded-lg shadow-inner select-none"
+      style={{
           width: `${gridWidth * TILE_SIZE + gridWidth * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + gridHeight * gridLineWidth}px`,
-          gap: `${gridLineWidth}px`,
-          imageRendering: zoom < 1 ? 'auto' : 'pixelated',
-        }}
-      >
-        {gridToRender.map((row, rowIndex) =>
-          row.map((tileId, colIndex) => {
-            const tile = tileMap.get(tileId);
-            const isCellSelectedByWand = selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
-
-            return (
-              <div
-                key={`${rowIndex}-${colIndex}`}
-                className={cn(
-                    "relative",
-                    activeLayer?.isVisible ? 'bg-card/50' : 'bg-card/20'
-                 )}
-                onMouseDown={(e) => handleMouseDown(e as unknown as MouseEvent, rowIndex, colIndex)}
-                onMouseMove={() => handleMouseMove(rowIndex, colIndex)}
-                onMouseUp={() => handleMouseUp(rowIndex, colIndex)}
-                style={{ width: TILE_SIZE, height: TILE_SIZE }}
-              >
-                {tile && tile.id !== 0 && (
-                  <Image
-                    src={tile.src}
-                    alt={tile.name}
-                    fill
-                    sizes={`${TILE_SIZE}px`}
-                    className="pointer-events-none object-cover"
-                    unoptimized
-                    data-ai-hint="pixel art tile"
-                  />
-                )}
-                 {isCellSelectedByWand && (
-                  <div className="absolute inset-0 bg-blue-500/30 pointer-events-none" />
-                )}
-              </div>
-            );
+      }}
+    >
+        {/* Render all visible layers, sorted by order */}
+        {layers
+          .map((layer, index) => ({ layer, index })) // Keep original index for stable sort
+          .sort((a, b) => {
+              // Bring active layer to the top of the sorting
+              if (a.layer.id === activeLayer?.id) return 1;
+              if (b.layer.id === activeLayer?.id) return -1;
+              return a.index - b.index; // Maintain original order for others
           })
-        )}
-
-         {isPreviewMode && (
+          .map(({ layer }) => 
+            layer.isVisible && renderLayer(layer, layer.id === activeLayer?.id)
+          )
+        }
+       
+       {/* Preview Mode Player */}
+       {isPreviewMode && (
           <div 
-            className="absolute flex items-center justify-center pointer-events-none"
+            className="absolute flex items-center justify-center pointer-events-none z-20"
             style={{
               left: `${playerPos.col * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
               top: `${playerPos.row * (TILE_SIZE + gridLineWidth) + gridLineWidth}px`,
@@ -412,10 +399,11 @@ export const MapGrid: FC<MapGridProps> = ({
             />
           </div>
         )}
-      </div>
+
+       {/* Selection Box */}
        {selectionToRender && !selectionToRender.selectedCells && !isPreviewMode && (
         <div
-          className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
+          className="absolute border-2 border-dashed border-blue-500 pointer-events-none z-20"
           style={{
             left: `${selectionToRender.minCol * (TILE_SIZE + gridLineWidth)}px`,
             top: `${selectionToRender.minRow * (TILE_SIZE + gridLineWidth)}px`,
