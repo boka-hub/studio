@@ -63,9 +63,7 @@ export const MapGrid: FC<MapGridProps> = ({
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter'].includes(tool);
   
-  const grid = activeLayer?.grid ?? [[]];
-  const gridHeight = grid.length;
-  const gridWidth = grid[0]?.length || 0;
+  const grid = activeLayer?.grid;
   
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
@@ -94,7 +92,7 @@ export const MapGrid: FC<MapGridProps> = ({
         
         for (let r = minRow; r <= maxRow; r++) {
           for (let c = minCol; c <= maxCol; c++) {
-            if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) newGrid[r][c] = tileId;
+            if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
           }
         }
         return newGrid;
@@ -161,7 +159,7 @@ export const MapGrid: FC<MapGridProps> = ({
           if (shape === 'rectangle') {
             for (let r = minRow; r <= maxRow; r++) {
               for (let c = minCol; c <= maxCol; c++) {
-                if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) newGrid[r][c] = tileId;
+                if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
               }
             }
           } else if (shape === 'circle') {
@@ -174,7 +172,7 @@ export const MapGrid: FC<MapGridProps> = ({
                    const dx = radiusX === 0 ? 0 : (c - centerX) / radiusX;
                    const dy = radiusY === 0 ? 0 : (r - centerY) / radiusY;
                    if ((dx * dx) + (dy * dy) <= 1) {
-                      if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) newGrid[r][c] = tileId;
+                      if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
                    }
                 }
               }
@@ -185,7 +183,7 @@ export const MapGrid: FC<MapGridProps> = ({
               const dy = -Math.abs(y1 - y0); const sy = y0 < y1 ? 1 : -1;
               let err = dx + dy;
               while (true) {
-                  if (y0 >= 0 && y0 < grid.length && x0 >= 0 && x0 < grid[0].length) newGrid[y0][x0] = tileId;
+                  if (y0 >= 0 && y0 < newGrid.length && x0 >= 0 && x0 < newGrid[0].length) newGrid[y0][x0] = tileId;
                   if (x0 === x1 && y0 === y1) break;
                   const e2 = 2 * err;
                   if (e2 >= dy) { err += dy; x0 += sx; }
@@ -196,7 +194,7 @@ export const MapGrid: FC<MapGridProps> = ({
             const width = maxCol - minCol + 1;
             for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
-                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) {
                         const step = (c - minCol) / Math.max(1, width - 1);
                         const threshold = ((r % 2 === 0) ? (c % 2 === 0 ? 0.25 : 0.75) : (c % 2 === 0 ? 0.75 : 0.25));
                         newGrid[r][c] = step < threshold ? selectedTileId : secondarySelectedTileId;
@@ -206,7 +204,7 @@ export const MapGrid: FC<MapGridProps> = ({
         } else if (currentTool === 'noise') {
             for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
-                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) {
                         newGrid[r][c] = Math.random() < 0.5 ? selectedTileId : secondarySelectedTileId;
                     }
                 }
@@ -215,7 +213,7 @@ export const MapGrid: FC<MapGridProps> = ({
              if (scatterSet.length === 0) return newGrid;
              for (let r = minRow; r <= maxRow; r++) {
                 for (let c = minCol; c <= maxCol; c++) {
-                    if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+                    if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) {
                         const randomIndex = Math.floor(Math.random() * scatterSet.length);
                         newGrid[r][c] = scatterSet[randomIndex];
                     }
@@ -224,12 +222,16 @@ export const MapGrid: FC<MapGridProps> = ({
         }
     }
     return newGrid;
-  }, [tool, shape, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite, grid.length, grid[0]?.length]);
+  }, [tool, shape, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite]);
 
   const getCoordsFromEvent = (e: MouseEvent<HTMLDivElement>): { row: number, col: number } | null => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+
+    if (!grid) return null;
+    const gridHeight = grid.length;
+    const gridWidth = grid[0]?.length || 0;
     
     const col = Math.floor(x / (TILE_SIZE + gridLineWidth));
     const row = Math.floor(y / (TILE_SIZE + gridLineWidth));
@@ -241,7 +243,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
-    if (isPreviewMode || !activeLayer || e.button !== 0) return;
+    if (isPreviewMode || !activeLayer || !grid || e.button !== 0) return;
     const coords = getCoordsFromEvent(e);
     if (!coords) return;
     
@@ -258,7 +260,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !activeLayer) return;
+    if (!isDrawing || !activeLayer || !grid) return;
     const coords = getCoordsFromEvent(e);
     if (!coords) return;
 
@@ -275,7 +277,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !activeLayer) return;
+    if (!isDrawing || !activeLayer || !grid) return;
     
     const coords = getCoordsFromEvent(e) || currentCell;
     if (!coords) return;
@@ -299,7 +301,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
   
   const handleMouseLeave = (e: MouseEvent<HTMLDivElement>) => {
-    if (isDrawing && activeLayer) {
+    if (isDrawing && activeLayer && grid) {
         if (previewGrid) {
            onDrawCommit(previewGrid);
         } else if (tool === 'select' && startCell && currentCell) {
@@ -328,6 +330,13 @@ export const MapGrid: FC<MapGridProps> = ({
         return 'cursor-default';
     }
   };
+
+  if (!activeLayer || !grid) {
+    return <div className="text-muted-foreground">No active layer selected or grid is empty.</div>
+  }
+  
+  const gridHeight = grid.length;
+  const gridWidth = grid[0]?.length || 0;
   
   let selectionToRender = selection;
   if (isDrawing && tool === 'select' && startCell && currentCell) {
@@ -337,11 +346,6 @@ export const MapGrid: FC<MapGridProps> = ({
       minCol: Math.min(startCell.col, currentCell.col),
       maxCol: Math.max(startCell.col, currentCell.col),
     };
-  }
-
-
-  if (gridHeight === 0 || gridWidth === 0) {
-    return <div className="text-muted-foreground">No layers available or grid is empty.</div>
   }
 
   const renderLayerGrid = (layer: Layer, isInteractive: boolean) => {
