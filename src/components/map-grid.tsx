@@ -421,7 +421,7 @@ export const MapGrid: FC<MapGridProps> = ({
                       gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
                       gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                       zIndex: index,
-                      pointerEvents: layer.id === activeLayer?.id ? 'auto' : 'none'
+                      pointerEvents: 'none'
                     }}
                   >
                    {renderLayerGrid(layer, layer.id === activeLayer?.id)}
@@ -470,3 +470,5 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
+
+    
