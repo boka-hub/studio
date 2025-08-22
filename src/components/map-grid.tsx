@@ -85,7 +85,6 @@ export const MapGrid: FC<MapGridProps> = ({
       let newGrid = gridState.map(r => [...r]);
       const endCoords = { row, col };
       
-      // Ctrl override for rectangle drawing
       if (isCtrlPressed && startCoords) {
         const minRow = Math.min(startCoords.row, endCoords.row);
         const maxRow = Math.max(startCoords.row, endCoords.row);
@@ -100,7 +99,6 @@ export const MapGrid: FC<MapGridProps> = ({
         }
         return newGrid;
       }
-
 
       if (currentTool === 'brush') {
           if (newGrid[row][col] !== selectedTileId) newGrid[row][col] = selectedTileId;
@@ -358,10 +356,7 @@ export const MapGrid: FC<MapGridProps> = ({
             return (
                 <div
                     key={`${layer.id}-${rowIndex}-${colIndex}`}
-                    className={cn(
-                        "relative",
-                        layer.id === activeLayer?.id && layer.isVisible ? 'bg-card/50' : 'bg-transparent'
-                    )}
+                    className="relative"
                     style={{ width: TILE_SIZE, height: TILE_SIZE }}
                 >
                     {tile && tile.id !== 0 && (
@@ -370,13 +365,13 @@ export const MapGrid: FC<MapGridProps> = ({
                             alt={tile.name}
                             fill
                             sizes={`${TILE_SIZE}px`}
-                            className="pointer-events-none object-cover"
+                            className="object-cover"
                             unoptimized
                             data-ai-hint="pixel art tile"
                         />
                     )}
                     {isInteractive && isCellSelectedByWand && (
-                        <div className="absolute inset-0 bg-blue-500/30 pointer-events-none" />
+                        <div className="absolute inset-0 bg-blue-500/30" />
                     )}
                 </div>
             );
@@ -384,50 +379,46 @@ export const MapGrid: FC<MapGridProps> = ({
     );
   };
 
-
   return (
     <div
-      className={cn(
-        "relative p-px rounded-lg shadow-inner select-none bg-muted/20",
-        getCursorClass()
-      )}
+      className="relative p-px rounded-lg shadow-inner select-none bg-muted/20"
       style={{
           width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
       }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
     >
         <div 
-             className="relative grid w-full h-full"
-             style={{
-                gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
-                gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
-                gap: `${gridLineWidth}px`,
-             }}
+            className="relative w-full h-full"
         >
             {layers
               .map((layer, index) => ({ layer, index }))
               .sort((a,b) => a.index - b.index) 
-              .map(({ layer, index }) => 
-                layer.isVisible && (
-                <div
-                    key={layer.id}
-                    className="absolute inset-0 grid"
-                     style={{
-                      gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
-                      gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
-                      zIndex: index,
-                      pointerEvents: 'none'
-                    }}
+              .map(({ layer, index }) => {
+                const isLayerActive = layer.id === activeLayer?.id;
+                return layer.isVisible && (
+                  <div
+                      key={layer.id}
+                      className={cn(
+                        "absolute inset-0 grid",
+                        isLayerActive ? getCursorClass() : 'pointer-events-none'
+                      )}
+                      style={{
+                        gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
+                        gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
+                        gap: `${gridLineWidth}px`,
+                        zIndex: index,
+                        backgroundColor: isLayerActive ? 'hsla(var(--card) / 0.5)' : 'transparent',
+                      }}
+                      onMouseDown={isLayerActive ? handleMouseDown : undefined}
+                      onMouseMove={isLayerActive ? handleMouseMove : undefined}
+                      onMouseUp={isLayerActive ? handleMouseUp : undefined}
+                      onMouseLeave={isLayerActive ? handleMouseLeave : undefined}
                   >
-                   {renderLayerGrid(layer, layer.id === activeLayer?.id)}
-                </div>
+                   {renderLayerGrid(layer, isLayerActive)}
+                  </div>
                 )
-              )
+              })
             }
         </div>
        
@@ -470,5 +461,3 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
-
-    
