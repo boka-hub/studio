@@ -71,21 +71,20 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (dragTargetRef.current) {
-        dragTargetRef.current.style.borderBottom = '';
-        dragTargetRef.current.style.borderTop = '';
-    }
     const targetElement = e.currentTarget as HTMLDivElement;
-    dragTargetRef.current = targetElement;
+    if (targetElement !== dragTargetRef.current) {
+        if (dragTargetRef.current) {
+            dragTargetRef.current.style.borderBottom = '';
+            dragTargetRef.current.style.borderTop = '';
+        }
+        dragTargetRef.current = targetElement;
+    }
     
     const rect = targetElement.getBoundingClientRect();
     const isAfter = e.clientY > rect.top + rect.height / 2;
 
-    if(isAfter) {
-        targetElement.style.borderBottom = '2px solid hsl(var(--primary))';
-    } else {
-        targetElement.style.borderTop = '2px solid hsl(var(--primary))';
-    }
+    targetElement.style.borderTop = isAfter ? '' : '2px solid hsl(var(--primary))';
+    targetElement.style.borderBottom = isAfter ? '2px solid hsl(var(--primary))' : '';
   };
 
   const handleDragLeave = () => {
@@ -98,21 +97,30 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropLayerId: string) => {
     e.preventDefault();
-    handleDragLeave();
 
     if (draggedLayerId === null || draggedLayerId === dropLayerId) {
+      handleDragLeave();
       setDraggedLayerId(null);
       return;
     }
     
-    const reordered = Array.from(layers);
-    const draggedIndex = layers.findIndex(l => l.id === draggedLayerId);
-    const dropIndex = layers.findIndex(l => l.id === dropLayerId);
+    const displayLayers = [...layers].reverse();
+    const draggedIndex = displayLayers.findIndex(l => l.id === draggedLayerId);
+    const dropTargetIndex = displayLayers.findIndex(l => l.id === dropLayerId);
 
+    const reordered = Array.from(displayLayers);
     const [draggedItem] = reordered.splice(draggedIndex, 1);
-    reordered.splice(dropIndex, 0, draggedItem);
     
+    // Adjust index for splice
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const isAfter = e.clientY > rect.top + rect.height / 2;
+    const finalDropIndex = isAfter ? dropTargetIndex + 1 : dropTargetIndex;
+
+    reordered.splice(finalDropIndex, 0, draggedItem);
+    
+    // Convert back to original storage order (reverse of display order)
     onReorderLayers(reordered.reverse());
+    handleDragLeave();
     setDraggedLayerId(null);
   };
 
@@ -145,7 +153,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               onDrop={(e) => handleDrop(e, layer.id)}
               onDragEnd={handleDragEnd}
               className={cn(
-                'flex items-center p-1.5 rounded-md cursor-pointer transition-opacity border-y-2 border-transparent',
+                'flex items-center p-1.5 rounded-md cursor-pointer transition-all border-y-2 border-transparent',
                 activeLayerId === layer.id && 'bg-secondary hover:bg-secondary',
                 draggedLayerId === layer.id ? 'opacity-50' : 'opacity-100'
               )}

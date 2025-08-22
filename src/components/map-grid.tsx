@@ -388,15 +388,12 @@ export const MapGrid: FC<MapGridProps> = ({
   return (
     <div
       className={cn(
-        "relative p-px rounded-lg shadow-inner select-none bg-muted/20 grid",
+        "relative p-px rounded-lg shadow-inner select-none bg-muted/20",
         getCursorClass()
       )}
       style={{
           width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
-          gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
-          gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
-          gap: `${gridLineWidth}px`,
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
       }}
       onMouseDown={handleMouseDown}
@@ -404,26 +401,35 @@ export const MapGrid: FC<MapGridProps> = ({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
     >
-        {layers
-          .map((layer, index) => ({ layer, index }))
-          .sort((a,b) => a.index - b.index) 
-          .map(({ layer, index }) => 
-            layer.isVisible && (
-            <div
-                key={layer.id}
-                className="absolute inset-0 grid"
-                 style={{
-                  gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
-                  gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
-                  zIndex: index,
-                  pointerEvents: layer.id === activeLayer?.id ? 'auto' : 'none'
-                }}
-              >
-               {renderLayerGrid(layer, layer.id === activeLayer?.id)}
-            </div>
-            )
-          )
-        }
+        <div 
+             className="relative grid w-full h-full"
+             style={{
+                gridTemplateColumns: `repeat(${gridWidth}, ${TILE_SIZE}px)`,
+                gridTemplateRows: `repeat(${gridHeight}, ${TILE_SIZE}px)`,
+                gap: `${gridLineWidth}px`,
+             }}
+        >
+            {layers
+              .map((layer, index) => ({ layer, index }))
+              .sort((a,b) => a.index - b.index) 
+              .map(({ layer, index }) => 
+                layer.isVisible && (
+                <div
+                    key={layer.id}
+                    className="absolute inset-0 grid"
+                     style={{
+                      gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
+                      gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
+                      zIndex: index,
+                      pointerEvents: layer.id === activeLayer?.id ? 'auto' : 'none'
+                    }}
+                  >
+                   {renderLayerGrid(layer, layer.id === activeLayer?.id)}
+                </div>
+                )
+              )
+            }
+        </div>
        
        {isPreviewMode && (
           <div 
