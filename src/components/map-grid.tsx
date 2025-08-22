@@ -389,7 +389,14 @@ export const MapGrid: FC<MapGridProps> = ({
       }}
     >
         <div 
-            className="relative w-full h-full"
+            className={cn(
+              "relative w-full h-full",
+              getCursorClass()
+            )}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
         >
             {layers
               .map((layer, index) => ({ layer, index }))
@@ -401,7 +408,7 @@ export const MapGrid: FC<MapGridProps> = ({
                       key={layer.id}
                       className={cn(
                         "absolute inset-0 grid",
-                        isLayerActive ? getCursorClass() : 'pointer-events-none'
+                        !isLayerActive && 'pointer-events-none'
                       )}
                       style={{
                         gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
@@ -410,10 +417,6 @@ export const MapGrid: FC<MapGridProps> = ({
                         zIndex: index,
                         backgroundColor: isLayerActive ? 'hsla(var(--card) / 0.5)' : 'transparent',
                       }}
-                      onMouseDown={isLayerActive ? handleMouseDown : undefined}
-                      onMouseMove={isLayerActive ? handleMouseMove : undefined}
-                      onMouseUp={isLayerActive ? handleMouseUp : undefined}
-                      onMouseLeave={isLayerActive ? handleMouseLeave : undefined}
                   >
                    {renderLayerGrid(layer, isLayerActive)}
                   </div>
