@@ -58,7 +58,7 @@ const shortcuts = [
     { keys: ['Ctrl', '='], description: 'Zoom In' },
     { keys: ['Ctrl', '-'], description: 'Zoom Out' },
     { keys: ['Ctrl', '0'], description: 'Reset Zoom to 100%' },
-    { keys: ['Ctrl', 'S'], description: 'Export Map as .txt file' },
+    { keys: ['Ctrl', 'S'], description: 'Open Export Menu' },
 ];
 
 const features = [
@@ -111,56 +111,7 @@ Selection Order:
 
 **47-Tile (Blob/Terrain)**
 
-This is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must create a full 47-tile set and select them in the correct order based on the standardized "blob" tileset layout.
-
-Selection Order (based on a standard 47-tile atlas):
-0. Empty/Surrounded by no tiles
-1. Surrounded only by West
-2. West-East Horizontal Line
-3. Surrounded only by East
-4. North-South Vertical Line
-5. Top-Left Inner Corner
-6. Bottom-Left Inner Corner
-7. Bottom-Right Inner Corner
-8. Surrounded only by North
-9. Top-Right Outer Corner
-10. Top-Left Outer Corner
-11. Bottom-Left Outer Corner
-12. Bottom Edge
-13. Bottom-Right Outer Corner
-14. Top Edge
-15. Center/Fully Surrounded
-16. Hollow Center (NW corner missing)
-17. Hollow Center (NE corner missing)
-18. Hollow Center (SW corner missing)
-19. Hollow Center (SE corner missing)
-20. Top-Left Corner (filled SE)
-21. Top-Right Corner (filled SW)
-22. Bottom-Left Corner (filled NE)
-23. Bottom-Right Corner (filled NW)
-24. Top Edge (concave SW)
-25. Top Edge (concave SE)
-26. Top Edge (concave S)
-27. Right Edge (concave NW)
-28. Right Edge (concave SW)
-29. Right Edge (concave W)
-30. Bottom Edge (concave NW)
-31. Bottom Edge (concave NE)
-32. Bottom Edge (concave N)
-33. Left Edge (concave NE)
-34. Left Edge (concave SE)
-35. Left Edge (concave E)
-36. Vertical Line (concave SW+NE)
-37. Vertical Line (concave SE+NW)
-38. Vertical Line (concave SW+SE)
-39. Vertical Line (concave NW+NE)
-40. Horizontal Line (concave NE+SW)
-41. Horizontal Line (concave NW+SE)
-42. Horizontal Line (concave NW+SW)
-43. Horizontal Line (concave NE+SE)
-44. Right Cul-de-sac
-45. Left Cul-de-sac
-46. Bottom Cul-de-sac`
+This is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must create a full 47-tile set and select them in the correct order based on the standardized "blob" tileset layout. A visual guide for the selection order can be easily found online by searching for "Godot 3x3 minimal tileset".`
     },
     {
         name: "Brush",
@@ -177,10 +128,44 @@ Selection Order (based on a standard 47-tile atlas):
         short: "Removes tiles from the grid.",
         long: "The eraser sets any tile it touches back to the transparent **Empty** state (which has an ID of 0). You can click a single tile to erase it, or click and drag to clear a larger area."
     },
-    {
-        name: "Exporting",
-        short: "Save your map and tiles to your computer.",
-        long: "Use the **Export...** button to save your layout. The format (.txt or .json) can be configured in the app settings. Exporting as a **Sheet** creates a single image of all your tiles and generates a powerful companion metadata file containing all tile names, properties (like 'solid'), and layout info. This metadata file is designed to be used with the Slicer for perfect, lossless re-importing of your work."
+     {
+        name: "Importing & Exporting",
+        short: "How to get your data in and out of TileForge.",
+        long: `Understanding how data flows is key. TileForge is designed to be both simple and powerful.
+
+---
+
+**1. Exporting Your Map Data**
+
+This saves the layout of your grid(s). The format automatically changes based on your settings.
+
+- **Single-Layer Mode (exports as .txt):**
+This is a simple comma-separated (CSV) file. Each number is a tile ID from your palette. The structure of the text file directly matches your visual grid. Game engines can easily parse this by splitting the text by newlines (for rows) and then by commas (for cells) to rebuild the map array.
+
+- **Multi-Layer Mode (exports as .json):**
+This is a much richer format that saves everything needed to rebuild your map perfectly. It contains a main object with a **tiles** array (listing all your tiles with their ID, name, and 'solid' property) and a **layers** array (listing all your layers, each with its own name, visibility status, and grid of tile IDs). This is the ideal format for loading a full, complex scene into a game engine.
+
+---
+
+**2. Exporting Your Tiles (Spritesheet & Metadata)**
+
+When you click **Export Sheet**, the app does two powerful things:
+
+- **Creates a Spritesheet (.png):** It combines all the tiles from your palette into a single image file.
+- **Creates a Metadata File (.txt):** This is the "brain" of your spritesheet. It's a JSON-formatted text file that stores the **tileWidth**, **tileHeight**, and the original **name**, **ID**, and **solid** property for every single tile, along with its position (index) in the sheet.
+
+---
+
+**3. The Power of Re-importing**
+
+This is where the metadata file shines, creating a perfect, lossless workflow.
+
+- Open the **Slice Sheet** tool.
+- Upload your exported **.png** spritesheet.
+- The slicer will also look for a companion **.txt** metadata file with the same name, or you can add it manually.
+- When the metadata is found, the slicer **perfectly restores everything**: it configures the correct tile dimensions, slices the sheet, and assigns the original name, ID, and solid property back to every single tile.
+
+This allows you to export your tiles, edit them in another program, and re-import them back into TileForge without losing any of your work or setup.`
     },
     {
         name: "Fill (Bucket)",
@@ -191,11 +176,6 @@ Selection Order (based on a standard 47-tile atlas):
         name: "Gradient",
         short: "Blends two tiles smoothly.",
         long: "Creates a smooth transition between two tiles using a dithering (checkerboard) pattern. First, select a primary tile (left-click) and a secondary tile (right-click) in the palette. Then, use the Gradient tool to draw a rectangle. The area will be filled with a mix of the two tiles, creating a gradient effect from left to right."
-    },
-    {
-        name: "Importing & Slicing",
-        short: "Add new tiles and maps from files.",
-        long: "Use the **Import Tiles** button for individual images or the **Slice Sheet** button for spritesheets. The Batch Slicer can handle multiple sheets at once. For maps, use the **Import Map** button in the header (this supports both single-layer .txt and multi-layer .json formats). You can also **drag-and-drop** image files or map files directly onto the application."
     },
     {
         name: "Layers",
@@ -375,54 +355,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                  </div>
 
                 <div className="space-y-2">
-                    <h3 className="font-semibold text-lg">Getting Started with TileForge</h3>
+                    <h3 className="font-semibold text-lg">About TileForge</h3>
                     <p className="text-muted-foreground">
-                        Welcome to TileForge! This is an all-in-one tool for creating 2D tile maps. Your work is automatically saved to your browser&apos;s local storage, so you can close the tab and come back later. Here&apos;s a quick guide to creating your first map from scratch.
+                        Welcome to TileForge! This is an all-in-one tool for creating 2D tile maps. Your work is automatically saved to your browser&apos;s local storage, so you can close the tab and come back later.
                     </p>
-                </div>
-                 <div className="space-y-3">
-                    <h4 className="font-semibold">Step 1: Adding Assets to Your Project</h4>
-                    <p className="text-muted-foreground">
-                        Your map is made of tiles, which live in the <B>Palette</B> on the right. You can import tiles, spritesheets, and existing maps. You can do this by using the header buttons or by dragging files directly onto the application.
-                    </p>
-                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li><B>For Individual Images:</B> Use the <i className="italic">Import Tiles</i> button (upload icon) in the header. Each image will become a single tile.</li>
-                        <li><B>For Spritesheets:</B> Use the <i className="italic">Slice Sheet</i> button (scissors icon). This opens the <B>Batch Slicer</B>, where you can specify tile dimensions to automatically cut up a sheet.</li>
-                         <li><B>For Existing Maps:</B> Use the <i className="italic">Import Map</i> button (file icon) to load a .txt or .json file.</li>
-                    </ul>
-                </div>
-                <div className="space-y-3">
-                    <h4 className="font-semibold">Step 2: Drawing Your Map</h4>
-                     <p className="text-muted-foreground">
-                        With tiles in your palette, you can now build your map on the central <B>Grid</B>. Select a tool from the <B>Toolbar</B> on the left.
-                    </p>
-                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                       <li>In the palette, <B>left-click</B> a tile to select it as your primary &quot;brush&quot; color. <B>Right-click</B> to select a secondary color for tools like Gradient and Noise.</li>
-                       <li>Use the <B>Brush</B> tool to paint tiles, and the <B>Eraser</B> to remove them.</li>
-                       <li>If you have layers enabled, make sure you&apos;ve selected the correct layer in the <B>Layers Panel</B>!</li>
-                       <li>Experiment with other tools like <B>Fill</B>, <B>Shape Tool</B>, and the powerful <B>Auto-Tile</B> to build your world quickly.</li>
-                    </ul>
-                </div>
-                 <div className="space-y-3">
-                    <h4 className="font-semibold">Step 3: Saving and Exporting Your Work</h4>
-                     <p className="text-muted-foreground">
-                        All your changes are <B>auto-saved</B> to the current project in your browser. To export your assets for use in your game, use the buttons in the header.
-                    </p>
-                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li><B>Export Map:</B> Saves the grid data as your chosen file type (.txt or .json). JSON is recommended for layered maps.</li>
-                        <li><B>Export Spritesheet:</B> This is the most powerful option. It compiles all your tiles back into a single spritesheet image and provides a companion <B>metadata .txt file</B>. This text file contains all the names, properties, and layout info for your tiles.</li>
-                    </ul>
-                </div>
-                <div className="space-y-3">
-                    <h4 className="font-semibold">Step 4: Re-importing and Iterating</h4>
-                     <p className="text-muted-foreground">
-                        To continue working on a project, you don&apos;t need to do anything—just open the app. To bring an exported spritesheet back into TileForge without losing your names and properties:
-                    </p>
-                    <ul className="list-disc list-inside text-muted-foreground space-y-1 pl-2">
-                        <li>Open the <B>Slice Sheet</B> tool.</li>
-                        <li>Drop in your spritesheet image file.</li>
-                        <li>Use the <B>&quot;Add .txt Metadata&quot;</B> button to manually select your corresponding metadata file. This will perfectly restore all your tiles, names, and settings.</li>
-                    </ul>
                 </div>
                 <div className="space-y-2 mt-6">
                     <h4 className="font-semibold">Created With</h4>

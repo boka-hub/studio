@@ -145,7 +145,7 @@ export default function Home() {
   const [dragFileType, setDragFileType] = useState<'image' | 'map' | 'other' | null>(null);
   const [isPreviewMode, setPreviewMode] = useState(false);
   const [playerPos, setPlayerPos] = useState({ row: 0, col: 0 });
-  const [settings, setSettings] = useState<AppSettings>({ layersEnabled: false, exportFormat: 'txt' });
+  const [settings, setSettings] = useState<AppSettings>({ layersEnabled: false, exportFormat: 'json' });
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
@@ -169,7 +169,7 @@ export default function Home() {
 
   const handleSettingsChange = useCallback((newSettings: AppSettings) => {
     // If user is disabling layers, show confirmation dialog first
-    if (settings.layersEnabled && !newSettings.layersEnabled) {
+    if (settings.layersEnabled && !newSettings.layersEnabled && layers.length > 1) {
       setPendingSettings(newSettings);
       setConfirmMergeLayersOpen(true);
     } else {
@@ -177,7 +177,7 @@ export default function Home() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, toast]);
+  }, [settings.layersEnabled, layers, toast]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {

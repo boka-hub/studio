@@ -63,8 +63,6 @@ export const MapGrid: FC<MapGridProps> = ({
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter'].includes(tool);
   
-  const grid = activeLayer?.grid;
-
   useEffect(() => {
     // When the active layer changes, or drawing stops, clear any lingering preview.
     if (!isDrawing) {
@@ -237,9 +235,9 @@ export const MapGrid: FC<MapGridProps> = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (!grid) return null;
-    const gridHeight = grid.length;
-    const gridWidth = grid[0]?.length || 0;
+    if (!activeLayer || !activeLayer.grid) return null;
+    const gridHeight = activeLayer.grid.length;
+    const gridWidth = activeLayer.grid[0]?.length || 0;
     
     const col = Math.floor(x / (TILE_SIZE + gridLineWidth));
     const row = Math.floor(y / (TILE_SIZE + gridLineWidth));
@@ -251,7 +249,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
-    if (isPreviewMode || !activeLayer || !grid || e.button !== 0) return;
+    if (isPreviewMode || !activeLayer || !activeLayer.grid || e.button !== 0) return;
     const coords = getCoordsFromEvent(e);
     if (!coords) return;
     
@@ -263,12 +261,12 @@ export const MapGrid: FC<MapGridProps> = ({
     const isCtrlPressed = e.ctrlKey || e.metaKey;
 
     if (isBrushLikeTool || isShapeTool || isCtrlPressed) {
-      setPreviewGrid(performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, coords));
+      setPreviewGrid(performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, coords));
     }
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !activeLayer || !grid) return;
+    if (!isDrawing || !activeLayer || !activeLayer.grid) return;
     const coords = getCoordsFromEvent(e);
     if (!coords) return;
 
@@ -276,17 +274,17 @@ export const MapGrid: FC<MapGridProps> = ({
     setCurrentCell(coords);
     
     const isCtrlPressed = e.ctrlKey || e.metaKey;
-    const baseGrid = isShapeTool ? grid : (previewGrid || grid);
+    const baseGrid = isShapeTool ? activeLayer.grid : (previewGrid || activeLayer.grid);
 
     if (isBrushLikeTool || isCtrlPressed) {
       setPreviewGrid(performDraw(baseGrid, coords.row, coords.col, tool, isCtrlPressed, startCell));
     } else if (isShapeTool && startCell) {
-      setPreviewGrid(performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, startCell));
+      setPreviewGrid(performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, startCell));
     }
   };
 
   const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !activeLayer || !grid) return;
+    if (!isDrawing || !activeLayer || !activeLayer.grid) return;
     
     const coords = getCoordsFromEvent(e) || currentCell;
     if (!coords) {
@@ -306,7 +304,7 @@ export const MapGrid: FC<MapGridProps> = ({
     } else if (!isCtrlPressed && tool === 'select' && startCell) {
       onSelectionCommit(startCell, coords);
     } else {
-        const finalGrid = previewGrid || performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
+        const finalGrid = previewGrid || performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
         if (finalGrid) onDrawCommit(finalGrid);
     }
     
@@ -316,7 +314,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
   
   const handleMouseLeave = (e: MouseEvent<HTMLDivElement>) => {
-    if (isDrawing && activeLayer && grid) {
+    if (isDrawing && activeLayer && activeLayer.grid) {
         if (previewGrid) {
            onDrawCommit(previewGrid);
         } else if (tool === 'select' && startCell && currentCell) {
@@ -346,12 +344,12 @@ export const MapGrid: FC<MapGridProps> = ({
     }
   };
 
-  if (!activeLayer || !grid) {
+  if (!activeLayer || !activeLayer.grid) {
     return <div className="flex items-center justify-center h-full text-muted-foreground">No active layer selected or grid is empty.</div>
   }
   
-  const gridHeight = grid.length;
-  const gridWidth = grid[0]?.length || 0;
+  const gridHeight = activeLayer.grid.length;
+  const gridWidth = activeLayer.grid[0]?.length || 0;
   
   let selectionToRender = selection;
   if (isDrawing && tool === 'select' && startCell && currentCell) {
@@ -401,29 +399,20 @@ export const MapGrid: FC<MapGridProps> = ({
 
   return (
     <div
-      className="relative p-px rounded-lg shadow-inner select-none bg-muted/20"
+      className={cn(
+        "relative p-px rounded-lg shadow-inner select-none bg-muted/20",
+        getCursorClass()
+      )}
       style={{
           width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
       }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
     >
-        {/* Interactive Overlay */}
-        <div 
-            className={cn(
-              "absolute inset-0 grid",
-              getCursorClass()
-            )}
-            style={{
-                zIndex: layers.length + 1,
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-        />
-        
-        {/* Visual Layer Stack */}
         {layers
           .map((layer, index) => ({ layer, index }))
           .sort((a,b) => a.index - b.index) 
@@ -432,13 +421,14 @@ export const MapGrid: FC<MapGridProps> = ({
             return layer.isVisible && (
               <div
                   key={layer.id}
-                  className="absolute inset-0 grid pointer-events-none"
+                  className="absolute inset-0 grid"
                   style={{
                     gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
                     gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                     gap: `${gridLineWidth}px`,
                     backgroundColor: 'hsla(var(--card) / 0.5)',
-                    zIndex: index, 
+                    zIndex: index,
+                    pointerEvents: 'none',
                   }}
               >
                {renderLayerGrid(layer, isLayerActive)}
