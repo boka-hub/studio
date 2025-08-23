@@ -421,10 +421,12 @@ export const TilePalette: FC<TilePaletteProps> = ({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onClearPalette}>Clear Palette</AlertDialogAction>
+              <AlertDialogAction onClick={() => { onClearPalette(); setConfirmClearPaletteOpen(false); }}>Clear Palette</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
     </div>
   );
 };
+
+    

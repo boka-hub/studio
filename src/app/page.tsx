@@ -841,7 +841,6 @@ export default function Home() {
     setSecondarySelectedTileId(0);
     setScatterSet([]);
     setAutoTileSet([]);
-    setConfirmClearPaletteOpen(false);
     toast({ title: "Palette Cleared", description: "All tiles have been removed and all layers cleared."});
   }, [gridSize, toast, updateTiles, clearAllLayers]);
   
@@ -1239,3 +1238,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
