@@ -104,7 +104,9 @@ export default function Home() {
   } = useHistoryState<Project>(initialProject);
 
   useEffect(() => {
-    resetHistory(initialProject);
+    if (initialProject) {
+      resetHistory(initialProject);
+    }
   }, [initialProject, resetHistory]);
   
   const { tiles, layers, activeLayerId } = projectState;
@@ -830,7 +832,7 @@ export default function Home() {
       }
        else if (e.key === 'd') {
         e.preventDefault();
-        setConfirmClearMapOpen(true);
+        if (!isPreviewMode) setConfirmClearMapOpen(true);
       }
       else if (e.key === '=') setZoom(z => Math.min(z + 0.1, 2));
       else if (e.key === '-') setZoom(z => Math.max(z - 0.1, 0.1));
@@ -907,7 +909,7 @@ export default function Home() {
     if (!activeLayer) return;
     clearLayer(activeLayer.id);
     setConfirmClearMapOpen(false);
-    toast({ title: "Map Cleared", description: "The grid has been reset."});
+    toast({ title: "Current Layer Cleared", description: "The grid for the active layer has been reset."});
   }, [activeLayer, clearLayer, toast]);
   
   const clearAllLayers = useCallback(() => {
@@ -1016,12 +1018,16 @@ export default function Home() {
     const projectToLoad = setCurrentProjectById(id);
     if(projectToLoad) {
       resetHistory(projectToLoad);
+      toast({ title: 'Project Loaded', description: `Successfully loaded "${projectToLoad.name}".`});
+    } else {
+      toast({ variant: 'destructive', title: 'Load Failed', description: 'Could not find the selected project.' });
     }
-    toast({ title: 'Loading Project...' });
-    setTimeout(() => {
-        setStorageOpen(false);
-    }, 300);
+    setStorageOpen(false);
   }, [setCurrentProjectById, resetHistory, toast]);
+
+  const handleOpenSettings = useCallback(() => {
+    setSettingsOpen(true);
+  }, []);
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -1136,7 +1142,7 @@ export default function Home() {
             subtitle={projectState.name}
             icon={ToyBrick} 
             actionGroups={[fileActions, projectActions, gameplayActions]}
-            onTitleClick={() => setSettingsOpen(true)}
+            onTitleClick={handleOpenSettings}
         />
         <div 
           className="flex flex-1 overflow-hidden"
@@ -1378,7 +1384,7 @@ export default function Home() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearMap}>Clear Map</AlertDialogAction>
+              <AlertDialogAction onClick={handleClearMap}>Clear Layer</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
