@@ -83,6 +83,56 @@ const shortcuts = [
     ]},
 ];
 
+const AutoTileVisualGuide = () => {
+    const tiles = [
+        // Row 1
+        { x: 0, y: 0, n: 1, s: "Blank" }, { x: 1, y: 0, n: 2, s: "Full" }, { x: 2, y: 0, n: 3, s: "S,W,E" }, { x: 3, y: 0, n: 4, s: "N,S,E" }, { x: 4, y: 0, n: 5, s: "N,S,W" },
+        // Row 2
+        { x: 0, y: 1, n: 6, s: "W,E" }, { x: 1, y: 1, n: 7, s: "N,S" }, { x: 2, y: 1, n: 8, s: "S,E" }, { x: 3, y: 1, n: 9, s: "S,W" }, { x: 4, y: 1, n: 10, s: "N,E" }, { x: 5, y: 1, n: 11, s: "N,W" },
+        // Row 3
+        { x: 0, y: 2, n: 12, s: "S" }, { x: 1, y: 2, n: 13, s: "N" }, { x: 2, y: 2, n: 14, s: "E" }, { x: 3, y: 2, n: 15, s: "W" }, { x: 4, y: 2, n: 16, s: "N,S,W,E" },
+        // Row 4
+        { x: 0, y: 3, n: 17, s: "Full" }, { x: 1, y: 3, n: 18, s: "S,E" }, { x: 2, y: 3, n: 19, s: "S,W" }, { x: 3, y: 3, n: 20, s: "N,E" }, { x: 4, y: 3, n: 21, s: "N,W" },
+        // Row 5
+        { x: 0, y: 4, n: 22, s: "S,W,E" }, { x: 1, y: 4, n: 23, s: "N,W,E" }, { x: 2, y: 4, n: 24, s: "N,S,E" }, { x: 3, y: 4, n: 25, s: "N,S,W" }, { x: 4, y: 4, n: 26, s: "S" }, { x: 5, y: 4, n: 27, s: "N" },
+        // Row 6
+        { x: 0, y: 5, n: 28, s: "E" }, { x: 1, y: 5, n: 29, s: "W" }, { x: 2, y: 5, n: 30, s: "Full" }, { x: 3, y: 5, n: 31, s: "Full" }, { x: 4, y: 5, n: 32, s: "W,E" },
+        // Row 7
+        { x: 0, y: 6, n: 33, s: "Full" }, { x: 1, y: 6, n: 34, s: "N,S" }, { x: 2, y: 6, n: 35, s: "Full" }, { x: 3, y: 6, n: 36, s: "W,E" }, { x: 4, y: 6, n: 37, s: "N,S" },
+        // Row 8
+        { x: 0, y: 7, n: 38, s: "S,E" }, { x: 1, y: 7, n: 39, s: "S,W" }, { x: 2, y: 7, n: 40, s: "N,E" }, { x: 3, y: 7, n: 41, s: "N,W" },
+        // Row 9
+        { x: 0, y: 8, n: 42, s: "S,W,E" }, { x: 1, y: 8, n: 43, s: "N,W,E" }, { x: 2, y: 8, n: 44, s: "N,S,E" }, { x: 3, y: 8, n: 45, s: "N,S,W" },
+        // Row 10
+        { x: 0, y: 9, n: 46, s: "N,S,W,E" }, { x: 1, y: 9, n: 47, s: "N,S,W,E" }
+    ];
+    const TILE_SIZE = 40;
+    const GAP = 4;
+    const width = 6 * (TILE_SIZE + GAP) - GAP;
+    const height = 10 * (TILE_SIZE + GAP) - GAP;
+    return (
+        <svg width="100%" viewBox={`0 0 ${width} ${height}`}>
+            <title>47-Tile Selection Order Guide</title>
+            {tiles.map(tile => (
+                <g key={tile.n} transform={`translate(${tile.x * (TILE_SIZE + GAP)}, ${tile.y * (TILE_SIZE + GAP)})`}>
+                    <rect width={TILE_SIZE} height={TILE_SIZE} rx="4" fill="hsl(var(--muted))" />
+                    <rect width={TILE_SIZE} height={TILE_SIZE} rx="4" stroke="hsl(var(--border))" fill="none" />
+                    <text x={TILE_SIZE / 2} y={TILE_SIZE / 2}
+                        dominantBaseline="middle" textAnchor="middle"
+                        fontSize="14" fontWeight="bold" fill="hsl(var(--foreground))">
+                        {tile.n}
+                    </text>
+                    <text x={TILE_SIZE / 2} y={TILE_SIZE - 8}
+                        dominantBaseline="middle" textAnchor="middle"
+                        fontSize="8" fill="hsl(var(--muted-foreground))">
+                        {tile.s}
+                    </text>
+                </g>
+            ))}
+        </svg>
+    )
+}
+
 const features = [
     {
         name: "Auto-Tile",
@@ -133,9 +183,7 @@ Selection Order:
 
 **47-Tile (Blob/Terrain)**
 
-This is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must create a full 47-tile set and select them in the correct order. The logic uses the same standard as the Godot game engine.
-
-**A visual guide for the selection order is essential.** Search online for **"Godot 3x3 minimal tileset"** to find the correct 47-tile layout image. You must select your tiles in the same order as shown in that visual guide.`
+This is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must select exactly 47 tiles by following the visual guide below. The tiles are numbered in their required selection order.`
     },
     {
         name: "Brush",
@@ -324,8 +372,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                                 <p className="text-sm font-normal text-muted-foreground">{feature.short}</p>
                             </div>
                         </AccordionTrigger>
-                        <AccordionContent className="text-sm text-muted-foreground whitespace-pre-line">
+                        <AccordionContent className="text-sm text-muted-foreground whitespace-pre-line space-y-4">
                           <FormattedText text={feature.long} />
+                          {feature.name === "Auto-Tile" && (
+                              <div className="pt-4">
+                                  <AutoTileVisualGuide />
+                              </div>
+                          )}
                         </AccordionContent>
                       </AccordionItem>
                   ))}
