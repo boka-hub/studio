@@ -108,6 +108,7 @@ export default function Home() {
     renameLayer,
     toggleLayerVisibility,
     reorderLayers,
+    mergeAllLayers,
   } = useProjects();
   
   const { tiles, layers, activeLayerId } = currentProject;
@@ -136,6 +137,8 @@ export default function Home() {
   const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isConfirmClearMapOpen, setConfirmClearMapOpen] = useState(false);
   const [isConfirmClearPaletteOpen, setConfirmClearPaletteOpen] = useState(false);
+  const [isConfirmMergeLayersOpen, setConfirmMergeLayersOpen] = useState(false);
+  const [pendingSettings, setPendingSettings] = useState<AppSettings | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [isPaletteCollapsed, setPaletteCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -165,10 +168,27 @@ export default function Home() {
   }, []);
 
   const handleSettingsChange = useCallback((newSettings: AppSettings) => {
-    setSettings(newSettings);
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-    toast({ title: "Settings Updated", description: "Your changes have been applied."});
-  }, [toast]);
+    // If user is disabling layers, show confirmation dialog first
+    if (settings.layersEnabled && !newSettings.layersEnabled) {
+      setPendingSettings(newSettings);
+      setConfirmMergeLayersOpen(true);
+    } else {
+      setSettings(newSettings);
+      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+      toast({ title: "Settings Updated", description: "Your changes have been applied."});
+    }
+  }, [settings.layersEnabled, toast]);
+
+  const confirmMergeLayers = useCallback(() => {
+    if (pendingSettings) {
+        mergeAllLayers();
+        setSettings(pendingSettings);
+        window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(pendingSettings));
+        toast({ title: "Layers Merged", description: "All visible layers have been flattened into one." });
+        setPendingSettings(null);
+    }
+    setConfirmMergeLayersOpen(false);
+  }, [pendingSettings, mergeAllLayers, toast]);
 
 
   // Sync grid size state when grid changes from project load
@@ -1172,6 +1192,21 @@ export default function Home() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleClearPalette}>Clear Palette</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isConfirmMergeLayersOpen} onOpenChange={setConfirmMergeLayersOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Merge All Layers?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will flatten all visible layers into a single layer. This action cannot be easily undone. Are you sure you want to continue?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingSettings(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmMergeLayers}>Merge Layers</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

@@ -329,6 +329,34 @@ export const useProjects = () => {
       modifyCurrentProject(() => ({ layers: newLayers }));
   }, [modifyCurrentProject]);
 
+  const mergeAllLayers = useCallback(() => {
+    modifyCurrentProject(project => {
+        const visibleLayers = project.layers.filter(l => l.isVisible);
+        if (visibleLayers.length === 0) return {};
+
+        const baseLayer = visibleLayers[0];
+        const mergedGrid = JSON.parse(JSON.stringify(baseLayer.grid));
+
+        for (let i = 1; i < visibleLayers.length; i++) {
+            const upperLayer = visibleLayers[i];
+            for (let r = 0; r < upperLayer.grid.length; r++) {
+                for (let c = 0; c < upperLayer.grid[r].length; c++) {
+                    if (upperLayer.grid[r][c] !== 0) {
+                        mergedGrid[r][c] = upperLayer.grid[r][c];
+                    }
+                }
+            }
+        }
+        
+        const mergedLayer = createNewLayer("Merged Layer", mergedGrid);
+
+        return {
+            layers: [mergedLayer],
+            activeLayerId: mergedLayer.id,
+        };
+    });
+  }, [modifyCurrentProject]);
+
   return {
     projects,
     currentProject,
@@ -353,5 +381,6 @@ export const useProjects = () => {
     renameLayer,
     toggleLayerVisibility,
     reorderLayers,
+    mergeAllLayers,
   };
 };
