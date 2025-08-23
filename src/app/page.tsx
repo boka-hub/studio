@@ -6,6 +6,7 @@ import {
   Panel,
   PanelGroup,
   PanelResizeHandle,
+  ImperativePanelHandle,
 } from "react-resizable-panels"
 import {
   Brush,
@@ -153,8 +154,8 @@ export default function Home() {
 
   const tileImportRef = useRef<HTMLInputElement>(null);
   const mapImportRef = useRef<HTMLInputElement>(null);
-  const leftPanelRef = useRef<any>(null);
-  const rightPanelRef = useRef<any>(null);
+  const leftPanelRef = useRef<ImperativePanelHandle>(null);
+  const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const mapGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

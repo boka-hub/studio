@@ -32,26 +32,6 @@ const createNewProject = (name: string): Project => {
     };
 };
 
-// This function migrates an old project structure to the new layered structure
-const migrateProject = (project: Project): Project => {
-    if (project.layers && project.layers.length > 0 && project.activeLayerId) {
-        return project; // Already has layers, no migration needed
-    }
-    // This part of migration logic is now obsolete as we remove the grid property
-    // but we keep it just in case an old project format is still in localStorage
-    // from before this cleanup.
-    // @ts-ignore
-    const gridToMigrate = project.grid || createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
-    const firstLayer = createNewLayer("Background", gridToMigrate);
-    const { grid, ...retypedProject } = project;
-    return {
-        ...retypedProject,
-        layers: [firstLayer],
-        activeLayerId: firstLayer.id,
-    };
-};
-
-
 export const useProjects = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -85,17 +65,14 @@ export const useProjects = () => {
       }
 
       if (savedState && Array.isArray(savedState.projects) && savedState.projects.length > 0 && savedState.currentProjectId) {
-         
-         const migratedProjects = savedState.projects.map(migrateProject);
-
-         let projectToLoad = migratedProjects.find(p => p.id === savedState.currentProjectId);
+         let projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId);
          
          if (!projectToLoad) {
-            projectToLoad = [...migratedProjects].sort((a,b) => b.lastModified - a.lastModified)[0];
+            projectToLoad = [...savedState.projects].sort((a,b) => b.lastModified - a.lastModified)[0];
          }
          
          resetHistory({
-           projects: migratedProjects,
+           projects: savedState.projects,
            currentProjectId: projectToLoad.id,
          });
       } else {
@@ -116,7 +93,8 @@ export const useProjects = () => {
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
         try {
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            const stateToSave = { ...state };
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
         } catch (error) {
             console.error("Failed to save projects to localStorage", error);
         }
