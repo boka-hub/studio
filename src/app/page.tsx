@@ -869,6 +869,7 @@ export default function Home() {
     isPreviewMode, 
     playerPos, 
     tiles, 
+    grid,
     togglePreviewMode, 
     selection, 
     handleCopySelection, 
@@ -1135,7 +1136,7 @@ export default function Home() {
     if (!isLoading) {
         saveProject(projectState);
     }
-  }, [projectState, saveProject, isLoading]);
+  }, [projectState.id, saveProject, isLoading]);
 
   if (isLoading) {
     return (
