@@ -285,6 +285,9 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         unoptimized
                         data-ai-hint="pixel art"
                       />
+                      {tool === 'auto-tile' && autoTileSet.includes(tile.id) && (
+                        <Badge variant="secondary" className="absolute bottom-1 left-1">{autoTileSet.indexOf(tile.id) + 1}</Badge>
+                      )}
                        {!isCollapsed && tile.id !== 0 && (
                           <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Tooltip>
@@ -350,7 +353,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                   </TooltipContent>
                 </Tooltip>
 
-                {!isCollapsed && (
+                {!isCollapsed && tile.id !== 0 && (
                   <div className="w-full text-center h-6">
                     {editingTileId === tile.id ? (
                       <Input
@@ -392,5 +395,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    

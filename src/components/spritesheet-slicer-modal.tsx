@@ -419,5 +419,3 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     </Dialog>
   );
 };
-
-    

@@ -694,19 +694,56 @@ export default function Home() {
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
     if (!mapGridRef.current?.contains(e.target as Node)) {
-        if (selection) {
-          // Pressing escape is the only way to deselect
+        if (selection && e.key !== 'Escape') {
+          // Prevent deselection on outside click
         }
     }
   }, [selection]);
+
+  const togglePreviewMode = useCallback(() => {
+    const newPreviewState = !isPreviewMode;
+    if (newPreviewState) {
+        // Collapse sidebars for preview mode
+        if (leftPanelRef.current && !leftPanelRef.current.isCollapsed()) leftPanelRef.current.collapse();
+        if (rightPanelRef.current && !rightPanelRef.current.isCollapsed()) rightPanelRef.current.collapse();
+
+        let startPos = { row: 0, col: 0 };
+        let found = false;
+        for (let r = 0; r < grid.length; r++) {
+            for (let c = 0; c < grid[0].length; c++) {
+                const tileId = grid[r][c];
+                const tile = tiles.find(t => t.id === tileId);
+                if (!tile?.solid) {
+                    startPos = { row: r, col: c };
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
+        if (!found) {
+            toast({
+                variant: 'destructive',
+                title: 'No Valid Start Position',
+                description: 'The entire map is solid. Player placed at (0,0).'
+            });
+        }
+        setPlayerPos(startPos);
+    } else {
+        // Expand sidebars when exiting preview mode
+        if (leftPanelRef.current && leftPanelRef.current.isCollapsed()) leftPanelRef.current.expand();
+        if (rightPanelRef.current && rightPanelRef.current.isCollapsed()) rightPanelRef.current.expand();
+        toast({ title: 'Exited Preview Mode' });
+    }
+    setPreviewMode(newPreviewState);
+  }, [grid, isPreviewMode, tiles, toast]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
           e.preventDefault();
           if (e.key === 'Escape') {
-              setPreviewMode(false);
-              toast({ title: 'Exited Preview Mode' });
+              togglePreviewMode();
               return;
           }
           
@@ -765,7 +802,7 @@ export default function Home() {
         setTool(keyMap[e.key]);
       }
     }
-  }, [selection, handleCopySelection, handleActivatePaste, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool]);
+  }, [selection, handleCopySelection, handleActivatePaste, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool, togglePreviewMode]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -788,35 +825,6 @@ export default function Home() {
       }
     }
   }, [settings.layersEnabled]);
-
-  const togglePreviewMode = useCallback(() => {
-    const newPreviewState = !isPreviewMode;
-    if (newPreviewState) {
-      let startPos = { row: 0, col: 0 };
-      let found = false;
-      for (let r = 0; r < grid.length; r++) {
-        for (let c = 0; c < grid[0].length; c++) {
-          const tileId = grid[r][c];
-          const tile = tiles.find(t => t.id === tileId);
-          if (!tile?.solid) {
-            startPos = { row: r, col: c };
-            found = true;
-            break;
-          }
-        }
-        if (found) break;
-      }
-      if (!found) {
-        toast({
-          variant: 'destructive',
-          title: 'No Valid Start Position',
-          description: 'The entire map is solid. Player placed at (0,0).'
-        });
-      }
-      setPlayerPos(startPos);
-    }
-    setPreviewMode(newPreviewState);
-  }, [grid, isPreviewMode, tiles, toast]);
   
   const handleClearMap = useCallback(() => {
     if (!activeLayer) return;
@@ -861,7 +869,7 @@ export default function Home() {
     scatter: { icon: Dices, label: 'Scatter (C)'},
     select: { icon: Lasso, label: 'Select (M)' },
     'magic-wand': { icon: Wand2, label: 'Wand (W)' },
-    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)' },
+    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', disabled: !clipboard },
   };
 
   const headerActions = [
@@ -887,7 +895,6 @@ export default function Home() {
   const selectionActions = {
     fill: { icon: FileCheck, label: 'Fill Selection', onClick: handleFillSelection },
     copy: { icon: Copy, label: 'Copy (Ctrl+C)', onClick: handleCopySelection },
-    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', onClick: handleActivatePaste, disabled: !clipboard },
     delete: { icon: Trash2, label: 'Delete (Del)', onClick: handleDeleteSelection },
     invert: { icon: Replace, label: 'Invert', onClick: handleInvertSelection },
     mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal', onClick: handleMirrorHorizontal },

@@ -103,19 +103,21 @@ export function Toolbar<T extends Tool>({
               return (
                 <Tooltip key={key}>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={selectedAction === key ? 'secondary' : 'ghost'}
-                      className={cn(
-                        'w-full flex h-auto py-2 gap-2 items-center',
-                        isCollapsed ? 'justify-center' : 'justify-start pl-3'
-                      )}
-                      onClick={() => onActionSelect(key)}
-                      disabled={action.disabled}
-                      aria-label={action.label}
-                    >
-                      <Icon className={cn('h-5 w-5', action.disabled && 'animate-spin')} />
-                      <span className={cn(isCollapsed && 'hidden')}>{action.label.split('(')[0].trim()}</span>
-                    </Button>
+                    <div>
+                        <Button
+                            variant={selectedAction === key ? 'secondary' : 'ghost'}
+                            className={cn(
+                                'w-full flex h-auto py-2 gap-2 items-center',
+                                isCollapsed ? 'justify-center' : 'justify-start pl-3'
+                            )}
+                            onClick={() => onActionSelect(key)}
+                            disabled={action.disabled}
+                            aria-label={action.label}
+                        >
+                            <Icon className={cn('h-5 w-5')} />
+                            <span className={cn(isCollapsed && 'hidden')}>{action.label.split('(')[0].trim()}</span>
+                        </Button>
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent side="right">
                     <p>{action.label}</p>
@@ -263,6 +265,7 @@ export function Toolbar<T extends Tool>({
                       value={localGridSize.width}
                       onChange={e => setLocalGridSize({...localGridSize, width: parseInt(e.target.value, 10) || 1 })}
                       onBlur={handleResize}
+                      onKeyDown={e => e.key === 'Enter' && handleResize()}
                       className="w-16 h-8 text-center"
                       aria-label="Grid width"
                     />
@@ -273,14 +276,11 @@ export function Toolbar<T extends Tool>({
                       value={localGridSize.height}
                       onChange={e => setLocalGridSize({...localGridSize, height: parseInt(e.target.value, 10) || 1 })}
                       onBlur={handleResize}
+                      onKeyDown={e => e.key === 'Enter' && handleResize()}
                       className="w-16 h-8 text-center"
                       aria-label="Grid height"
                     />
                   </div>
-                  <Button size="sm" variant="outline" className="w-full h-8" onClick={handleResize}>
-                      <Maximize className="h-4 w-4 mr-2" />
-                      Apply Size
-                  </Button>
                 </div>
                 <Separator />
                 <div className="space-y-2">

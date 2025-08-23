@@ -227,5 +227,3 @@ export const StorageModal: React.FC<StorageModalProps> = ({
     </Dialog>
   );
 };
-
-    

@@ -361,12 +361,12 @@ export const useProjects = () => {
   }, [modifyCurrentProject]);
 
     const clearAllLayers = useCallback((width: number, height: number) => {
-        modifyCurrentProject(() => {
+        modifyCurrentProject((project) => {
             const newGrid = createEmptyGrid(width, height);
-            const clearedLayers = currentProject.layers.map(layer => ({ ...layer, grid: newGrid }));
+            const clearedLayers = project.layers.map(layer => ({ ...layer, grid: newGrid }));
             return { layers: clearedLayers };
         });
-    }, [modifyCurrentProject, currentProject.layers]);
+    }, [modifyCurrentProject]);
 
 
   return {
@@ -397,5 +397,3 @@ export const useProjects = () => {
     clearAllLayers,
   };
 };
-
-    
