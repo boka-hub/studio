@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   Panel,
   PanelGroup,
@@ -1044,24 +1044,24 @@ export default function Home() {
     'magic-wand': { icon: Wand2, label: 'Wand (W)' },
   };
 
-  const fileActions = [
+  const fileActions = useMemo(() => [
     { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet (Ctrl+O)', onClick: () => openSlicer() },
     { icon: FileJson2, label: 'Import Metadata (Ctrl+M)', onClick: () => setMetadataModalOpen(true) },
     { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => mapImportRef.current?.click() },
     { icon: Package, label: 'Export... (Ctrl+S)', onClick: () => setExportOpen(true) },
-  ];
+  ], [openSlicer]);
   
-  const projectActions = [
+  const projectActions = useMemo(() => [
       { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
       { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
       { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: () => setStorageOpen(true) },
       { icon: Grid, label: 'Clear Map (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
-  ];
+  ], [undo, redo, canUndo, canRedo]);
   
-  const gameplayActions = [
+  const gameplayActions = useMemo(() => [
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (F5)' : 'Live Preview (F5)', onClick: togglePreviewMode, isActive: isPreviewMode },
-  ];
+  ], [isPreviewMode, togglePreviewMode]);
   
   const selectionActions = {
     fill: { icon: FileCheck, label: 'Fill (Enter)', onClick: handleFillSelection },
