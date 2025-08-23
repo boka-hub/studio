@@ -83,7 +83,7 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 
 export default function Home() {
   const {
-    currentProject: initialProject,
+    currentProject,
     saveProject,
     deleteProject,
     renameProject,
@@ -100,13 +100,13 @@ export default function Home() {
     canUndo, 
     canRedo,
     reset: resetHistory,
-  } = useHistoryState<Project>(initialProject);
+  } = useHistoryState<Project>(currentProject);
 
   useEffect(() => {
-    if (initialProject && initialProject.id) {
-      resetHistory(initialProject);
+    if (currentProject && currentProject.id) {
+      resetHistory(currentProject);
     }
-  }, [initialProject.id, resetHistory]);
+  }, [currentProject.id, resetHistory]);
   
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
@@ -219,7 +219,7 @@ export default function Home() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
+  }, [settings.layersEnabled, layers, toast]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -868,7 +868,6 @@ export default function Home() {
   }, [
     isPreviewMode, 
     playerPos, 
-    grid, 
     tiles, 
     togglePreviewMode, 
     selection, 
@@ -881,7 +880,8 @@ export default function Home() {
     handleFillSelection, 
     handleInvertSelection, 
     handleMirrorHorizontal, 
-    handleMirrorVertical
+    handleMirrorVertical,
+    grid,
   ]);
   
   useEffect(() => {
@@ -1134,9 +1134,9 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading) {
-      saveProject(projectState);
+        saveProject(projectState);
     }
-  }, [projectState, isLoading, saveProject]);
+  }, [projectState, saveProject, isLoading]);
 
   if (isLoading) {
     return (
