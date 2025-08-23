@@ -4,7 +4,7 @@ import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape, Layer } from '@/lib/types';
-import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
+import { getAutoTileId } from '@/lib/auto-tiler';
 
 interface MapGridProps {
   layers: Layer[];
@@ -161,35 +161,29 @@ export const MapGrid: FC<MapGridProps> = ({
         }
 
         const autoTileSet_ = new Set(autoTileSet);
-        const getTileIdFunc = {
-          '9-tile': getAutoTileId9,
-          '13-tile': getAutoTileId13,
-          '47-tile': getAutoTileId47,
-        }[autoTileMode];
-
+        
+        // Step 1: Place the center tile at the cursor position
         const centerIndex = autoTileMode === '9-tile' ? 4 : autoTileMode === '13-tile' ? 12 : 2;
-        if(newGrid[row] && newGrid[row][col] !== undefined) {
-          // Place the center tile
-          if (autoTileOverwrite || newGrid[row][col] === 0 || autoTileSet_.has(newGrid[row][col])) {
-              newGrid[row][col] = autoTileSet[centerIndex];
-          }
+        if(newGrid[row]?.[col] !== undefined) {
+            if (autoTileOverwrite || newGrid[row][col] === 0 || autoTileSet_.has(newGrid[row][col])) {
+                newGrid[row][col] = autoTileSet[centerIndex];
+            }
         }
-
-        // After placing, update all neighbors
+        
+        // Step 2: Update the placed tile and all its direct neighbors
         for (let r_offset = -1; r_offset <= 1; r_offset++) {
           for (let c_offset = -1; c_offset <= 1; c_offset++) {
             const nr = row + r_offset;
             const nc = col + c_offset;
-
+            
             if (nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-              const neighborTile = newGrid[nr][nc];
-              // Only update tiles that are part of the set, or empty tiles if not overwriting
-              if (autoTileSet_.has(neighborTile) || (autoTileOverwrite && neighborTile !== 0) || neighborTile === 0) {
-                 const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
-                 if(newGrid[nr] && newGrid[nr][nc] !== undefined) {
-                    newGrid[nr][nc] = newTileId;
-                 }
-              }
+                const neighborTile = newGrid[nr][nc];
+                if (autoTileSet_.has(neighborTile) || (neighborTile === 0 && autoTileOverwrite)) {
+                     const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet, autoTileMode);
+                     if (newGrid[nr]?.[nc] !== undefined) {
+                        newGrid[nr][nc] = newTileId;
+                     }
+                }
             }
           }
         }
