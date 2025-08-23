@@ -874,7 +874,24 @@ export default function Home() {
         setTool(keyMap[e.key]);
       }
     }
-  }, [selection, handleCopySelection, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, togglePreviewMode, handleFillSelection, handleInvertSelection, handleMirrorHorizontal, handleMirrorVertical, openSlicer, handlePasteAtMouse]);
+  }, [
+    isPreviewMode, 
+    playerPos, 
+    grid, 
+    tiles, 
+    togglePreviewMode, 
+    selection, 
+    handleCopySelection, 
+    handlePasteAtMouse, 
+    undo, 
+    redo, 
+    openSlicer, 
+    handleDeleteSelection, 
+    handleFillSelection, 
+    handleInvertSelection, 
+    handleMirrorHorizontal, 
+    handleMirrorVertical
+  ]);
   
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
