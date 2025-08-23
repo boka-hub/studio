@@ -1114,7 +1114,7 @@ export default function Home() {
                           onRenameTile={handleRenameTile}
                           onDeleteTile={confirmDeleteTile}
                           onToggleSolid={handleToggleSolid}
-                          onReorderTiles={onReorderTiles}
+                          onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
                           onClearPalette={handleClearPalette}
                           />
