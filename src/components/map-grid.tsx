@@ -168,7 +168,9 @@ export const MapGrid: FC<MapGridProps> = ({
         }[autoTileMode];
 
         const centerIndex = autoTileMode === '9-tile' ? 4 : autoTileMode === '13-tile' ? 12 : 2;
-        newGrid[row][col] = autoTileSet[centerIndex];
+        if(newGrid[row] && newGrid[row][col] !== undefined) {
+          newGrid[row][col] = autoTileSet[centerIndex];
+        }
 
         for (let r_offset = -1; r_offset <= 1; r_offset++) {
           for (let c_offset = -1; c_offset <= 1; c_offset++) {
@@ -181,7 +183,9 @@ export const MapGrid: FC<MapGridProps> = ({
               
               if (isNeighborAutoTile || autoTileOverwrite || neighborTile === 0) {
                  const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
-                 newGrid[nr][nc] = newTileId;
+                 if(newGrid[nr] && newGrid[nr][nc] !== undefined) {
+                    newGrid[nr][nc] = newTileId;
+                 }
               }
             }
           }
@@ -315,7 +319,7 @@ export const MapGrid: FC<MapGridProps> = ({
     setCurrentCell(coords);
     
     const isCtrlPressed = e.ctrlKey || e.metaKey;
-    const baseGrid = (isBrushLikeTool && !isShapeTool) ? (previewGrid || activeLayer.grid) : activeLayer.grid;
+    const baseGrid = (isBrushLikeTool && !isShapeTool && previewGrid) ? previewGrid : activeLayer.grid;
 
     if (isBrushLikeTool || isCtrlPressed) {
       setPreviewGrid(performDraw(baseGrid, coords.row, coords.col, tool, isCtrlPressed, startCell));
@@ -453,6 +457,7 @@ export const MapGrid: FC<MapGridProps> = ({
                     gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                     gap: `${gridLineWidth}px`,
                     backgroundColor: 'hsla(var(--card) / 0.5)',
+                    opacity: isLayerActive ? 1 : 0.75,
                     zIndex: index,
                   }}
               >
