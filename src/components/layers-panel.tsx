@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Layer } from '@/lib/types';
-import { PlusCircle, Eye, EyeOff, Trash2, Edit, Check, X, GripVertical } from 'lucide-react';
+import { PlusCircle, Eye, EyeOff, Trash2, Check, X, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -111,14 +111,12 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
     const reordered = Array.from(displayLayers);
     const [draggedItem] = reordered.splice(draggedIndex, 1);
     
-    // Adjust index for splice
     const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
     const isAfter = e.clientY > rect.top + rect.height / 2;
     const finalDropIndex = isAfter ? dropTargetIndex + 1 : dropTargetIndex;
 
     reordered.splice(finalDropIndex, 0, draggedItem);
     
-    // Convert back to original storage order (reverse of display order)
     onReorderLayers(reordered.reverse());
     handleDragLeave();
     setDraggedLayerId(null);
@@ -129,8 +127,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
     setDraggedLayerId(null);
   };
 
-  // Layers are rendered from top to bottom, but z-index wise they go from bottom to top.
-  // We reverse the array for display so that the "top" layer (rendered last) is at the top of the list.
   const displayLayers = [...layers].reverse();
 
   return (
@@ -146,20 +142,21 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           {displayLayers.map(layer => (
             <div
               key={layer.id}
-              draggable
+              draggable={layers.length > 1}
               onDragStart={(e) => handleDragStart(e, layer.id)}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, layer.id)}
               onDragEnd={handleDragEnd}
               className={cn(
-                'flex items-center p-1.5 rounded-md cursor-pointer transition-all border-y-2 border-transparent',
+                'flex items-center p-1.5 rounded-md transition-all border-y-2 border-transparent',
+                layers.length > 1 && "cursor-pointer",
                 activeLayerId === layer.id && 'bg-secondary hover:bg-secondary',
                 draggedLayerId === layer.id ? 'opacity-50' : 'opacity-100'
               )}
               onClick={() => onSelectLayer(layer.id)}
             >
-              <GripVertical className="h-4 w-4 mr-2 text-muted-foreground cursor-move" />
+              {layers.length > 1 && <GripVertical className="h-4 w-4 mr-2 text-muted-foreground cursor-move" />}
              {editingLayerId === layer.id ? (
                 <div className="flex-grow flex items-center gap-1">
                     <Input 

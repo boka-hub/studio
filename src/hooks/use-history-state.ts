@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 
 const MAX_HISTORY_SIZE = 50;
@@ -26,7 +27,7 @@ export function useHistoryState<T>(initialState: T) {
         return {
           ...currentState,
           present: newPresent,
-          future: [], // Clear future on batched partial update
+          future: [],
         };
       }
       

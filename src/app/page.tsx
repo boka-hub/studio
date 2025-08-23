@@ -43,10 +43,8 @@ import {
   FileText,
   Wand,
   Shapes,
-  Circle,
-  Slash,
-  Lasso,
   FileUp,
+  Lasso,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -57,9 +55,10 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat, Project } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
+import { useHistoryState } from '@/hooks/use-history-state';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -91,26 +90,24 @@ export default function Home() {
     renameProject,
     projects,
     isLoading,
-    updateGridInLayer,
-    updateTiles,
-    remapGrid,
-    addTiles,
-    deleteTile,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    addLayer,
-    deleteLayer,
-    selectLayer,
-    renameLayer,
-    toggleLayerVisibility,
-    reorderLayers,
-    mergeAllLayers,
-    clearAllLayers,
+    setCurrentProject,
   } = useProjects();
   
-  const { tiles, layers, activeLayerId } = currentProject;
+  const { 
+    state: projectState, 
+    set: setProjectHistory, 
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo,
+    reset: resetHistory,
+  } = useHistoryState<Project>(currentProject);
+
+  useEffect(() => {
+    resetHistory(currentProject);
+  }, [currentProject, resetHistory]);
+  
+  const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
   const grid = activeLayer?.grid ?? [[]];
 
@@ -157,6 +154,12 @@ export default function Home() {
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const mapGridRef = useRef<HTMLDivElement>(null);
 
+  // Sync project state from history back to the global projects store
+  useEffect(() => {
+    setCurrentProject(projectState);
+  }, [projectState, setCurrentProject]);
+
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const savedSettings = window.localStorage.getItem(SETTINGS_KEY);
@@ -165,6 +168,13 @@ export default function Home() {
         }
     }
   }, []);
+
+  const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
+    setProjectHistory(currentProject => {
+        const changes = modifier(currentProject);
+        return { ...currentProject, ...changes };
+    }, batch);
+  }, [setProjectHistory]);
 
   const handleSettingsChange = useCallback((newSettings: AppSettings) => {
     // If user is disabling layers, show confirmation dialog first
@@ -178,16 +188,64 @@ export default function Home() {
     }
   }, [settings.layersEnabled, layers, toast]);
 
+  const updateGridInLayer = useCallback((layerId: string, grid: GridState, batch = false) => {
+      modifyCurrentProject(project => {
+        const newLayers = project.layers.map(l => l.id === layerId ? {...l, grid} : l);
+        return { layers: newLayers };
+      }, batch);
+  }, [modifyCurrentProject]);
+  
+  const updateTiles = useCallback((tiles: Tile[], batch = false) => {
+      modifyCurrentProject(() => ({ tiles }), batch);
+  }, [modifyCurrentProject]);
+
+  const mergeAllLayers = useCallback(() => {
+    modifyCurrentProject(project => {
+        const visibleLayers = project.layers.filter(l => l.isVisible);
+        if (visibleLayers.length <= 1) {
+            toast({ title: 'Merge Skipped', description: 'You need at least two visible layers to merge.' });
+            return {};
+        }
+
+        const baseLayer = visibleLayers[0];
+        const mergedGrid = JSON.parse(JSON.stringify(baseLayer.grid));
+
+        for (let i = 1; i < visibleLayers.length; i++) {
+            const upperLayer = visibleLayers[i];
+            for (let r = 0; r < upperLayer.grid.length; r++) {
+                for (let c = 0; c < upperLayer.grid[r].length; c++) {
+                    if (upperLayer.grid[r][c] !== 0) {
+                        mergedGrid[r][c] = upperLayer.grid[r][c];
+                    }
+                }
+            }
+        }
+        const newLayer = (name: string, grid: GridState): Layer => ({
+            id: `layer_${new Date().getTime()}_${Math.random()}`,
+            name,
+            grid,
+            isVisible: true,
+        });
+
+        const mergedLayer = newLayer("Merged Layer", mergedGrid);
+
+        return {
+            layers: [mergedLayer],
+            activeLayerId: mergedLayer.id,
+        };
+    });
+    toast({ title: "Layers Merged", description: "All visible layers have been flattened into one." });
+  }, [modifyCurrentProject, toast]);
+
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
         mergeAllLayers();
         setSettings(pendingSettings);
         window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(pendingSettings));
-        toast({ title: "Layers Merged", description: "All visible layers have been flattened into one." });
         setPendingSettings(null);
     }
     setConfirmMergeLayersOpen(false);
-  }, [pendingSettings, mergeAllLayers, toast]);
+  }, [pendingSettings, mergeAllLayers]);
 
 
   // Sync grid size state when grid changes from project load
@@ -202,7 +260,7 @@ export default function Home() {
     setPreviewMode(false);
     setPlayerPos({ row: 0, col: 0 });
     setZoom(1);
-  }, [currentProject.id]);
+  }, [projectState.id]);
   
   const toggleToolbar = useCallback(() => {
     const panel = leftPanelRef.current;
@@ -265,6 +323,17 @@ export default function Home() {
     );
     updateTiles(newTiles);
   }, [tiles, updateTiles]);
+
+  const deleteTile = useCallback((tileId: number) => {
+    modifyCurrentProject(project => {
+        const newTiles = project.tiles.filter(t => t.id !== tileId);
+        const newLayers = project.layers.map(layer => ({
+            ...layer,
+            grid: layer.grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)))
+        }));
+        return { tiles: newTiles, layers: newLayers };
+    });
+  }, [modifyCurrentProject]);
   
   const confirmDeleteTile = useCallback((tileId: number) => {
     const tileToDelete = tiles.find(t => t.id === tileId);
@@ -283,6 +352,21 @@ export default function Home() {
   const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
     updateTiles(reorderedTiles, false);
   }, [updateTiles]);
+  
+  const addTiles = useCallback((tileData: TileImportData[]) => {
+    if (tileData.length === 0) return;
+    modifyCurrentProject(project => {
+      let nextId = project.tiles.length > 0 ? Math.max(...project.tiles.map(t => t.id)) + 1 : 1;
+      const tilesWithIds: Tile[] = tileData.map(data => ({
+        id: nextId++,
+        name: data.file.name.replace(/\.[^/.]+$/, ""),
+        src: URL.createObjectURL(data.file),
+        solid: data.isSolid,
+      }));
+      return { tiles: [...project.tiles, ...tilesWithIds] };
+    });
+    toast({ title: 'Tiles Added', description: `${tileData.length} new tile(s) have been added.` });
+  }, [modifyCurrentProject, toast]);
 
   const handleImportTiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -307,8 +391,6 @@ export default function Home() {
 
               if (file.name.endsWith('.json')) {
                   const mapData = JSON.parse(content);
-                  // For now, just import the grid of the first layer from a JSON file
-                  // A more advanced implementation could handle multiple layers.
                   newGrid = mapData.layers[0]?.grid;
                     if (!newGrid) {
                       throw new Error('JSON map file is missing layer data.');
@@ -332,7 +414,6 @@ export default function Home() {
               if(activeLayer) {
                 updateGridInLayer(activeLayer.id, newGrid);
 
-                // Check for missing tiles
                 const availableTileIds = new Set(tiles.map(t => t.id));
                 const importedTileIds = new Set(newGrid.flat());
                 const missingIds = Array.from(importedTileIds).filter(id => !availableTileIds.has(id));
@@ -341,7 +422,7 @@ export default function Home() {
                     toast({
                         variant: 'destructive',
                         title: 'Map Imported with Warnings',
-                        description: `Some tile IDs (${missingIds.join(', ')}) were not found in your palette and have been rendered as empty.`,
+                        description: `Some tile IDs (${missingIds.join(', ')}) were not found and have been rendered as empty.`,
                     });
                 } else {
                     toast({ title: 'Map Imported', description: `Successfully loaded map into current layer from ${file.name}` });
@@ -390,7 +471,6 @@ export default function Home() {
       
       let newGrid = grid.map(r => [...r]);
       
-      // Handle tools that are just simple clicks and don't use the preview system.
       if (tool === 'picker') {
         const tileId = newGrid[row][col];
         const pickedTile = tiles.find(t => t.id === tileId);
@@ -463,7 +543,6 @@ export default function Home() {
         return; 
       }
       
-      // If we reach here, it means a tool that doesn't use the preview system modified the grid.
       updateGridInLayer(activeLayer.id, newGrid);
       setSelection(null);
     },
@@ -572,9 +651,8 @@ export default function Home() {
       .slice(selection.minRow, selection.maxRow + 1)
       .map((row, rIndex) =>
         row.slice(selection.minCol, selection.maxCol + 1).map((cell, cIndex) => {
-          // If using magic wand, only copy the selected cells
           if (selection.selectedCells && selection.selectedCells[selection.minRow + rIndex][selection.minCol + cIndex] === 0) {
-            return -1; // Use -1 to represent a non-copied cell
+            return -1;
           }
           return cell;
         })
@@ -645,7 +723,6 @@ export default function Home() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only deactivate if leaving the main grid area entirely
     const mainArea = mapGridRef.current?.parentElement;
     if (mainArea && !mainArea.contains(e.relatedTarget as Node)) {
         setIsDragging(false);
@@ -653,7 +730,7 @@ export default function Home() {
     }
   };
 
-  const handleMouseDown = useCallback((e: MouseEvent) => {
+  const handleMouseDownOnPage = useCallback((e: MouseEvent) => {
     if (selection && mapGridRef.current && !mapGridRef.current.contains(e.target as Node)) {
         setSelection(null);
     }
@@ -750,7 +827,6 @@ export default function Home() {
         document.getElementById('clear-palette-button')?.click();
       }
        else if (e.key === 'd') {
-        if (isPreviewMode) return;
         e.preventDefault();
         setConfirmClearMapOpen(true);
       }
@@ -798,12 +874,12 @@ export default function Home() {
   
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('mousedown', handleMouseDown as any);
+    window.addEventListener('mousedown', handleMouseDownOnPage);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('mousedown', handleMouseDown as any);
+      window.removeEventListener('mousedown', handleMouseDownOnPage);
     }
-  }, [handleKeyDown, handleMouseDown]);
+  }, [handleKeyDown, handleMouseDownOnPage]);
 
   const handleToolSelect = useCallback((newTool: Tool) => {
     setTool(newTool);
@@ -817,16 +893,31 @@ export default function Home() {
       }
     }
   }, [settings.layersEnabled]);
+
+  const clearLayer = useCallback((layerId: string) => {
+    const layer = projectState.layers.find(l => l.id === layerId);
+    if (!layer) return;
+    const newGrid = createEmptyGrid(layer.grid[0]?.length || 0, layer.grid.length);
+    updateGridInLayer(layerId, newGrid);
+  }, [projectState.layers, updateGridInLayer]);
   
   const handleClearMap = useCallback(() => {
     if (!activeLayer) return;
-    updateGridInLayer(activeLayer.id, createEmptyGrid(gridSize.width, gridSize.height));
+    clearLayer(activeLayer.id);
     setConfirmClearMapOpen(false);
     toast({ title: "Map Cleared", description: "The grid has been reset."});
-  }, [gridSize, toast, updateGridInLayer, activeLayer]);
+  }, [activeLayer, clearLayer, toast]);
+  
+  const clearAllLayers = useCallback(() => {
+        modifyCurrentProject((project) => {
+            const newGrid = createEmptyGrid(gridSize.width, gridSize.height);
+            const clearedLayers = project.layers.map(layer => ({ ...layer, grid: newGrid }));
+            return { layers: clearedLayers };
+        });
+    }, [modifyCurrentProject, gridSize.width, gridSize.height]);
   
   const handleClearPalette = useCallback(() => {
-    clearAllLayers(gridSize.width, gridSize.height);
+    clearAllLayers();
     updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
@@ -852,6 +943,70 @@ export default function Home() {
       const tile = tiles.find(t => t.id === id);
       toast({ title: 'Secondary Tile Selected', description: `"${tile?.name || 'Unknown'}" set as secondary.`});
   }, [tiles, toast]);
+
+  const addLayer = useCallback(() => {
+    modifyCurrentProject(project => {
+        const { width, height } = project.layers[0] ? { width: project.layers[0].grid[0].length, height: project.layers[0].grid.length } : { width: INITIAL_GRID_SIZE, height: INITIAL_GRID_SIZE };
+        const newLayer = (name: string, grid: GridState): Layer => ({
+            id: `layer_${new Date().getTime()}_${Math.random()}`,
+            name,
+            grid,
+            isVisible: true,
+        });
+        const newLayerData = newLayer(`Layer ${project.layers.length + 1}`, createEmptyGrid(width, height));
+        return { 
+            layers: [...project.layers, newLayerData],
+            activeLayerId: newLayerData.id,
+        };
+    });
+  }, [modifyCurrentProject]);
+
+  const deleteLayer = useCallback((layerId: string) => {
+    modifyCurrentProject(project => {
+        if (project.layers.length <= 1) {
+            toast({ variant: 'destructive', title: 'Cannot Delete', description: 'You must have at least one layer.' });
+            return {};
+        }
+        const newLayers = project.layers.filter(l => l.id !== layerId);
+        let newActiveLayerId = project.activeLayerId;
+        if (project.activeLayerId === layerId) {
+            newActiveLayerId = newLayers[newLayers.length - 1]?.id ?? null;
+        }
+        return { layers: newLayers, activeLayerId: newActiveLayerId };
+    });
+  }, [modifyCurrentProject, toast]);
+
+  const selectLayer = useCallback((layerId: string) => {
+    modifyCurrentProject(() => ({ activeLayerId: layerId }));
+  }, [modifyCurrentProject]);
+
+  const renameLayer = useCallback((layerId: string, newName: string) => {
+    modifyCurrentProject(project => ({
+        layers: project.layers.map(l => l.id === layerId ? { ...l, name: newName } : l)
+    }));
+  }, [modifyCurrentProject]);
+
+  const toggleLayerVisibility = useCallback((layerId: string) => {
+    modifyCurrentProject(project => ({
+        layers: project.layers.map(l => l.id === layerId ? { ...l, isVisible: !l.isVisible } : l)
+    }), true);
+  }, [modifyCurrentProject]);
+
+  const reorderLayers = useCallback((newLayers: Layer[]) => {
+      modifyCurrentProject(() => ({ layers: newLayers }));
+  }, [modifyCurrentProject]);
+  
+  const remapGrid = useCallback((remap: { [oldId: number]: number }) => {
+    modifyCurrentProject(project => {
+        const newLayers = project.layers.map(layer => ({
+            ...layer,
+            grid: layer.grid.map(row => 
+                row.map(cell => remap[cell] ?? cell)
+            )
+        }));
+        return { layers: newLayers };
+    });
+  }, [modifyCurrentProject]);
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -963,7 +1118,7 @@ export default function Home() {
     <TooltipProvider delayDuration={300}>
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header 
-            subtitle={currentProject.name}
+            subtitle={projectState.name}
             icon={ToyBrick} 
             actionGroups={[fileActions, projectActions, gameplayActions]}
             onTitleClick={() => setSettingsOpen(true)}
@@ -1184,7 +1339,7 @@ export default function Home() {
           isOpen={isStorageOpen}
           onClose={() => setStorageOpen(false)}
           projects={projects}
-          currentProjectId={currentProject.id}
+          currentProjectId={projectState.id}
           onLoadProject={loadProject}
           onSaveProject={saveProject}
           onDeleteProject={deleteProject}
@@ -1232,7 +1387,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    
-
-    
