@@ -977,7 +977,10 @@ export default function Home() {
               onExpand={() => setToolbarCollapsed(false)}
             >
               <div className="bg-card border-r border-border flex flex-col h-full">
-                <div className={cn('flex-grow overflow-hidden transition-opacity duration-300', (isToolbarCollapsed) && 'opacity-0')}>
+                <div 
+                  className="flex-grow overflow-hidden transition-opacity duration-300"
+                  style={{ opacity: isToolbarCollapsed ? 0 : 1 }}
+                >
                   {!isPreviewMode && (
                     <Toolbar<Tool>
                       actions={toolbarActions}
@@ -1087,7 +1090,10 @@ export default function Home() {
                 onExpand={() => setPaletteCollapsed(false)}
             >
               <div className="bg-card border-l border-border flex flex-col h-full">
-                <div className={cn('flex-grow overflow-hidden transition-opacity duration-300', isPaletteCollapsed && 'opacity-0')}>
+                 <div 
+                  className="flex-grow overflow-hidden transition-opacity duration-300"
+                  style={{ opacity: isPaletteCollapsed ? 0 : 1 }}
+                >
                       {!isPreviewMode && (
                           <TilePalette
                           tiles={tiles}
