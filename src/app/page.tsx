@@ -168,7 +168,7 @@ export default function Home() {
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     setProjectHistory(currentProject => {
         const changes = modifier(currentProject);
-        return { ...currentProject, ...changes };
+        return { ...currentProject, ...changes, lastModified: Date.now() };
     }, batch);
   }, [setProjectHistory]);
 
@@ -881,7 +881,6 @@ export default function Home() {
     handleInvertSelection, 
     handleMirrorHorizontal, 
     handleMirrorVertical,
-    grid,
   ]);
   
   useEffect(() => {
@@ -1419,5 +1418,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    

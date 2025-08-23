@@ -1,9 +1,10 @@
 
 import { useState, useCallback } from 'react';
+import type { Project } from '@/lib/types';
 
 const MAX_HISTORY_SIZE = 50;
 
-export function useHistoryState<T>(initialState: T) {
+export function useHistoryState<T extends Project>(initialState: T) {
   const [state, setState] = useState({
     past: [] as T[],
     present: initialState,
@@ -19,7 +20,8 @@ export function useHistoryState<T>(initialState: T) {
         ? (newState as (prevState: T) => T)(currentState.present) 
         : newState;
 
-      if (JSON.stringify(currentState.present) === JSON.stringify(newPresent)) {
+      // Use a more reliable check than deep equality on a complex object
+      if (currentState.present.lastModified === newPresent.lastModified) {
           return currentState;
       }
 
