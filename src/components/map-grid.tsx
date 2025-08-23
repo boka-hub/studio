@@ -56,7 +56,7 @@ const TileCell = React.memo(function TileCell({
                 />
             )}
             {isCellSelectedByWand && (
-                <div className="absolute inset-0 bg-blue-500/30" />
+                <div className="absolute inset-0 bg-primary/30" />
             )}
         </div>
     );
@@ -378,8 +378,6 @@ export const MapGrid: FC<MapGridProps> = ({
         return 'cursor-crosshair';
       case 'picker': case 'fill': case 'magic-wand':
         return 'cursor-pointer';
-      case 'paste':
-        return 'cursor-copy';
       case 'shape': case 'gradient': case 'noise': case 'scatter': case 'select':
         return 'cursor-crosshair';
       default:
@@ -492,7 +490,7 @@ export const MapGrid: FC<MapGridProps> = ({
 
        {selectionToRender && !selectionToRender.selectedCells && !isPreviewMode && (
         <div
-          className="absolute border-2 border-dashed border-blue-500 pointer-events-none"
+          className="absolute border-2 border-dashed border-primary pointer-events-none"
           style={{
             left: `${selectionToRender.minCol * (TILE_SIZE + gridLineWidth)}px`,
             top: `${selectionToRender.minRow * (TILE_SIZE + gridLineWidth)}px`,
