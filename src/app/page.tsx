@@ -678,10 +678,9 @@ export default function Home() {
   };
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
-    if (!mapGridRef.current?.contains(e.target as Node)) {
-        if (selection && e.key !== 'Escape') {
-          // Prevent deselection on outside click
-        }
+    // Check if the click is outside the map grid area
+    if (selection && mapGridRef.current && !mapGridRef.current.contains(e.target as Node)) {
+        // Do nothing to prevent deselection
     }
   }, [selection]);
 

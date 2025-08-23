@@ -531,5 +531,3 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
-
-    
