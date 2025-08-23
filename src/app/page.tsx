@@ -72,6 +72,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { MapGrid } from '@/components/map-grid';
+import { useMounted } from '@/hooks/use-mounted';
+
 
 const INITIAL_GRID_SIZE = 32;
 const SETTINGS_KEY = 'tileforge-app-settings';
@@ -81,7 +83,7 @@ const createEmptyGrid = (width: number, height: number): GridState =>
     .fill(null)
     .map(() => Array(width).fill(0));
 
-export default function Home() {
+function HomeComponent() {
   const {
     currentProject,
     saveProject,
@@ -100,13 +102,7 @@ export default function Home() {
     canUndo, 
     canRedo,
     reset: resetHistory,
-  } = useHistoryState<Project>(currentProject);
-
-  useEffect(() => {
-    if (currentProject && currentProject.id) {
-      resetHistory(currentProject);
-    }
-  }, [currentProject.id, resetHistory]);
+  } = useHistoryState(currentProject);
   
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
@@ -869,7 +865,6 @@ export default function Home() {
     isPreviewMode, 
     playerPos, 
     tiles, 
-    grid,
     togglePreviewMode, 
     selection, 
     handleCopySelection, 
@@ -882,6 +877,7 @@ export default function Home() {
     handleInvertSelection, 
     handleMirrorHorizontal, 
     handleMirrorVertical,
+    grid, // Add grid dependency for collision checks in preview mode
   ]);
   
   useEffect(() => {
@@ -1136,7 +1132,7 @@ export default function Home() {
     if (!isLoading) {
         saveProject(projectState);
     }
-  }, [projectState.id, saveProject, isLoading]);
+  }, [projectState.id]);
 
   if (isLoading) {
     return (
@@ -1418,4 +1414,18 @@ export default function Home() {
       </div>
     </TooltipProvider>
   );
+}
+
+export default function Page() {
+  const mounted = useMounted();
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <ToyBrick className="h-12 w-12 text-primary animate-pulse" />
+      </div>
+    );
+  }
+
+  return <HomeComponent />;
 }
