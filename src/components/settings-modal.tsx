@@ -55,7 +55,7 @@ const shortcuts = [
     { section: 'Selection Actions', items: [
         { keys: ['Ctrl', 'Drag'], description: 'Draw rectangle with current tile (overrides tool)' },
         { keys: ['Ctrl', 'C'], description: 'Copy selection to clipboard' },
-        { keys: ['Ctrl', 'V'], description: 'Activate Paste mode' },
+        { keys: ['Ctrl', 'V'], description: 'Paste selection at mouse position' },
         { keys: ['Enter'], description: 'Fill selection with primary tile' },
         { keys: ['Delete'], description: 'Delete tiles within a selection' },
         { keys: ['I'], description: 'Invert tiles in selection' },
@@ -89,13 +89,13 @@ const features = [
         short: "Automatically places the correct tile to form connections.",
         long: `This powerful offline tool makes drawing environments like walls or terrain incredibly fast. Select a mode (9, 13, or 47-tile) from the toolbar, then select the exact number of tiles required for that mode in the palette. When you draw, the tool analyzes neighbors and places the correct tile automatically.
 
-IMPORTANT: The order in which you select tiles in the palette is absolutely critical for the logic to work. You must select them in the precise order listed below.
+IMPORTANT: The order in which you select tiles in the palette is absolutely critical for the logic to work. You must select them in the precise order based on standardized tileset layouts.
 
 ---
 
 **9-Tile (Simple Walls/Paths)**
 
-This is for simple connections. You must select exactly 9 tiles.
+This is for simple connections (e.g., a basic path). You must select exactly 9 tiles.
 
 Selection Order:
 1. Top-Left Corner
@@ -133,7 +133,9 @@ Selection Order:
 
 **47-Tile (Blob/Terrain)**
 
-This is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must create a full 47-tile set and select them in the correct order based on the standardized "blob" tileset layout. A visual guide for the selection order can be easily found online by searching for "Godot 3x3 minimal tileset".`
+This is the most comprehensive set, ideal for natural, organic terrain like grass, dirt, or sand. You must create a full 47-tile set and select them in the correct order. The logic uses the same standard as the Godot game engine.
+
+**A visual guide for the selection order is essential.** Search online for **"Godot 3x3 minimal tileset"** to find the correct 47-tile layout image. You must select your tiles in the same order as shown in that visual guide.`
     },
     {
         name: "Brush",
@@ -247,7 +249,7 @@ This allows you to export your tiles, edit them in another program, and re-impor
     {
         name: "Selection Actions",
         short: "Tools for editing a selected area.",
-        long: "Once you have an area selected, a new set of tools appears in the toolbar: Fill (fills the selection with your primary tile), Copy (copies the selected tile data to an invisible clipboard), Paste (pastes the clipboard into the top-left of a new selection), Delete (clears all tiles in the selection), Invert (swaps your primary tile with other tiles), and Mirror (flips the selection horizontally or vertically)."
+        long: "Once you have an area selected, a new set of tools appears in the toolbar: Fill (fills the selection with your primary tile), Copy (copies the selected tile data to an invisible clipboard), Paste (pastes the clipboard at your cursor), Delete (clears all tiles in the selection), Invert (swaps your primary tile with other tiles), and Mirror (flips the selection horizontally or vertically)."
     },
     {
         name: "Shape Tool",

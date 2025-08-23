@@ -169,19 +169,22 @@ export const MapGrid: FC<MapGridProps> = ({
 
         const centerIndex = autoTileMode === '9-tile' ? 4 : autoTileMode === '13-tile' ? 12 : 2;
         if(newGrid[row] && newGrid[row][col] !== undefined) {
-          newGrid[row][col] = autoTileSet[centerIndex];
+          // Place the center tile
+          if (autoTileOverwrite || newGrid[row][col] === 0 || autoTileSet_.has(newGrid[row][col])) {
+              newGrid[row][col] = autoTileSet[centerIndex];
+          }
         }
 
-        for (let r_offset = -2; r_offset <= 2; r_offset++) {
-          for (let c_offset = -2; c_offset <= 2; c_offset++) {
+        // After placing, update all neighbors
+        for (let r_offset = -1; r_offset <= 1; r_offset++) {
+          for (let c_offset = -1; c_offset <= 1; c_offset++) {
             const nr = row + r_offset;
             const nc = col + c_offset;
 
             if (nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
               const neighborTile = newGrid[nr][nc];
-              const isNeighborAutoTile = autoTileSet_.has(neighborTile);
-              
-              if (isNeighborAutoTile || autoTileOverwrite || neighborTile === 0) {
+              // Only update tiles that are part of the set, or empty tiles if not overwriting
+              if (autoTileSet_.has(neighborTile) || (autoTileOverwrite && neighborTile !== 0) || neighborTile === 0) {
                  const newTileId = getTileIdFunc(newGrid, nr, nc, autoTileSet);
                  if(newGrid[nr] && newGrid[nr][nc] !== undefined) {
                     newGrid[nr][nc] = newTileId;
@@ -504,5 +507,3 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
-
-    
