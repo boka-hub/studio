@@ -6,8 +6,6 @@ function isTileInSet(grid: GridState, r: number, c: number, tileSet: Set<number>
     if (r < 0 || r >= grid.length || c < 0 || c >= grid[0].length) {
         return true; // Out of bounds counts as a "match" to create edges.
     }
-    // A tile is considered part of the "set" if it's in the auto-tile set OR it's an empty tile that we want to overwrite.
-    // The logic is: "does this tile connect to me?"
     return tileSet.has(grid[r][c]);
 }
 
@@ -49,23 +47,23 @@ function getAutoTileId9(grid: GridState, r: number, c: number, autoTileSet: numb
     const e = isTileInSet(grid, r, c + 1, tileSet);
 
     if (n && s && w && e) return center;
-    if (n && s && !w && e) return left;
-    if (n && s && w && !e) return right;
-    if (!n && s && w && e) return top;
-    if (n && !s && w && e) return bottom;
+    if (n && s && !w && e) return right;
+    if (n && s && w && !e) return left;
+    if (!n && s && w && e) return bottom;
+    if (n && !s && w && e) return top;
 
-    if (!n && s && !w && e) return topLeft;
-    if (!n && s && w && !e) return topRight;
-    if (n && !s && !w && e) return bottomLeft;
-    if (n && !s && w && !e) return bottomRight;
+    if (!n && s && !w && e) return bottomRight;
+    if (!n && s && w && !e) return bottomLeft;
+    if (n && !s && !w && e) return topRight;
+    if (n && !s && w && !e) return topLeft;
     
-    if (n && s) return right; 
+    if (n && s) return left;
     if (w && e) return top;
 
-    if (n) return bottom;
-    if (s) return top;
-    if (w) return right;
-    if (e) return left;
+    if (n) return top;
+    if (s) return bottom;
+    if (w) return left;
+    if (e) return right;
     
     return center;
 }
@@ -81,8 +79,8 @@ function getAutoTileId13(grid: GridState, r: number, c: number, autoTileSet: num
     const tileSet = new Set(autoTileSet);
     
     const [
-        top, bottom, left, right,
         topLeft, topRight, bottomLeft, bottomRight,
+        top, bottom, left, right,
         interiorTopLeft, interiorTopRight, interiorBottomLeft, interiorBottomRight,
         center
     ] = autoTileSet;
@@ -137,7 +135,7 @@ function getAutoTileId13(grid: GridState, r: number, c: number, autoTileSet: num
  * using a 47-tile "blob" auto-tiling logic. This is the industry standard.
  */
 function getAutoTileId47(grid: GridState, r: number, c: number, autoTileSet: number[]): number {
-    if (autoTileSet.length !== 47) return autoTileSet[0] ?? 0;
+    if (autoTileSet.length < 16) return autoTileSet[0] ?? 0; // Needs at least the base 16
     const tileSet = new Set(autoTileSet);
 
     let bitmask = 0;
@@ -146,43 +144,46 @@ function getAutoTileId47(grid: GridState, r: number, c: number, autoTileSet: num
     if (isTileInSet(grid, r + 1, c, tileSet)) bitmask |= 4;  // South
     if (isTileInSet(grid, r, c - 1, tileSet)) bitmask |= 8;  // West
     
-    // Get the base tile index from the cardinal directions
     let index = bitmaskToIndexMap4[bitmask];
 
-    // If it's a convex corner, we don't need to check diagonals
-    if(index === 0 || index === 1 || index === 4 || index === 5 || index === 16 || index === 17 || index === 20 || index === 21 || index === 22 || index === 23 || index === 26 || index === 27 || index === 32 || index === 33 || index === 36 || index === 37) {
-      //pass
-    } else {
-      // Concave corners require diagonal checks to select the correct variation
-      if ((bitmask & 1) && (bitmask & 8) && !isTileInSet(grid, r-1, c-1, tileSet)) index = 10; // Top-Left concave
-      if ((bitmask & 1) && (bitmask & 2) && !isTileInSet(grid, r-1, c+1, tileSet)) index = 8; // Top-Right concave
-      if ((bitmask & 4) && (bitmask & 8) && !isTileInSet(grid, r+1, c-1, tileSet)) index = 34; // Bottom-Left concave
-      if ((bitmask & 4) && (bitmask & 2) && !isTileInSet(grid, r+1, c+1, tileSet)) index = 32; // Bottom-Right concave
+    // Check for concave corners if the main shape is a solid blob
+    if (index === 3 && autoTileSet.length === 47) {
+      if (!isTileInSet(grid, r-1, c-1, tileSet)) index = 21; // Concave NW
+      if (!isTileInSet(grid, r-1, c+1, tileSet)) index = 20; // Concave NE
+      if (!isTileInSet(grid, r+1, c-1, tileSet)) index = 19; // Concave SW
+      if (!isTileInSet(grid, r+1, c+1, tileSet)) index = 18; // Concave SE
     }
 
     if (index === undefined) {
-      return autoTileSet[2]; // Default to solid center
+      return autoTileSet[1]; // Default to solid center
     }
     return autoTileSet[index];
 }
 
 // Godot 3.x 3x3 minimal blob tile bitmask standard.
 const bitmaskToIndexMap4: { [key: number]: number } = {
-    0: 0,   // isolated tile
-    1: 20,  // N
-    2: 17,  // E
-    3: 16,  // N, E
-    4: 5,   // S
-    5: 2,   // S, N
-    6: 21,  // S, E
-    7: 22,  // S, E, N
-    8: 4,   // W
-    9: 26,  // W, N
-    10: 1,  // W, E
-    11: 27, // W, E, N
-    12: 37, // W, S
-    13: 38, // W, S, N
-    14: 33, // W, S, E
-    15: 3,  // W, S, E, N
+    2: 12,
+    8: 10,
+    10: 11,
+    11: 15,
+    1: 4,
+    3: 9,
+    9: 8,
+    12: 6,
+    13: 5,
+    14: 7,
+    4: 13,
+    5: 14,
+    6: 24,
+    7: 25,
+    15: 1, // Full
+    0: 0, // Empty
 };
 
+
+// The full 47-tile mapping (for reference, the simplified one is used above for the most common cases)
+const fullBitmaskMap = {
+    1: 4, 2: 12, 3: 9, 4: 13, 5: 14, 6: 24, 7: 25, 8: 10, 9: 8, 10: 11, 11: 15, 12: 6, 13: 5, 14: 7, 15: 1,
+    16: 18, 17: 20, 18: 38, 19: 39, 20: 30, 21: 31, 22: 40, 23: 41, 24: 16, 25: 17, 26: 36, 27: 37, 28: 28, 29: 29, 30: 32, 31: 33,
+    32: 19, 33: 23, 34: 44, 35: 45, 36: 42, 37: 43, 38: 46, 39: 47, 40: 22, 41: 26, 42: 3, 43: 2, 44: 27, 45: 35, 46: 34, 47: 21
+};

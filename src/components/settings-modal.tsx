@@ -162,17 +162,17 @@ Selection Order:
 
 **13-Tile (With Interior Corners)**
 
-This set adds support for interior corners, perfect for more complex walls or dungeons. You must select exactly 13 tiles.
+This set adds support for interior corners, perfect for more complex walls or dungeons. You must select exactly 13 tiles in the following order.
 
 Selection Order:
-1. Top Edge
-2. Bottom Edge
-3. Left Edge
-4. Right Edge
-5. Top-Left Corner (Outer)
-6. Top-Right Corner (Outer)
-7. Bottom-Left Corner (Outer)
-8. Bottom-Right Corner (Outer)
+1. Top-Left Corner (Outer)
+2. Top-Right Corner (Outer)
+3. Bottom-Left Corner (Outer)
+4. Bottom-Right Corner (Outer)
+5. Top Edge
+6. Bottom Edge
+7. Left Edge
+8. Right Edge
 9. Top-Left Corner (Inner)
 10. Top-Right Corner (Inner)
 11. Bottom-Left Corner (Inner)
