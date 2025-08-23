@@ -34,7 +34,7 @@ interface StorageModalProps {
   projects: Project[];
   currentProjectId: string;
   onLoadProject: (id: string) => void;
-  onSaveProject: (name: string) => void;
+  onSaveProject: (project: Project) => void;
   onDeleteProject: (id: string) => void;
   onRenameProject: (id: string, newName: string) => void;
 }
@@ -65,21 +65,24 @@ export const StorageModal: React.FC<StorageModalProps> = ({
       toast({ variant: 'destructive', title: 'Save Failed', description: 'A project with that name already exists.' });
       return;
     }
-    onSaveProject(trimmedName);
+    const currentProject = projects.find(p => p.id === currentProjectId);
+    if (!currentProject) return;
+
+    const newProject: Project = {
+        ...JSON.parse(JSON.stringify(currentProject)),
+        id: `proj_${new Date().getTime()}_${Math.random()}`,
+        name: trimmedName,
+        lastModified: Date.now(),
+    };
+    
+    onSaveProject(newProject);
     setNewProjectName('');
     toast({ title: 'Project Saved!', description: `"${trimmedName}" has been saved.`});
   };
 
   const handleLoad = (id: string) => {
     setLoadingProjectId(id);
-    // The actual loading logic is handled in `useProjects` which will update the state
-    // We just show a loader and close the modal.
     onLoadProject(id);
-    toast({ title: 'Loading Project...'});
-    setTimeout(() => {
-        onClose();
-        setLoadingProjectId(null);
-    }, 500); // Give some visual feedback
   };
 
   const startEditing = (project: Project) => {

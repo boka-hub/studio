@@ -54,5 +54,3 @@ export interface TileImportData {
   file: File;
   isSolid: boolean;
 }
-
-    

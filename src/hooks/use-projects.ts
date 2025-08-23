@@ -61,7 +61,8 @@ export const useProjects = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
@@ -69,34 +70,40 @@ export const useProjects = () => {
     }
   }, [state, isLoading]);
 
-  const setCurrentProject = useCallback((project: Project) => {
-    setState(currentState => ({
-      ...currentState,
-      projects: currentState.projects.map(p => p.id === project.id ? project : p),
-    }));
-  }, []);
-
-  const loadProject = useCallback((id: string) => {
-    setState(currentState => ({
-      ...currentState,
-      currentProjectId: id,
-    }));
-  }, []);
-
-  const saveProject = useCallback((name: string) => {
+  const saveProject = useCallback((projectToSave: Project) => {
     setState(currentState => {
-      const current = currentState.projects.find(p => p.id === currentState.currentProjectId);
-      if (!current) return currentState;
-      const newProject: Project = {
-        ...JSON.parse(JSON.stringify(current)),
-        id: `proj_${new Date().getTime()}_${Math.random()}`,
-        name,
-        lastModified: Date.now(),
+      // Check if it's a new project being added or an existing one being updated
+      const existingProjectIndex = currentState.projects.findIndex(p => p.id === projectToSave.id);
+      let newProjects;
+
+      if (existingProjectIndex > -1) {
+        // Update existing project
+        newProjects = [...currentState.projects];
+        newProjects[existingProjectIndex] = { ...projectToSave, lastModified: Date.now() };
+      } else {
+        // Add new project
+        newProjects = [...currentState.projects, projectToSave];
+      }
+
+      return {
+        ...currentState,
+        projects: newProjects,
+        currentProjectId: projectToSave.id,
       };
-      return { ...currentState, projects: [...currentState.projects, newProject] };
     });
-    toast({ title: 'Project Saved!', description: `"${name}" has been saved.` });
-  }, [toast]);
+  }, []);
+  
+  const setCurrentProjectById = useCallback((id: string): Project | undefined => {
+    let project: Project | undefined;
+    setState(currentState => {
+      project = currentState.projects.find(p => p.id === id);
+      return {
+        ...currentState,
+        currentProjectId: id,
+      };
+    });
+    return project;
+  }, []);
 
   const deleteProject = useCallback((id: string) => {
     setState(currentState => {
@@ -125,10 +132,9 @@ export const useProjects = () => {
     currentProjectId: state.currentProjectId,
     currentProject,
     isLoading,
-    loadProject,
     saveProject,
     deleteProject,
     renameProject,
-    setCurrentProject,
+    setCurrentProjectById,
   };
 };

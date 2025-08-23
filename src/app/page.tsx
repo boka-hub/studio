@@ -55,7 +55,7 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat, Project } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat, Project, TileImportData } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { useHistoryState } from '@/hooks/use-history-state';
@@ -83,14 +83,14 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 
 export default function Home() {
   const {
-    currentProject,
+    currentProject: initialProject,
     loadProject,
     saveProject,
     deleteProject,
     renameProject,
     projects,
     isLoading,
-    setCurrentProject,
+    setCurrentProjectById,
   } = useProjects();
   
   const { 
@@ -101,11 +101,11 @@ export default function Home() {
     canUndo, 
     canRedo,
     reset: resetHistory,
-  } = useHistoryState<Project>(currentProject);
+  } = useHistoryState<Project>(initialProject);
 
   useEffect(() => {
-    resetHistory(currentProject);
-  }, [currentProject, resetHistory]);
+    resetHistory(initialProject);
+  }, [initialProject, resetHistory]);
   
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
@@ -156,8 +156,10 @@ export default function Home() {
 
   // Sync project state from history back to the global projects store
   useEffect(() => {
-    setCurrentProject(projectState);
-  }, [projectState, setCurrentProject]);
+    if (projectState.id === initialProject.id) {
+       saveProject(projectState);
+    }
+  }, [projectState, initialProject.id, saveProject]);
 
 
   useEffect(() => {
@@ -910,11 +912,13 @@ export default function Home() {
   
   const clearAllLayers = useCallback(() => {
         modifyCurrentProject((project) => {
-            const newGrid = createEmptyGrid(gridSize.width, gridSize.height);
-            const clearedLayers = project.layers.map(layer => ({ ...layer, grid: newGrid }));
+            const clearedLayers = project.layers.map(layer => {
+                const newGrid = createEmptyGrid(layer.grid[0]?.length || 0, layer.grid.length);
+                return { ...layer, grid: newGrid };
+            });
             return { layers: clearedLayers };
         });
-    }, [modifyCurrentProject, gridSize.width, gridSize.height]);
+    }, [modifyCurrentProject]);
   
   const handleClearPalette = useCallback(() => {
     clearAllLayers();
@@ -924,7 +928,7 @@ export default function Home() {
     setScatterSet([]);
     setAutoTileSet([]);
     toast({ title: "Palette Cleared", description: "All tiles have been removed and all layers cleared."});
-  }, [gridSize, toast, updateTiles, clearAllLayers]);
+  }, [clearAllLayers, toast, updateTiles]);
   
   const onToggleScatterTile = useCallback((id: number) => {
     setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
@@ -1007,6 +1011,17 @@ export default function Home() {
         return { layers: newLayers };
     });
   }, [modifyCurrentProject]);
+  
+  const handleLoadProject = useCallback((id: string) => {
+    const projectToLoad = setCurrentProjectById(id);
+    if(projectToLoad) {
+      resetHistory(projectToLoad);
+    }
+    toast({ title: 'Loading Project...' });
+    setTimeout(() => {
+        setStorageOpen(false);
+    }, 300);
+  }, [setCurrentProjectById, resetHistory, toast]);
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -1340,7 +1355,7 @@ export default function Home() {
           onClose={() => setStorageOpen(false)}
           projects={projects}
           currentProjectId={projectState.id}
-          onLoadProject={loadProject}
+          onLoadProject={handleLoadProject}
           onSaveProject={saveProject}
           onDeleteProject={deleteProject}
           onRenameProject={renameProject}

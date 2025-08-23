@@ -432,5 +432,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    
