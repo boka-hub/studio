@@ -1,5 +1,5 @@
 
-export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile' | 'paste';
+export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile';
 
 export type Shape = 'rectangle' | 'circle' | 'line';
 
@@ -54,3 +54,5 @@ export interface TileImportData {
   file: File;
   isSolid: boolean;
 }
+
+    

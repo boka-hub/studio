@@ -6,7 +6,7 @@ import {
   Panel,
   PanelGroup,
   PanelResizeHandle,
-  ImperativePanelHandle,
+  type ImperativePanelHandle,
 } from "react-resizable-panels"
 import {
   Brush,
@@ -782,10 +782,6 @@ export default function Home() {
     
     if (e.key === 'Escape') {
         e.preventDefault();
-        if (tool === 'paste') {
-          setTool('brush');
-          toast({ title: 'Paste Canceled' });
-        }
         if (selection) setSelection(null);
     } else {
        const keyMap: { [key: string]: Tool } = {
@@ -798,7 +794,7 @@ export default function Home() {
         setTool(keyMap[e.key]);
       }
     }
-  }, [selection, handleCopySelection, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool, togglePreviewMode, handleFillSelection, handleInvertSelection, handleMirrorHorizontal, handleMirrorVertical, openSlicer, handlePasteAtMouse]);
+  }, [selection, handleCopySelection, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, togglePreviewMode, handleFillSelection, handleInvertSelection, handleMirrorHorizontal, handleMirrorVertical, openSlicer, handlePasteAtMouse]);
   
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -811,7 +807,7 @@ export default function Home() {
 
   const handleToolSelect = useCallback((newTool: Tool) => {
     setTool(newTool);
-    if (newTool !== 'select' && newTool !== 'magic-wand' && newTool !== 'paste') {
+    if (newTool !== 'select' && newTool !== 'magic-wand') {
       setSelection(null);
     }
     const toolsWithSettings: Tool[] = ['spray', 'shape', 'gradient', 'noise', 'scatter', 'auto-tile'];
@@ -1236,3 +1232,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
