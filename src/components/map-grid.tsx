@@ -156,29 +156,30 @@ export const MapGrid: FC<MapGridProps> = ({
         }
       } else if (tool === 'auto-tile') {
         const requiredTiles = { '9-tile': 9, '13-tile': 13, '47-tile': 47 };
-        if (autoTileSet.length !== requiredTiles[autoTileMode]) {
+        if (autoTileMode === '47-tile' && autoTileSet.length < 16) return newGrid;
+        if (autoTileMode !== '47-tile' && autoTileSet.length !== requiredTiles[autoTileMode]) {
           return newGrid;
         }
 
         const autoTileSet_ = new Set(autoTileSet);
         
-        // Step 1: Place the center tile at the cursor position
-        const centerIndex = autoTileMode === '9-tile' ? 4 : autoTileMode === '13-tile' ? 12 : 2;
+        const tileToPlace = getAutoTileId(baseGrid, row, col, autoTileSet, autoTileMode);
+
         if(newGrid[row]?.[col] !== undefined) {
-            if (autoTileOverwrite || newGrid[row][col] === 0 || autoTileSet_.has(newGrid[row][col])) {
-                newGrid[row][col] = autoTileSet[centerIndex];
+             if (autoTileOverwrite || newGrid[row][col] === 0 || autoTileSet_.has(newGrid[row][col])) {
+                newGrid[row][col] = tileToPlace;
             }
         }
         
-        // Step 2: Update the placed tile and all its direct neighbors
+        // Update all its direct neighbors
         for (let r_offset = -1; r_offset <= 1; r_offset++) {
           for (let c_offset = -1; c_offset <= 1; c_offset++) {
+             if (r_offset === 0 && c_offset === 0) continue; // Don't update the cell we just placed
             const nr = row + r_offset;
             const nc = col + c_offset;
             
             if (nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
-                const neighborTile = newGrid[nr][nc];
-                if (autoTileSet_.has(neighborTile) || (neighborTile === 0 && autoTileOverwrite)) {
+                if (autoTileSet_.has(newGrid[nr][nc])) {
                      const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet, autoTileMode);
                      if (newGrid[nr]?.[nc] !== undefined) {
                         newGrid[nr][nc] = newTileId;
