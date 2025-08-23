@@ -248,15 +248,15 @@ export const TilePalette: FC<TilePaletteProps> = ({
       <ScrollArea className="flex-grow">
         <div className={cn(
             "grid gap-2 p-4 pt-2",
-            isCollapsed ? 'grid-cols-1' : 'grid-cols-3'
+            isCollapsed ? 'grid-cols-1 justify-items-center' : 'grid-cols-3'
           )}>
           {filteredTiles.map((tile) => (
               <div 
                 key={tile.id} 
                 className={cn(
-                    "group flex flex-col items-center gap-1.5 tile-container w-full", 
+                    "group flex flex-col items-center gap-1.5 tile-container", 
                     draggedTileId === tile.id && "opacity-50",
-                    isCollapsed && 'items-center'
+                    isCollapsed ? 'w-10' : 'w-full'
                 )}
                 draggable={!searchQuery && !isCollapsed}
                 onDragStart={(e) => handleDragStart(e, tile.id)}
