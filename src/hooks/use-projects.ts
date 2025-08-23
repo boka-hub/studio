@@ -29,8 +29,20 @@ export const useProjects = () => {
   const { toast } = useToast();
 
   const currentProject = useMemo(() => {
-    return state.projects.find(p => p.id === state.currentProjectId) || createNewProject("Loading...");
-  }, [state.projects, state.currentProjectId]);
+    const project = state.projects.find(p => p.id === state.currentProjectId);
+    if (project) {
+        return project;
+    }
+    // Return a temporary, minimal project object during initial load to prevent errors
+    if (isLoading) {
+        return createNewProject("Loading...");
+    }
+    // If no project is found after loading, create a new one. This is a fallback.
+    const newProject = createNewProject('New Project');
+    // We shouldn't directly set state here as it's a side effect.
+    // This will be handled by the main useEffect.
+    return newProject;
+  }, [state.projects, state.currentProjectId, isLoading]);
 
 
   useEffect(() => {
@@ -64,12 +76,10 @@ export const useProjects = () => {
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
-      // Save state to local storage whenever it changes
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
   }, [state, isLoading]);
@@ -94,16 +104,18 @@ export const useProjects = () => {
     });
   }, []);
   
-  const setCurrentProjectById = useCallback((id: string): Project | undefined => {
+  const setCurrentProjectById = useCallback((id: string) => {
     const project = state.projects.find(p => p.id === id);
     if(project) {
         setState(currentState => ({
             ...currentState,
             currentProjectId: id,
         }));
+        toast({ title: 'Project Loaded', description: `Successfully loaded "${project.name}".`});
+    } else {
+        toast({ variant: 'destructive', title: 'Load Failed', description: 'Could not find the selected project.' });
     }
-    return project;
-  }, [state.projects]);
+  }, [state.projects, toast]);
 
   const deleteProject = useCallback((id: string) => {
     setState(currentState => {
@@ -138,3 +150,5 @@ export const useProjects = () => {
     setCurrentProjectById,
   };
 };
+
+    

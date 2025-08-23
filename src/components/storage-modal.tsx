@@ -82,7 +82,11 @@ export const StorageModal: React.FC<StorageModalProps> = ({
 
   const handleLoad = (id: string) => {
     setLoadingProjectId(id);
-    onLoadProject(id);
+    // Simulate loading time to show feedback, in a real app this might be an async operation
+    setTimeout(() => {
+      onLoadProject(id);
+      setLoadingProjectId(null);
+    }, 250); 
   };
 
   const startEditing = (project: Project) => {
@@ -104,7 +108,6 @@ export const StorageModal: React.FC<StorageModalProps> = ({
        return;
     }
     
-    // Check if another project (not the one being edited) already has the new name
     if (projects.some(p => p.id !== editingProjectId && p.name === trimmedName)) {
         toast({ variant: 'destructive', title: 'Rename Failed', description: 'Another project already has that name.' });
         return;
@@ -128,7 +131,6 @@ export const StorageModal: React.FC<StorageModalProps> = ({
         
         <ScrollArea className="max-h-full -mx-6 px-6">
           <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Saved Projects List */}
             <div className="flex flex-col gap-2 h-full">
               <h3 className="font-semibold text-muted-foreground px-1">Saved Projects</h3>
               <ScrollArea className="border rounded-md flex-grow">
@@ -161,10 +163,10 @@ export const StorageModal: React.FC<StorageModalProps> = ({
                       <>
                           <span className="truncate flex-grow">{project.name}</span>
                           <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditing(project)}><Edit className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditing(project)} disabled={!!loadingProjectId}><Edit className="h-4 w-4" /></Button>
                               <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={project.id === currentProjectId}>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={project.id === currentProjectId || !!loadingProjectId}>
                                         <Trash2 className="h-4 w-4" />
                                       </Button>
                                   </AlertDialogTrigger>
@@ -185,7 +187,7 @@ export const StorageModal: React.FC<StorageModalProps> = ({
                                   size="sm" 
                                   className="h-8" 
                                   onClick={() => handleLoad(project.id)} 
-                                  disabled={project.id === currentProjectId || loadingProjectId === project.id}
+                                  disabled={project.id === currentProjectId || !!loadingProjectId}
                               >
                                   {loadingProjectId === project.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                   Load
@@ -198,7 +200,6 @@ export const StorageModal: React.FC<StorageModalProps> = ({
                 </div>
               </ScrollArea>
             </div>
-            {/* Save New Project */}
             <div className="flex flex-col gap-4 p-4 border rounded-md bg-muted/50">
               <div className="space-y-2">
                   <h3 className="font-semibold">Save Current Project</h3>
@@ -230,3 +231,5 @@ export const StorageModal: React.FC<StorageModalProps> = ({
     </Dialog>
   );
 };
+
+    

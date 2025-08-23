@@ -103,7 +103,7 @@ export default function Home() {
   } = useHistoryState<Project>(initialProject);
 
   useEffect(() => {
-    if (initialProject) {
+    if (initialProject && initialProject.id) {
       resetHistory(initialProject);
     }
   }, [initialProject.id, resetHistory]);
@@ -172,29 +172,6 @@ export default function Home() {
     }, batch);
   }, [setProjectHistory]);
 
-  const handleSettingsChange = useCallback((newSettings: AppSettings) => {
-    // If user is disabling layers, show confirmation dialog first
-    if (settings.layersEnabled && !newSettings.layersEnabled && layers.length > 1) {
-      setPendingSettings(newSettings);
-      setConfirmMergeLayersOpen(true);
-    } else {
-      setSettings(newSettings);
-      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-      toast({ title: "Settings Updated", description: "Your changes have been applied."});
-    }
-  }, [settings.layersEnabled, layers, toast]);
-
-  const updateGridInLayer = useCallback((layerId: string, grid: GridState, batch = false) => {
-      modifyCurrentProject(project => {
-        const newLayers = project.layers.map(l => l.id === layerId ? {...l, grid} : l);
-        return { layers: newLayers };
-      }, batch);
-  }, [modifyCurrentProject]);
-  
-  const updateTiles = useCallback((tiles: Tile[], batch = false) => {
-      modifyCurrentProject(() => ({ tiles }), batch);
-  }, [modifyCurrentProject]);
-
   const mergeAllLayers = useCallback(() => {
     modifyCurrentProject(project => {
         const visibleLayers = project.layers.filter(l => l.isVisible);
@@ -232,6 +209,17 @@ export default function Home() {
     });
     toast({ title: "Layers Merged", description: "All visible layers have been flattened into one." });
   }, [modifyCurrentProject, toast]);
+
+  const handleSettingsChange = useCallback((newSettings: AppSettings) => {
+    if (settings.layersEnabled && !newSettings.layersEnabled && layers.length > 1) {
+      setPendingSettings(newSettings);
+      setConfirmMergeLayersOpen(true);
+    } else {
+      setSettings(newSettings);
+      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
+      toast({ title: "Settings Updated", description: "Your changes have been applied."});
+    }
+  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -278,6 +266,13 @@ export default function Home() {
     }
   }, []);
 
+  const updateGridInLayer = useCallback((layerId: string, grid: GridState, batch = false) => {
+      modifyCurrentProject(project => {
+        const newLayers = project.layers.map(l => l.id === layerId ? {...l, grid} : l);
+        return { layers: newLayers };
+      }, batch);
+  }, [modifyCurrentProject]);
+
   const handleGridResize = useCallback((newWidth: number, newHeight: number) => {
     if (!activeLayer) return;
     const oldGrid = grid;
@@ -296,10 +291,14 @@ export default function Home() {
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   }, [grid, activeLayer, updateGridInLayer, toast]);
   
+  const updateTiles = useCallback((tiles: Tile[], batch = false) => {
+      modifyCurrentProject(() => ({ tiles }), batch);
+  }, [modifyCurrentProject]);
+  
   const handleRenameTile = useCallback((tileId: number, newName: string) => {
     const tileBeingRenamed = tiles.find(t => t.id === tileId);
     if (tileBeingRenamed && tileBeingRenamed.name === newName) {
-      return; // No change, so no action needed.
+      return;
     }
     const isNameTaken = tiles.some(t => t.name === newName);
     if (isNameTaken) {
@@ -1025,15 +1024,9 @@ export default function Home() {
   
   const handleLoadProject = useCallback((id: string) => {
     saveProject(projectState); // Save current project before switching
-    const projectToLoad = setCurrentProjectById(id);
-    if(projectToLoad) {
-      resetHistory(projectToLoad);
-      toast({ title: 'Project Loaded', description: `Successfully loaded "${projectToLoad.name}".`});
-    } else {
-      toast({ variant: 'destructive', title: 'Load Failed', description: 'Could not find the selected project.' });
-    }
+    setCurrentProjectById(id);
     setStorageOpen(false);
-  }, [setCurrentProjectById, resetHistory, toast, saveProject, projectState]);
+  }, [setCurrentProjectById, saveProject, projectState]);
 
   const handleOpenSettings = useCallback(() => {
     setSettingsOpen(true);
@@ -1143,7 +1136,7 @@ export default function Home() {
     if (!isLoading) {
       saveProject(projectState);
     }
-  }, [projectState]);
+  }, [projectState, isLoading, saveProject]);
 
   if (isLoading) {
     return (
@@ -1426,3 +1419,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    

@@ -80,7 +80,7 @@ export function Toolbar<T extends Tool>({
   const [localGridSize, setLocalGridSize] = useState(gridSize);
 
   useEffect(() => {
-    setLocalGridSize({...gridSize});
+    setLocalGridSize(gridSize);
   }, [gridSize]);
 
   const handleResize = () => {
@@ -310,3 +310,5 @@ export function Toolbar<T extends Tool>({
     </ScrollArea>
   );
 }
+
+    
