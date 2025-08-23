@@ -218,7 +218,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className={cn("p-4 pb-2 flex-shrink-0 space-y-2", isCollapsed && "hidden")}>
+      <div className="p-4 pb-2 flex-shrink-0 space-y-2">
         <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

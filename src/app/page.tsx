@@ -69,7 +69,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -135,7 +134,6 @@ export default function Home() {
   const [isStorageOpen, setStorageOpen] = useState(false);
   const [isMetadataModalOpen, setMetadataModalOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [tileToDelete, setTileToDelete] = useState<Tile | null>(null);
   const [isConfirmClearMapOpen, setConfirmClearMapOpen] = useState(false);
   const [isConfirmClearPaletteOpen, setConfirmClearPaletteOpen] = useState(false);
   const [isConfirmMergeLayersOpen, setConfirmMergeLayersOpen] = useState(false);
@@ -268,12 +266,9 @@ export default function Home() {
     );
     updateTiles(newTiles);
   }, [tiles, updateTiles]);
-
-  const openDeleteTileDialog = (tile: Tile) => {
-    setTileToDelete(tile);
-  };
   
-  const confirmDeleteTile = useCallback(() => {
+  const confirmDeleteTile = useCallback((tileId: number) => {
+    const tileToDelete = tiles.find(t => t.id === tileId);
     if (!tileToDelete) return;
     
     deleteTile(tileToDelete.id);
@@ -289,8 +284,7 @@ export default function Home() {
       title: 'Tile Deleted', 
       description: `Tile "${tileToDelete.name}" has been removed.`,
     });
-    setTileToDelete(null);
-  }, [tileToDelete, selectedTileId, secondarySelectedTileId, autoTileSet, deleteTile, toast]);
+  }, [tiles, selectedTileId, secondarySelectedTileId, autoTileSet, deleteTile, toast]);
   
   const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
     updateTiles(reorderedTiles, false);
@@ -679,17 +673,8 @@ export default function Home() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const currentTarget = e.currentTarget;
-    
-    setTimeout(() => {
-        if (currentTarget) {
-            const relatedTarget = e.relatedTarget as Node | null;
-            if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
-                setIsDragging(false);
-                setDragFileType(null);
-            }
-        }
-    }, 50);
+    setIsDragging(false);
+    setDragFileType(null);
   };
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
@@ -703,14 +688,18 @@ export default function Home() {
   const togglePreviewMode = useCallback(() => {
     const newPreviewState = !isPreviewMode;
     if (newPreviewState) {
-        // Collapse sidebars for preview mode
         if (leftPanelRef.current && !leftPanelRef.current.isCollapsed()) leftPanelRef.current.collapse();
         if (rightPanelRef.current && !rightPanelRef.current.isCollapsed()) rightPanelRef.current.collapse();
 
         let startPos = { row: 0, col: 0 };
         let found = false;
-        for (let r = 0; r < grid.length; r++) {
-            for (let c = 0; c < grid[0].length; c++) {
+        
+        const startArea = selection 
+          ? { minR: selection.minRow, maxR: selection.maxRow, minC: selection.minCol, maxC: selection.maxCol } 
+          : { minR: 0, maxR: grid.length - 1, minC: 0, maxC: (grid[0]?.length || 0) - 1};
+
+        for (let r = startArea.minR; r <= startArea.maxR; r++) {
+            for (let c = startArea.minC; c <= startArea.maxC; c++) {
                 const tileId = grid[r][c];
                 const tile = tiles.find(t => t.id === tileId);
                 if (!tile?.solid) {
@@ -725,18 +714,18 @@ export default function Home() {
             toast({
                 variant: 'destructive',
                 title: 'No Valid Start Position',
-                description: 'The entire map is solid. Player placed at (0,0).'
+                description: 'The entire map (or selection) is solid. Player placed at (0,0).'
             });
+            startPos = {row: 0, col: 0};
         }
         setPlayerPos(startPos);
     } else {
-        // Expand sidebars when exiting preview mode
         if (leftPanelRef.current && leftPanelRef.current.isCollapsed()) leftPanelRef.current.expand();
         if (rightPanelRef.current && rightPanelRef.current.isCollapsed()) rightPanelRef.current.expand();
         toast({ title: 'Exited Preview Mode' });
     }
     setPreviewMode(newPreviewState);
-  }, [grid, isPreviewMode, tiles, toast]);
+  }, [grid, isPreviewMode, tiles, toast, selection]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
@@ -855,6 +844,12 @@ export default function Home() {
   }, []);
 
   const onClearAutoTileSet = useCallback(() => setAutoTileSet([]), []);
+  
+  const handleSelectSecondaryTile = useCallback((id: number) => {
+      setSecondarySelectedTileId(id);
+      const tile = tiles.find(t => t.id === id);
+      toast({ title: 'Secondary Tile Selected', description: `"${tile?.name || 'Unknown'}" set as secondary.`});
+  }, [tiles, toast]);
 
   const toolbarActions = {
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -963,13 +958,7 @@ export default function Home() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div 
-        className="flex flex-col h-screen bg-background text-foreground font-body relative"
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-      >
-       {isDragging && renderDragOverlay()}
+      <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header 
             title="TileForge"
             subtitle={currentProject.name}
@@ -989,7 +978,7 @@ export default function Home() {
               onExpand={() => setToolbarCollapsed(false)}
             >
               <div className="bg-card border-r border-border flex flex-col h-full">
-                <div className='flex-grow overflow-hidden'>
+                <div className={cn('flex-grow overflow-hidden transition-opacity duration-300', (isToolbarCollapsed) && 'opacity-0')}>
                   {!isPreviewMode && (
                     <Toolbar<Tool>
                       actions={toolbarActions}
@@ -1052,7 +1041,13 @@ export default function Home() {
               <div className="w-1 h-8 bg-primary/20 rounded-full" />
             </PanelResizeHandle>
             <Panel defaultSize={panelLayout[1]} minSize={30}>
-              <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full">
+              <main 
+                className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full relative"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                {isDragging && renderDragOverlay()}
                 <div ref={mapGridRef}>
                   <MapGrid
                     layers={layers}
@@ -1093,7 +1088,7 @@ export default function Home() {
                 onExpand={() => setPaletteCollapsed(false)}
             >
               <div className="bg-card border-l border-border flex flex-col h-full">
-                <div className="flex-grow overflow-hidden">
+                <div className={cn('flex-grow overflow-hidden transition-opacity duration-300', isPaletteCollapsed && 'opacity-0')}>
                       {!isPreviewMode && (
                           <TilePalette
                           tiles={tiles}
@@ -1104,13 +1099,13 @@ export default function Home() {
                           autoTileMode={autoTileMode}
                           tool={tool}
                           onSelectTile={setSelectedTileId}
-                          onSelectSecondaryTile={setSecondarySelectedTileId}
+                          onSelectSecondaryTile={handleSelectSecondaryTile}
                           onToggleScatterTile={onToggleScatterTile}
                           onClearScatterSet={onClearScatterSet}
                           onToggleAutoTile={onToggleAutoTile}
                           onClearAutoTileSet={onClearAutoTileSet}
                           onRenameTile={handleRenameTile}
-                          onDeleteTile={openDeleteTileDialog}
+                          onDeleteTile={confirmDeleteTile}
                           onToggleSolid={handleToggleSolid}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
@@ -1197,21 +1192,6 @@ export default function Home() {
           tiles={tiles}
           onImport={handleMetadataImport}
         />
-
-        <AlertDialog open={!!tileToDelete} onOpenChange={(open) => !open && setTileToDelete(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will remove the tile &quot;{tileToDelete?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setTileToDelete(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDeleteTile}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         
         <AlertDialog open={isConfirmClearMapOpen} onOpenChange={setConfirmClearMapOpen}>
           <AlertDialogContent>
