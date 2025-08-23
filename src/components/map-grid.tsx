@@ -34,6 +34,36 @@ interface MapGridProps {
 const BASE_TILE_SIZE = 16;
 const gridLineWidth = 1;
 
+// Memoized TileCell component for performance optimization
+const TileCell = React.memo(function TileCell({
+    tile,
+    isCellSelectedByWand,
+    tileSize,
+}: {
+    tile: Tile | undefined;
+    isCellSelectedByWand: boolean;
+    tileSize: number;
+}) {
+    return (
+        <div className="relative" style={{ width: tileSize, height: tileSize }}>
+            {tile && tile.id !== 0 && (
+                <Image
+                    src={tile.src}
+                    alt={tile.name}
+                    fill
+                    sizes={`${tileSize}px`}
+                    className="object-cover"
+                    unoptimized
+                />
+            )}
+            {isCellSelectedByWand && (
+                <div className="absolute inset-0 bg-blue-500/30" />
+            )}
+        </div>
+    );
+});
+
+
 export const MapGrid: FC<MapGridProps> = ({ 
   layers,
   activeLayer, 
@@ -387,25 +417,12 @@ export const MapGrid: FC<MapGridProps> = ({
             const isCellSelectedByWand = isPrimaryActiveLayer && selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
 
             return (
-                <div
+                <TileCell
                     key={`${layer.id}-${rowIndex}-${colIndex}`}
-                    className="relative"
-                    style={{ width: TILE_SIZE, height: TILE_SIZE }}
-                >
-                    {tile && tile.id !== 0 && (
-                        <Image
-                            src={tile.src}
-                            alt={tile.name}
-                            fill
-                            sizes={`${TILE_SIZE}px`}
-                            className="object-cover"
-                            unoptimized
-                        />
-                    )}
-                    {isCellSelectedByWand && (
-                        <div className="absolute inset-0 bg-blue-500/30" />
-                    )}
-                </div>
+                    tile={tile}
+                    isCellSelectedByWand={isCellSelectedByWand}
+                    tileSize={TILE_SIZE}
+                />
             );
         })
     );

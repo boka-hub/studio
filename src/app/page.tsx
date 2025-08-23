@@ -924,7 +924,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-destructive/20 border-4 border-dashed border-destructive z-50 flex items-center justify-center pointer-events-none">
           <div className="text-center p-8 bg-background/80 rounded-lg">
             <h2 className="text-2xl font-bold mt-4 text-destructive-foreground">Invalid File Type</h2>
-            <p className="text-muted-foreground">Only images (.png, .jpg) or map files (.txt) are supported.</p>
+            <p className="text-muted-foreground">Only images (.png, .jpg) or map files (.txt, .json) are supported.</p>
           </div>
         </div>
       );

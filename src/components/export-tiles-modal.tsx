@@ -14,8 +14,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Tile, AppSettings, Layer } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-import { Download, FileImage, FileText } from 'lucide-react';
+import { Download, FileImage, FileText, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface ExportTilesModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
   const [gap, setGap] = useState(0);
   const [tileWidth, setTileWidth] = useState(16);
   const [tileHeight, setTileHeight] = useState(16);
+  const [dimensionMismatch, setDimensionMismatch] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
@@ -52,6 +54,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
       try {
         const images = await Promise.all(imagePromises);
+        setDimensionMismatch(false);
         if (images.length === 0) {
             const ctx = canvas.getContext('2d');
             if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -61,6 +64,19 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         const firstImage = images[0];
         const effectiveTileWidth = firstImage.naturalWidth;
         const effectiveTileHeight = firstImage.naturalHeight;
+        
+        // Check if all images have the same dimensions
+        for(const img of images) {
+            if (img.naturalWidth !== effectiveTileWidth || img.naturalHeight !== effectiveTileHeight) {
+                setDimensionMismatch(true);
+                toast({
+                    variant: 'destructive',
+                    title: 'Dimension Mismatch',
+                    description: 'Not all tiles have the same dimensions. Spritesheet export is disabled.',
+                });
+                return;
+            }
+        }
         
         setTileWidth(effectiveTileWidth);
         setTileHeight(effectiveTileHeight);
@@ -161,7 +177,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
   const handleExportSpritesheet = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || dimensionMismatch) return;
     
     const baseFilename = getBaseFilename();
     const sheetFilename = `${baseFilename}.png`;
@@ -181,7 +197,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
     toast({ title: 'Export Complete', description: 'Spritesheet and metadata file have been downloaded.' });
     onClose();
-  }, [downloadMetadata, onClose, toast, downloadFile, getBaseFilename]);
+  }, [downloadMetadata, onClose, toast, downloadFile, getBaseFilename, dimensionMismatch]);
   
   const handleExportIndividual = useCallback(() => {
     if (tilesToExport.length === 0) {
@@ -220,6 +236,15 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
              <div className="space-y-2">
               <h4 className="font-medium leading-none">Spritesheet Export</h4>
             </div>
+             {dimensionMismatch && (
+                <Alert variant="destructive">
+                    <ShieldAlert className="h-4 w-4" />
+                    <AlertTitle>Tile Dimension Mismatch</AlertTitle>
+                    <AlertDescription>
+                        All tiles must have the same width and height to be exported as a single spritesheet.
+                    </AlertDescription>
+                </Alert>
+            )}
             <div className="space-y-2">
               <h4 className="font-medium leading-none">Spritesheet Preview</h4>
               <div className="rounded-md border bg-muted/50 p-2 overflow-auto max-h-64">
@@ -256,12 +281,12 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
                   <FileImage className="mr-2 h-4 w-4" />
                   PNGs
               </Button>
-               <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tilesToExport.length === 0} className="col-span-1">
+               <Button type="button" variant="outline" onClick={handleDownloadMetadata} disabled={tilesToExport.length === 0 || dimensionMismatch} className="col-span-1">
                   <FileText className="mr-2 h-4 w-4" />
                   Metadata
               </Button>
               <Button type="button" variant="secondary" onClick={onClose} className="col-span-1">Cancel</Button>
-              <Button type="button" onClick={handleExportSpritesheet} disabled={tilesToExport.length === 0} className="col-span-1">
+              <Button type="button" onClick={handleExportSpritesheet} disabled={tilesToExport.length === 0 || dimensionMismatch} className="col-span-1">
                   <Download className="mr-2 h-4 w-4" />
                   Sheet
               </Button>

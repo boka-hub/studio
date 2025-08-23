@@ -332,7 +332,10 @@ export const useProjects = () => {
   const mergeAllLayers = useCallback(() => {
     modifyCurrentProject(project => {
         const visibleLayers = project.layers.filter(l => l.isVisible);
-        if (visibleLayers.length <= 1) return {};
+        if (visibleLayers.length <= 1) {
+            toast({ title: 'Merge Skipped', description: 'You need at least two visible layers to merge.' });
+            return {};
+        }
 
         // Start with a deep copy of the bottom-most visible layer's grid
         const baseLayer = visibleLayers[0];
@@ -358,7 +361,7 @@ export const useProjects = () => {
             activeLayerId: mergedLayer.id,
         };
     });
-  }, [modifyCurrentProject]);
+  }, [modifyCurrentProject, toast]);
 
     const clearAllLayers = useCallback((width: number, height: number) => {
         modifyCurrentProject((project) => {
