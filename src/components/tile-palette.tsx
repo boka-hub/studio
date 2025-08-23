@@ -61,7 +61,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
   const dragTargetRef = useRef<HTMLDivElement | null>(null);
 
   const handleStartEditing = (tile: Tile) => {
-    if (isCollapsed || tile.id === 0) return;
+    if (tile.id === 0) return;
     setEditingTileId(tile.id);
     setEditingName(tile.name);
   };
@@ -124,7 +124,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, tileId: number) => {
-    if (isCollapsed || searchQuery) {
+    if (searchQuery) {
         e.preventDefault();
         return;
     }
@@ -245,14 +245,13 @@ export const TilePalette: FC<TilePaletteProps> = ({
       </div>
       <ScrollArea className="flex-grow">
         <div className={cn(
-            "grid gap-2 p-4 pt-2",
-            isCollapsed ? "grid-cols-1 place-items-center" : "grid-cols-3"
+            "grid gap-2 p-4 pt-2 grid-cols-3"
           )}>
           {filteredTiles.map((tile) => (
               <div 
                 key={tile.id} 
-                className={cn("group flex flex-col items-center gap-1.5 tile-container", isCollapsed ? "w-10" : "w-full", draggedTileId === tile.id && "opacity-50")}
-                draggable={!isCollapsed && !searchQuery}
+                className={cn("group flex flex-col items-center gap-1.5 tile-container w-full", draggedTileId === tile.id && "opacity-50")}
+                draggable={!searchQuery}
                 onDragStart={(e) => handleDragStart(e, tile.id)}
                 onDragOver={(e) => handleDragOver(e, tile.id)}
                 onDragLeave={handleDragLeave}
@@ -269,7 +268,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       onClick={(e) => handleTileClick(e, tile.id)}
                       className={cn(
                         'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150',
-                         !isCollapsed && !searchQuery ? 'cursor-grab' : 'cursor-pointer',
+                         !searchQuery ? 'cursor-grab' : 'cursor-pointer',
                         getBorderStyle(tile.id)
                       )}
                       aria-label={`Select tile ${tile.name}`}
@@ -288,7 +287,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       {tool === 'auto-tile' && autoTileSet.includes(tile.id) && (
                         <Badge variant="secondary" className="absolute bottom-1 left-1">{autoTileSet.indexOf(tile.id) + 1}</Badge>
                       )}
-                       {!isCollapsed && tile.id !== 0 && (
+                       {tile.id !== 0 && (
                           <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -353,7 +352,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                   </TooltipContent>
                 </Tooltip>
 
-                {!isCollapsed && tile.id !== 0 && (
+                {tile.id !== 0 && (
                   <div className="w-full text-center h-6">
                     {editingTileId === tile.id ? (
                       <Input
@@ -395,3 +394,5 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
+
+    
