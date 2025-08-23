@@ -73,7 +73,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
-import { isTileTransparent } from '@/lib/utils';
 
 const INITIAL_GRID_SIZE = 32;
 const SETTINGS_KEY = 'tileforge-app-settings';
@@ -278,12 +277,7 @@ export default function Home() {
     if (autoTileSet.includes(tileToDelete.id)) {
       setAutoTileSet([]);
     }
-
-    toast({ 
-      title: 'Tile Deleted', 
-      description: `Tile "${tileToDelete.name}" has been removed.`,
-    });
-  }, [tiles, selectedTileId, secondarySelectedTileId, autoTileSet, deleteTile, toast]);
+  }, [tiles, selectedTileId, secondarySelectedTileId, autoTileSet, deleteTile]);
   
   const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
     updateTiles(reorderedTiles, false);
@@ -292,42 +286,9 @@ export default function Home() {
   const handleImportTiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-
-    const fileList = Array.from(files);
-    
-    const readFiles = fileList.map(file => {
-      return new Promise<{ file: File; isSolid: boolean } | null>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const src = e.target?.result as string;
-          if (await isTileTransparent(src)) {
-            resolve(null);
-          } else {
-            resolve({ file, isSolid: false });
-          }
-        };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(file);
-      });
-    });
-
-    const results = await Promise.all(readFiles);
-    const validTileData = results.filter((r): r is TileImportData => r !== null);
-    
-    const skippedCount = fileList.length - validTileData.length;
-    if (skippedCount > 0) {
-      toast({
-        title: 'Transparent Tiles Skipped',
-        description: `${skippedCount} tile(s) were fully transparent and have been ignored.`,
-      });
-    }
-
-    if (validTileData.length > 0) {
-      addTiles(validTileData);
-    }
-
+    addTiles(Array.from(files).map(file => ({ file, isSolid: false })));
     event.target.value = '';
-  }, [addTiles, toast]);
+  }, [addTiles]);
   
   const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
@@ -691,9 +652,8 @@ export default function Home() {
   };
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
-    // Check if the click is outside the map grid area
     if (selection && mapGridRef.current && !mapGridRef.current.contains(e.target as Node)) {
-        // Do nothing to prevent deselection
+        setSelection(null);
     }
   }, [selection]);
 
@@ -741,9 +701,9 @@ export default function Home() {
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'F5'].includes(e.key)) {
           e.preventDefault();
-          if (e.key === 'Escape') {
+          if (e.key === 'Escape' || e.key === 'F5') {
               togglePreviewMode();
               return;
           }
@@ -769,8 +729,8 @@ export default function Home() {
     const target = e.target as HTMLElement;
     if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.getAttribute('role') === 'slider') return;
 
-    if ((e.ctrlKey || e.metaKey)) {
-        if (['c', 'v', 'z', 'y', 's', '0', '=', '-'].includes(e.key)) {
+    if (e.ctrlKey || e.metaKey) {
+        if (['c', 'v', 'z', 'y', 's', 'o', 'i', 'u', 'm', 'p'].includes(e.key) || e.key.startsWith('Arrow')) {
             e.preventDefault();
         }
       if (e.key === 'c' && selection) handleCopySelection();
@@ -778,14 +738,48 @@ export default function Home() {
       else if (e.key === 'z') undo();
       else if (e.key === 'y') redo();
       else if (e.key === 's') setExportOpen(true);
+      else if (e.key === 'i') tileImportRef.current?.click();
+      else if (e.key === 'o') openSlicer();
+      else if (e.key === 'm') setMetadataModalOpen(true);
+      else if (e.key === 'u') mapImportRef.current?.click();
+      else if (e.key === 'p') setStorageOpen(true);
+      else if (e.key === 'd' && e.shiftKey) {
+        e.preventDefault();
+        // This will be handled by the palette, which has the dialog.
+        // We find the button and click it to trigger the dialog.
+        document.getElementById('clear-palette-button')?.click();
+      }
+       else if (e.key === 'd') {
+        e.preventDefault();
+        setConfirmClearMapOpen(true);
+      }
       else if (e.key === '=') setZoom(z => Math.min(z + 0.1, 2));
       else if (e.key === '-') setZoom(z => Math.max(z - 0.1, 0.1));
       else if (e.key === '0') setZoom(1);
 
-    } else if (e.key === 'Delete' && selection) {
+    } else if (e.key === 'F5') {
         e.preventDefault();
-        handleDeleteSelection();
-    } else if (e.key === 'Escape') {
+        togglePreviewMode();
+    } else if (selection) {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          handleDeleteSelection();
+      } else if (e.key === 'Enter') {
+          e.preventDefault();
+          handleFillSelection();
+      } else if (e.key === 'i') {
+          e.preventDefault();
+          handleInvertSelection();
+      } else if (e.key === 'h') {
+          e.preventDefault();
+          handleMirrorHorizontal();
+      } else if (e.key === 'v') {
+          e.preventDefault();
+          handleMirrorVertical();
+      }
+    }
+    
+    if (e.key === 'Escape') {
         e.preventDefault();
         if (tool === 'paste') {
           setTool('brush');
@@ -799,11 +793,11 @@ export default function Home() {
         'l': 'gradient', 'n': 'noise', 'c': 'scatter', 'a': 'auto-tile',
       };
 
-      if (keyMap[e.key]) {
+      if (keyMap[e.key] && !e.ctrlKey && !e.metaKey) {
         setTool(keyMap[e.key]);
       }
     }
-  }, [selection, handleCopySelection, handleActivatePaste, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool, togglePreviewMode]);
+  }, [selection, handleCopySelection, handleActivatePaste, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool, togglePreviewMode, handleFillSelection, handleInvertSelection, handleMirrorHorizontal, handleMirrorVertical, openSlicer]);
   
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -878,33 +872,32 @@ export default function Home() {
     paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', disabled: !clipboard },
   };
 
-  const headerActions = [
-    { icon: Upload, label: 'Import Tiles', onClick: () => tileImportRef.current?.click() },
-    { icon: Scissors, label: 'Slice Sheet', onClick: () => openSlicer() },
-    { icon: FileJson2, label: 'Import Metadata', onClick: () => setMetadataModalOpen(true) },
-    { icon: FileUp, label: 'Import Map', onClick: () => mapImportRef.current?.click() },
-    { icon: Package, label: 'Export...', onClick: () => setExportOpen(true) },
+  const fileActions = [
+    { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => tileImportRef.current?.click() },
+    { icon: Scissors, label: 'Slice Sheet (Ctrl+O)', onClick: () => openSlicer() },
+    { icon: FileJson2, label: 'Import Metadata (Ctrl+M)', onClick: () => setMetadataModalOpen(true) },
+    { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => mapImportRef.current?.click() },
+    { icon: Package, label: 'Export... (Ctrl+S)', onClick: () => setExportOpen(true) },
   ];
   
   const projectActions = [
       { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
       { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
-      { icon: Database, label: 'Manage Projects', onClick: () => setStorageOpen(true) },
-      { icon: Grid, label: 'Clear Map', onClick: () => setConfirmClearMapOpen(true) },
-      { icon: ArchiveX, label: 'Clear Palette', onClick: () => { /* Placeholder for tile-palette.tsx's dialog */ } },
-  ]
+      { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: () => setStorageOpen(true) },
+      { icon: Grid, label: 'Clear Map (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
+  ];
   
   const gameplayActions = [
-    { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (Esc)' : 'Live Preview (Arrows to move, Esc to exit)', onClick: togglePreviewMode, isActive: isPreviewMode },
+    { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (F5)' : 'Live Preview (F5)', onClick: togglePreviewMode, isActive: isPreviewMode },
   ];
   
   const selectionActions = {
-    fill: { icon: FileCheck, label: 'Fill Selection', onClick: handleFillSelection },
+    fill: { icon: FileCheck, label: 'Fill (Enter)', onClick: handleFillSelection },
     copy: { icon: Copy, label: 'Copy (Ctrl+C)', onClick: handleCopySelection },
     delete: { icon: Trash2, label: 'Delete (Del)', onClick: handleDeleteSelection },
-    invert: { icon: Replace, label: 'Invert', onClick: handleInvertSelection },
-    mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal', onClick: handleMirrorHorizontal },
-    mirrorVertical: { icon: FlipVertical, label: 'Mirror Vertical', onClick: handleMirrorVertical },
+    invert: { icon: Replace, label: 'Invert (I)', onClick: handleInvertSelection },
+    mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal (H)', onClick: handleMirrorHorizontal },
+    mirrorVertical: { icon: FlipVertical, label: 'Mirror Vertical (V)', onClick: handleMirrorVertical },
   };
   
   const handleLayout = (sizes: number[]) => {
@@ -973,10 +966,15 @@ export default function Home() {
         <Header 
             subtitle={currentProject.name}
             icon={ToyBrick} 
-            actionGroups={[headerActions, projectActions, gameplayActions]}
+            actionGroups={[fileActions, projectActions, gameplayActions]}
             onTitleClick={() => setSettingsOpen(true)}
         />
-        <div className="flex flex-1 overflow-hidden">
+        <div 
+          className="flex flex-1 overflow-hidden"
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
           <PanelGroup direction="horizontal" onLayout={handleLayout} autoSaveId="tileforge-panels">
             <Panel
               ref={leftPanelRef}
@@ -1053,9 +1051,6 @@ export default function Home() {
             <Panel defaultSize={panelLayout[1]} minSize={30}>
               <main 
                 className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full relative"
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
               >
                 {isDragging && renderDragOverlay()}
                 <div ref={mapGridRef}>
@@ -1238,5 +1233,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    

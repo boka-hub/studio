@@ -38,27 +38,49 @@ interface SettingsModalProps {
 }
 
 const shortcuts = [
-    { keys: ['B'], description: 'Select Brush Tool' },
-    { keys: ['E'], description: 'Select Eraser Tool' },
-    { keys: ['P'], description: 'Select Picker Tool' },
-    { keys: ['G'], description: 'Select Fill Tool' },
-    { keys: ['S'], description: 'Select Spray Tool' },
-    { keys: ['A'], description: 'Select Auto-Tile Tool' },
-    { keys: ['R'], description: 'Select Shape Tool' },
-    { keys: ['L'], description: 'Select Gradient Tool' },
-    { keys: ['N'], description: 'Select Noise Tool' },
-    { keys: ['C'], description: 'Select Scatter Tool' },
-    { keys: ['M'], 'description': 'Select/Lasso Tool' },
-    { keys: ['W'], 'description': 'Select Magic Wand Tool' },
-    { keys: ['Ctrl', 'Drag'], description: 'Draw rectangle with current tile (overrides tool)' },
-    { keys: ['Ctrl', 'C'], description: 'Copy selection to clipboard' },
-    { keys: ['Ctrl', 'V'], description: 'Paste from clipboard to selection' },
-    { keys: ['Delete'], description: 'Delete tiles within a selection' },
-    { keys: ['Escape'], description: 'Deselect current selection or cancel drawing' },
-    { keys: ['Ctrl', '='], description: 'Zoom In' },
-    { keys: ['Ctrl', '-'], description: 'Zoom Out' },
-    { keys: ['Ctrl', '0'], description: 'Reset Zoom to 100%' },
-    { keys: ['Ctrl', 'S'], description: 'Open Export Menu' },
+    { section: 'Tool Selection', items: [
+        { keys: ['B'], description: 'Select Brush Tool' },
+        { keys: ['E'], description: 'Select Eraser Tool' },
+        { keys: ['P'], description: 'Select Picker Tool' },
+        { keys: ['G'], description: 'Select Fill (Bucket) Tool' },
+        { keys: ['S'], description: 'Select Spray Tool' },
+        { keys: ['A'], description: 'Select Auto-Tile Tool' },
+        { keys: ['R'], description: 'Select Shape Tool' },
+        { keys: ['L'], description: 'Select Gradient Tool' },
+        { keys: ['N'], description: 'Select Noise Tool' },
+        { keys: ['C'], description: 'Select Scatter Tool' },
+        { keys: ['M'], 'description': 'Select/Lasso Tool' },
+        { keys: ['W'], 'description': 'Select Magic Wand Tool' },
+    ]},
+    { section: 'Selection Actions', items: [
+        { keys: ['Ctrl', 'Drag'], description: 'Draw rectangle with current tile (overrides tool)' },
+        { keys: ['Ctrl', 'C'], description: 'Copy selection to clipboard' },
+        { keys: ['Ctrl', 'V'], description: 'Activate Paste mode' },
+        { keys: ['Enter'], description: 'Fill selection with primary tile' },
+        { keys: ['Delete'], description: 'Delete tiles within a selection' },
+        { keys: ['I'], description: 'Invert tiles in selection' },
+        { keys: ['H'], description: 'Mirror selection horizontally' },
+        { keys: ['V'], description: 'Mirror selection vertically' },
+        { keys: ['Escape'], description: 'Deselect current selection or cancel drawing' },
+    ]},
+    { section: 'File & Project', items: [
+        { keys: ['Ctrl', 'S'], description: 'Open Export Menu' },
+        { keys: ['Ctrl', 'I'], description: 'Open Import Tiles Dialog' },
+        { keys: ['Ctrl', 'O'], description: 'Open Spritesheet Slicer' },
+        { keys: ['Ctrl', 'M'], description: 'Open Metadata Import' },
+        { keys: ['Ctrl', 'U'], description: 'Open Map Import Dialog' },
+        { keys: ['Ctrl', 'P'], description: 'Open Project Management' },
+        { keys: ['Ctrl', 'Z'], description: 'Undo last action' },
+        { keys: ['Ctrl', 'Y'], description: 'Redo last action' },
+        { keys: ['Ctrl', 'D'], description: 'Clear current map layer' },
+        { keys: ['Ctrl', 'Shift', 'D'], description: 'Clear entire palette and map' },
+    ]},
+    { section: 'General UI & View', items: [
+        { keys: ['F5'], description: 'Toggle Live Preview Mode' },
+        { keys: ['Ctrl', '='], description: 'Zoom In' },
+        { keys: ['Ctrl', '-'], description: 'Zoom Out' },
+        { keys: ['Ctrl', '0'], description: 'Reset Zoom to 100%' },
+    ]},
 ];
 
 const features = [
@@ -310,18 +332,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
           </TabsContent>
           <TabsContent value="shortcuts" className="flex-grow overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="space-y-4 p-4">
-                {shortcuts.map((shortcut, i) => (
-                  <div key={shortcut.description} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
-                    <p className="text-sm">{shortcut.description}</p>
-                    <div className="flex items-center gap-1">
-                      {shortcut.keys.map((key) => (
-                        <Badge key={`${shortcut.description}-${key}`} variant="secondary" className="text-xs">{key}</Badge>
-                      ))}
+                <div className="p-4 space-y-6">
+                    {shortcuts.map((section) => (
+                    <div key={section.section}>
+                        <h3 className="text-lg font-semibold mb-3">{section.section}</h3>
+                        <div className="space-y-3">
+                        {section.items.map((shortcut) => (
+                            <div key={shortcut.description} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                                <p className="text-sm">{shortcut.description}</p>
+                                <div className="flex items-center gap-1">
+                                {shortcut.keys.map((key) => (
+                                    <Badge key={`${shortcut.description}-${key}`} variant="secondary" className="text-xs">{key}</Badge>
+                                ))}
+                                </div>
+                            </div>
+                        ))}
+                        </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                    ))}
+                </div>
             </ScrollArea>
           </TabsContent>
           <TabsContent value="about" className="flex-grow overflow-auto p-4 space-y-6">
@@ -357,7 +386,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                 <div className="space-y-2">
                     <h3 className="font-semibold text-lg">About TileForge</h3>
                     <p className="text-muted-foreground">
-                        Welcome to TileForge! This is an all-in-one tool for creating 2D tile maps. Your work is automatically saved to your browser&apos;s local storage, so you can close the tab and come back later.
+                        Welcome to TileForge! This is an all-in-one tool for creating 2D tile maps. Your work is automatically saved to your browser's local storage, so you can close the tab and come back later.
                     </p>
                 </div>
                 <div className="space-y-2 mt-6">
@@ -379,7 +408,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure you want to reset?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete all saved projects and settings from your browser&apos;s local storage. This action cannot be undone.
+                            This will permanently delete all saved projects and settings from your browser's local storage. This action cannot be undone.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

@@ -208,7 +208,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
         <div className="flex items-center justify-center gap-2">
           <Wand className="h-4 w-4 text-muted-foreground"/>
           <p className="text-sm text-muted-foreground">Auto-Tile Set:</p>
-          <Badge variant="secondary">{autoTileSet.length} / {requiredTiles}</Badge>
+          <Badge variant={autoTileSet.length === requiredTiles ? "default" : "secondary"}>{autoTileSet.length} / {requiredTiles}</Badge>
         </div>
         <p className="text-xs text-muted-foreground">Select exactly {requiredTiles} tiles for a {autoTileMode} tileset.</p>
         {autoTileSet.length > 0 && (
@@ -227,11 +227,11 @@ export const TilePalette: FC<TilePaletteProps> = ({
             <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setConfirmClearPaletteOpen(true)}>
+                    <Button id="clear-palette-button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setConfirmClearPaletteOpen(true)}>
                         <ArchiveX className="h-4 w-4" />
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side="left"><p>Clear Palette</p></TooltipContent>
+                <TooltipContent side="left"><p>Clear Palette (Ctrl+Shift+D)</p></TooltipContent>
             </Tooltip>
           </div>
           <div className="relative">
@@ -269,8 +269,8 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 className={cn(
                     "group flex flex-col items-center gap-1.5 tile-container", 
                     draggedTileId === tile.id && "opacity-50",
-                    isCollapsed ? 'w-10' : 'w-full'
                 )}
+                style={isCollapsed ? { width: '2.5rem', height: '2.5rem' } : {}}
                 draggable={!searchQuery && !isCollapsed}
                 onDragStart={(e) => handleDragStart(e, tile.id)}
                 onDragOver={(e) => handleDragOver(e, tile.id)}
@@ -428,5 +428,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    
