@@ -14,14 +14,14 @@ interface HeaderAction {
 }
 
 interface HeaderProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   icon: ElementType;
   actionGroups: HeaderAction[][];
   onTitleClick?: () => void;
 }
 
-export const Header: FC<HeaderProps> = ({ title, subtitle, icon: Icon, actionGroups, onTitleClick }) => {
+export const Header: FC<HeaderProps> = ({ title = "TileForge", subtitle, icon: Icon, actionGroups, onTitleClick }) => {
 
   return (
     <header className="flex items-center justify-between p-2 border-b border-border shadow-sm z-10 flex-shrink-0">

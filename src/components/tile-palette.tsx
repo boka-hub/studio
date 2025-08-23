@@ -7,7 +7,7 @@ import type { Tile, Tool, AutoTileMode } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search, Dices, Wand } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Dices, Wand, ArchiveX } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -31,6 +31,7 @@ interface TilePaletteProps {
   onToggleSolid: (id: number) => void;
   onReorderTiles: (reorderedTiles: Tile[]) => void;
   isCollapsed: boolean;
+  onClearPalette: () => void;
 }
 
 export const TilePalette: FC<TilePaletteProps> = ({
@@ -52,11 +53,13 @@ export const TilePalette: FC<TilePaletteProps> = ({
   onToggleSolid,
   onReorderTiles,
   isCollapsed,
+  onClearPalette,
 }) => {
   const [editingTileId, setEditingTileId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [draggedTileId, setDraggedTileId] = useState<number | null>(null);
+  const [isConfirmClearPaletteOpen, setConfirmClearPaletteOpen] = useState(false);
   
   const dragTargetRef = useRef<HTMLDivElement | null>(null);
 
@@ -220,7 +223,17 @@ export const TilePalette: FC<TilePaletteProps> = ({
     <div className="flex flex-col h-full overflow-hidden">
       {!isCollapsed && (
         <div className="p-4 pb-2 flex-shrink-0 space-y-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setConfirmClearPaletteOpen(true)}>
+                        <ArchiveX className="h-4 w-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left"><p>Clear Palette</p></TooltipContent>
+            </Tooltip>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -398,6 +411,20 @@ export const TilePalette: FC<TilePaletteProps> = ({
             )}
         </div>
       </ScrollArea>
+       <AlertDialog open={isConfirmClearPaletteOpen} onOpenChange={setConfirmClearPaletteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently delete all tiles from your palette and clear all layers of the map. This action can be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onClearPalette}>Clear Palette</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 };

@@ -414,7 +414,7 @@ export const MapGrid: FC<MapGridProps> = ({
     return gridData.map((row, rowIndex) =>
         row.map((tileId, colIndex) => {
             const tile = tileMap.get(tileId);
-            const isCellSelectedByWand = isPrimaryActiveLayer && selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
+            const isCellSelectedByWand = isPrimaryActiveLayer && selection?.selectedCells?.[rowIndex]?.[colIndex] === 1;
 
             return (
                 <TileCell

@@ -135,7 +135,6 @@ export default function Home() {
   const [isMetadataModalOpen, setMetadataModalOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [isConfirmClearMapOpen, setConfirmClearMapOpen] = useState(false);
-  const [isConfirmClearPaletteOpen, setConfirmClearPaletteOpen] = useState(false);
   const [isConfirmMergeLayersOpen, setConfirmMergeLayersOpen] = useState(false);
   const [pendingSettings, setPendingSettings] = useState<AppSettings | null>(null);
   const [isToolbarCollapsed, setToolbarCollapsed] = useState(false);
@@ -335,50 +334,64 @@ export default function Home() {
     setSlicerOpen(true);
   }, []);
   
-    const handleImportMap = useCallback((file: File) => {
-        if (!file) return;
+  const handleImportMap = useCallback((file: File) => {
+      if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const content = e.target?.result as string;
-                let newGrid: GridState;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          try {
+              const content = e.target?.result as string;
+              let newGrid: GridState;
 
-                if (file.name.endsWith('.json')) {
-                    const mapData = JSON.parse(content);
-                    // For now, just import the grid of the first layer from a JSON file
-                    // A more advanced implementation could handle multiple layers.
-                    newGrid = mapData.layers[0]?.grid;
-                     if (!newGrid) {
-                        throw new Error('JSON map file is missing layer data.');
-                    }
-                } else { // Assume .txt
-                    newGrid = content
-                        .split('\n')
-                        .map(row => row.trim())
-                        .filter(row => row)
-                        .map(row => row.split(',').map(cell => parseInt(cell, 10) || 0));
-                }
+              if (file.name.endsWith('.json')) {
+                  const mapData = JSON.parse(content);
+                  // For now, just import the grid of the first layer from a JSON file
+                  // A more advanced implementation could handle multiple layers.
+                  newGrid = mapData.layers[0]?.grid;
+                    if (!newGrid) {
+                      throw new Error('JSON map file is missing layer data.');
+                  }
+              } else { // Assume .txt
+                  newGrid = content
+                      .split('\n')
+                      .map(row => row.trim())
+                      .filter(row => row)
+                      .map(row => row.split(',').map(cell => parseInt(cell, 10) || 0));
+              }
+              
+              if (newGrid.length === 0 || newGrid[0].length === 0) {
+                  throw new Error('Map file is empty or invalid.');
+              }
+              const width = newGrid[0].length;
+              if (!newGrid.every(row => row.length === width)) {
+                  throw new Error('Map rows have inconsistent lengths.');
+              }
+
+              if(activeLayer) {
+                updateGridInLayer(activeLayer.id, newGrid);
+
+                // Check for missing tiles
+                const availableTileIds = new Set(tiles.map(t => t.id));
+                const importedTileIds = new Set(newGrid.flat());
+                const missingIds = Array.from(importedTileIds).filter(id => !availableTileIds.has(id));
                 
-                if (newGrid.length === 0 || newGrid[0].length === 0) {
-                    throw new Error('Map file is empty or invalid.');
+                if (missingIds.length > 0) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Map Imported with Warnings',
+                        description: `Some tile IDs (${missingIds.join(', ')}) were not found in your palette and have been rendered as empty.`,
+                    });
+                } else {
+                    toast({ title: 'Map Imported', description: `Successfully loaded map into current layer from ${file.name}` });
                 }
-                const width = newGrid[0].length;
-                if (!newGrid.every(row => row.length === width)) {
-                    throw new Error('Map rows have inconsistent lengths.');
-                }
-
-                if(activeLayer) {
-                  updateGridInLayer(activeLayer.id, newGrid);
-                  toast({ title: 'Map Imported', description: `Successfully loaded map into current layer from ${file.name}` });
-                }
-            } catch (error: any) {
-                console.error("Failed to parse map file", error);
-                toast({ variant: 'destructive', title: 'Import Failed', description: error.message || 'Could not parse the map file.' });
-            }
-        };
-        reader.readAsText(file);
-    }, [toast, updateGridInLayer, activeLayer]);
+              }
+          } catch (error: any) {
+              console.error("Failed to parse map file", error);
+              toast({ variant: 'destructive', title: 'Import Failed', description: error.message || 'Could not parse the map file.' });
+          }
+      };
+      reader.readAsText(file);
+  }, [toast, updateGridInLayer, activeLayer, tiles]);
 
   const handleMapFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -791,7 +804,7 @@ export default function Home() {
       }
     }
   }, [selection, handleCopySelection, handleActivatePaste, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool, togglePreviewMode]);
-
+  
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('mousedown', handleMouseDown as any);
@@ -879,7 +892,7 @@ export default function Home() {
       { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
       { icon: Database, label: 'Manage Projects', onClick: () => setStorageOpen(true) },
       { icon: Grid, label: 'Clear Map', onClick: () => setConfirmClearMapOpen(true) },
-      { icon: ArchiveX, label: 'Clear Palette', onClick: () => setConfirmClearPaletteOpen(true) },
+      { icon: ArchiveX, label: 'Clear Palette', onClick: () => { /* Placeholder for tile-palette.tsx's dialog */ } },
   ]
   
   const gameplayActions = [
@@ -959,7 +972,6 @@ export default function Home() {
     <TooltipProvider delayDuration={300}>
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header 
-            title="TileForge"
             subtitle={currentProject.name}
             icon={ToyBrick} 
             actionGroups={[headerActions, projectActions, gameplayActions]}
@@ -1108,6 +1120,7 @@ export default function Home() {
                           onToggleSolid={handleToggleSolid}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
+                          onClearPalette={handleClearPalette}
                           />
                       )}
                 </div>
@@ -1203,21 +1216,6 @@ export default function Home() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleClearMap}>Clear Map</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <AlertDialog open={isConfirmClearPaletteOpen} onOpenChange={setConfirmClearPaletteOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action will permanently delete all tiles from your palette and clear all layers of the map. This action can be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleClearPalette}>Clear Palette</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
