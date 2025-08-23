@@ -337,10 +337,12 @@ export const useProjects = () => {
         const baseLayer = visibleLayers[0];
         const mergedGrid = JSON.parse(JSON.stringify(baseLayer.grid));
 
+        // Iterate from the second layer upwards (index 1 to end)
         for (let i = 1; i < visibleLayers.length; i++) {
             const upperLayer = visibleLayers[i];
             for (let r = 0; r < upperLayer.grid.length; r++) {
                 for (let c = 0; c < upperLayer.grid[r].length; c++) {
+                    // If the tile on the upper layer is not empty, it overwrites the one below
                     if (upperLayer.grid[r][c] !== 0) {
                         mergedGrid[r][c] = upperLayer.grid[r][c];
                     }
