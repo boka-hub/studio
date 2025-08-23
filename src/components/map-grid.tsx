@@ -172,8 +172,8 @@ export const MapGrid: FC<MapGridProps> = ({
           newGrid[row][col] = autoTileSet[centerIndex];
         }
 
-        for (let r_offset = -1; r_offset <= 1; r_offset++) {
-          for (let c_offset = -1; c_offset <= 1; c_offset++) {
+        for (let r_offset = -2; r_offset <= 2; r_offset++) {
+          for (let c_offset = -2; c_offset <= 2; c_offset++) {
             const nr = row + r_offset;
             const nc = col + c_offset;
 
@@ -504,3 +504,5 @@ export const MapGrid: FC<MapGridProps> = ({
     </div>
   );
 };
+
+    

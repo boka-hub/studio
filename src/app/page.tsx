@@ -57,7 +57,7 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, TileImportData, Layer, AppSettings, ExportFormat } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -72,7 +72,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { MapGrid } from '@/components/map-grid';
 
 const INITIAL_GRID_SIZE = 32;
@@ -751,6 +750,7 @@ export default function Home() {
         document.getElementById('clear-palette-button')?.click();
       }
        else if (e.key === 'd') {
+        if (isPreviewMode) return;
         e.preventDefault();
         setConfirmClearMapOpen(true);
       }
@@ -1232,5 +1232,7 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
 
     

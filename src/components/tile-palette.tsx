@@ -163,13 +163,17 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropTileId: number) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent parent drag handlers
+    e.stopPropagation();
+    if (dragTargetRef.current) {
+        dragTargetRef.current.style.borderBottom = '';
+        dragTargetRef.current = null;
+    }
+    
     if (draggedTileId === null || draggedTileId === dropTileId || searchQuery) {
+      setDraggedTileId(null);
       return;
     }
     
-    handleDragLeave(e);
-
     // IMPORTANT: Always use the original `tiles` array for reordering logic, not `filteredTiles`.
     const emptyTile = tiles.find(t => t.id === 0);
     const reorderableTiles = tiles.filter(t => t.id !== 0);
@@ -269,8 +273,8 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 className={cn(
                     "group flex flex-col items-center gap-1.5 tile-container", 
                     draggedTileId === tile.id && "opacity-50",
+                    isCollapsed && 'w-10 h-10',
                 )}
-                style={isCollapsed ? { width: '2.5rem', height: '2.5rem' } : {}}
                 draggable={!searchQuery && !isCollapsed}
                 onDragStart={(e) => handleDragStart(e, tile.id)}
                 onDragOver={(e) => handleDragOver(e, tile.id)}
@@ -305,7 +309,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         data-ai-hint="pixel art"
                       />
                       {tool === 'auto-tile' && autoTileSet.includes(tile.id) && (
-                        <Badge variant="secondary" className="absolute bottom-1 left-1">{autoTileSet.indexOf(tile.id) + 1}</Badge>
+                        <Badge variant="secondary" className="absolute top-1 left-1">{autoTileSet.indexOf(tile.id) + 1}</Badge>
                       )}
                        {tile.id !== 0 && !isCollapsed && (
                           <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -363,7 +367,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                        )}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="left">
+                  <TooltipContent side="right">
                      {isCollapsed ? <p>{tile.name}</p> : 
                      searchQuery ? <p>{tile.name}</p> :
                      tool === 'scatter' ? <p>Toggle in Scatter Set</p> :
@@ -428,3 +432,5 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
+
+    
