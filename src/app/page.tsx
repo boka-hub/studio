@@ -1062,6 +1062,8 @@ export default function Home() {
   const gameplayActions = useMemo(() => [
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (F5)' : 'Live Preview (F5)', onClick: togglePreviewMode, isActive: isPreviewMode },
   ], [isPreviewMode, togglePreviewMode]);
+
+  const actionGroups = useMemo(() => [fileActions, projectActions, gameplayActions], [fileActions, projectActions, gameplayActions]);
   
   const selectionActions = {
     fill: { icon: FileCheck, label: 'Fill (Enter)', onClick: handleFillSelection },
@@ -1141,7 +1143,7 @@ export default function Home() {
         <Header 
             subtitle={projectState.name}
             icon={ToyBrick} 
-            actionGroups={[fileActions, projectActions, gameplayActions]}
+            actionGroups={actionGroups}
             onTitleClick={handleOpenSettings}
         />
         <div 
@@ -1408,3 +1410,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
+    
