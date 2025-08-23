@@ -25,7 +25,6 @@ const createNewProject = (name: string): Project => {
     return {
       id: `proj_${new Date().getTime()}_${Math.random()}`,
       name,
-      grid: [] , // Obsolete, kept for migration
       layers: [defaultLayer],
       activeLayerId: defaultLayer.id,
       tiles: [{ id: 0, name: 'Empty', src: '', solid: false }],
@@ -38,9 +37,15 @@ const migrateProject = (project: Project): Project => {
     if (project.layers && project.layers.length > 0 && project.activeLayerId) {
         return project; // Already has layers, no migration needed
     }
-    const firstLayer = createNewLayer("Background", project.grid || createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE));
+    // This part of migration logic is now obsolete as we remove the grid property
+    // but we keep it just in case an old project format is still in localStorage
+    // from before this cleanup.
+    // @ts-ignore
+    const gridToMigrate = project.grid || createEmptyGrid(INITIAL_GRID_SIZE, INITIAL_GRID_SIZE);
+    const firstLayer = createNewLayer("Background", gridToMigrate);
+    const { grid, ...retypedProject } = project;
     return {
-        ...project,
+        ...retypedProject,
         layers: [firstLayer],
         activeLayerId: firstLayer.id,
     };
@@ -111,11 +116,7 @@ export const useProjects = () => {
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
         try {
-            const stateToSave = {
-                ...state,
-                projects: state.projects.map(({grid, ...p}) => p) // Remove obsolete grid property before saving
-            };
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         } catch (error) {
             console.error("Failed to save projects to localStorage", error);
         }
@@ -243,7 +244,6 @@ export const useProjects = () => {
         const newProject: Project = {
           id: `proj_${new Date().getTime()}_${Math.random()}`,
           name,
-          grid: [], // Obsolete
           layers: JSON.parse(JSON.stringify(current.layers)),
           activeLayerId: current.activeLayerId,
           tiles: JSON.parse(JSON.stringify(current.tiles)),

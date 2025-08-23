@@ -34,7 +34,6 @@ export interface Selection {
 export interface Project {
     id: string;
     name: string;
-    grid: GridState; // Kept for backwards compatibility during migration
     layers: Layer[];
     activeLayerId: string | null;
     tiles: Tile[];
