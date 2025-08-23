@@ -84,7 +84,6 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 export default function Home() {
   const {
     currentProject: initialProject,
-    loadProject,
     saveProject,
     deleteProject,
     renameProject,
@@ -107,7 +106,7 @@ export default function Home() {
     if (initialProject) {
       resetHistory(initialProject);
     }
-  }, [initialProject, resetHistory]);
+  }, [initialProject.id, resetHistory]);
   
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
@@ -169,13 +168,9 @@ export default function Home() {
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     setProjectHistory(currentProject => {
         const changes = modifier(currentProject);
-        const newState = { ...currentProject, ...changes };
-        if (newState.id === currentProject.id) {
-          saveProject(newState);
-        }
-        return newState;
+        return { ...currentProject, ...changes };
     }, batch);
-  }, [setProjectHistory, saveProject]);
+  }, [setProjectHistory]);
 
   const handleSettingsChange = useCallback((newSettings: AppSettings) => {
     // If user is disabling layers, show confirmation dialog first
@@ -1143,6 +1138,12 @@ export default function Home() {
     updateTiles(newTiles, true);
     remapGrid(remap);
   }, [updateTiles, remapGrid]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      saveProject(projectState);
+    }
+  }, [projectState]);
 
   if (isLoading) {
     return (

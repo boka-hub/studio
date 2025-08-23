@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Project, ProjectsState } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,7 +28,10 @@ export const useProjects = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const currentProject = state.projects.find(p => p.id === state.currentProjectId) || createNewProject("Loading...");
+  const currentProject = useMemo(() => {
+    return state.projects.find(p => p.id === state.currentProjectId) || createNewProject("Loading...");
+  }, [state.projects, state.currentProjectId]);
+
 
   useEffect(() => {
     setIsLoading(true);
