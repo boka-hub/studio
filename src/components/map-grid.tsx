@@ -63,7 +63,6 @@ export const MapGrid: FC<MapGridProps> = ({
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter'].includes(tool);
   
-  // Use activeLayer.grid directly as the source of truth for drawing operations
   const grid = activeLayer?.grid;
 
   useEffect(() => {
@@ -291,7 +290,6 @@ export const MapGrid: FC<MapGridProps> = ({
     
     const coords = getCoordsFromEvent(e) || currentCell;
     if (!coords) {
-        // If mouse is released outside, cancel drawing
         setIsDrawing(false);
         setStartCell(null);
         setCurrentCell(null);
@@ -308,7 +306,6 @@ export const MapGrid: FC<MapGridProps> = ({
     } else if (!isCtrlPressed && tool === 'select' && startCell) {
       onSelectionCommit(startCell, coords);
     } else {
-        // Use the final preview grid if available, otherwise perform one last draw
         const finalGrid = previewGrid || performDraw(grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
         if (finalGrid) onDrawCommit(finalGrid);
     }
@@ -363,18 +360,17 @@ export const MapGrid: FC<MapGridProps> = ({
       maxRow: Math.max(startCell.row, currentCell.row),
       minCol: Math.min(startCell.col, currentCell.col),
       maxCol: Math.max(startCell.col, currentCell.col),
+      selectedCells: undefined
     };
   }
 
   const renderLayerGrid = (layer: Layer, isPrimaryActiveLayer: boolean) => {
-    // Use previewGrid if it exists and this is the active layer, otherwise use the layer's own grid.
     const gridData = isPrimaryActiveLayer && previewGrid ? previewGrid : layer.grid;
     if (!gridData || gridData.length === 0 || gridData[0].length === 0) return null;
 
     return gridData.map((row, rowIndex) =>
         row.map((tileId, colIndex) => {
             const tile = tileMap.get(tileId);
-            // Selection is only shown on the active layer
             const isCellSelectedByWand = isPrimaryActiveLayer && selection?.selectedCells && selection.selectedCells[rowIndex][colIndex] === 1;
 
             return (
@@ -412,27 +408,24 @@ export const MapGrid: FC<MapGridProps> = ({
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
       }}
     >
+        {/* Interactive Overlay */}
         <div 
             className={cn(
               "absolute inset-0 grid",
               getCursorClass()
             )}
             style={{
-                gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
-                gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
-                gap: `${gridLineWidth}px`,
-                backgroundColor: 'hsla(var(--card) / 0.5)',
-                zIndex: layers.length + 1, // Make sure this is on top for mouse events
+                zIndex: layers.length + 1,
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseLeave}
         />
-
+        
+        {/* Visual Layer Stack */}
         {layers
           .map((layer, index) => ({ layer, index }))
-          // Render from bottom to top
           .sort((a,b) => a.index - b.index) 
           .map(({ layer, index }) => {
             const isLayerActive = layer.id === activeLayer?.id;
@@ -444,7 +437,8 @@ export const MapGrid: FC<MapGridProps> = ({
                     gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
                     gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                     gap: `${gridLineWidth}px`,
-                    zIndex: index, // Layers stack based on their order in the array
+                    backgroundColor: 'hsla(var(--card) / 0.5)',
+                    zIndex: index, 
                   }}
               >
                {renderLayerGrid(layer, isLayerActive)}
