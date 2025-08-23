@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape, Layer } from '@/lib/types';
 import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
-import { ClipboardPaste } from 'lucide-react';
 
 interface MapGridProps {
   layers: Layer[];
@@ -16,6 +15,7 @@ interface MapGridProps {
   onCellAction: (row: number, col: number) => void;
   onDrawCommit: (newGrid: GridState) => void;
   onSelectionCommit: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
+  onCoordsChange: (coords: {row: number, col: number} | null) => void;
   zoom?: number;
   selectedTileId: number;
   secondarySelectedTileId: number;
@@ -28,7 +28,6 @@ interface MapGridProps {
   sprayRadius: number;
   sprayDensity: number;
   scatterSet: number[];
-  clipboard: GridState | null;
 }
 
 const BASE_TILE_SIZE = 16;
@@ -73,6 +72,7 @@ export const MapGrid: FC<MapGridProps> = ({
   onCellAction, 
   onDrawCommit,
   onSelectionCommit,
+  onCoordsChange,
   zoom = 1, 
   selectedTileId, 
   secondarySelectedTileId, 
@@ -85,13 +85,11 @@ export const MapGrid: FC<MapGridProps> = ({
   sprayRadius,
   sprayDensity,
   scatterSet,
-  clipboard,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
-  const [pastePreview, setPastePreview] = useState<{grid: GridState, row: number, col: number} | null>(null);
   const mainGridRef = useRef<HTMLDivElement>(null);
   
   const TILE_SIZE = useMemo(() => BASE_TILE_SIZE * zoom, [zoom]);
@@ -304,18 +302,14 @@ export const MapGrid: FC<MapGridProps> = ({
 
   const handleMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
     const coords = getCoordsFromEvent(e);
-    if (!coords) {
-      if (tool === 'paste') setPastePreview(null);
-      return;
-    }
-    
-    if (tool === 'paste' && clipboard) {
-      setPastePreview({ grid: clipboard, row: coords.row, col: coords.col });
+    if (coords) {
+      onCoordsChange(coords);
     } else {
-      setPastePreview(null);
+      onCoordsChange(null);
     }
     
     if (!isDrawing || !activeLayer || !activeLayer.grid) return;
+    if (!coords) return;
 
     if (currentCell && currentCell.row === coords.row && currentCell.col === coords.col) return;
     setCurrentCell(coords);
@@ -339,8 +333,8 @@ export const MapGrid: FC<MapGridProps> = ({
       const isClick = startCell && startCell.row === coords.row && startCell.col === coords.col;
       const isCtrlPressed = e.ctrlKey || e.metaKey;
 
-      if (!isCtrlPressed && (tool === 'picker' || tool === 'fill' || tool === 'magic-wand' || tool === 'paste')) {
-        if(isClick || tool === 'paste') onCellAction(coords.row, coords.col);
+      if (!isCtrlPressed && (tool === 'picker' || tool === 'fill' || tool === 'magic-wand')) {
+        if(isClick) onCellAction(coords.row, coords.col);
       } else if (!isCtrlPressed && tool === 'select' && startCell) {
         onSelectionCommit(startCell, coords);
       } else {
@@ -356,7 +350,7 @@ export const MapGrid: FC<MapGridProps> = ({
   };
   
   const handleMouseLeave = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (tool === 'paste') setPastePreview(null);
+    onCoordsChange(null);
     if (isDrawing && activeLayer && activeLayer.grid) {
         if (previewGrid) {
            onDrawCommit(previewGrid);
@@ -427,45 +421,6 @@ export const MapGrid: FC<MapGridProps> = ({
         })
     );
   };
-  
-  const renderPastePreview = () => {
-    if (!pastePreview) return null;
-    return pastePreview.grid.map((row, r_idx) => 
-        row.map((tileId, c_idx) => {
-            if (tileId === -1) return null; // -1 means transparent cell in copied data
-            const tile = tileMap.get(tileId);
-            if (!tile) return null;
-
-            const top = (pastePreview.row + r_idx) * (TILE_SIZE + gridLineWidth) + gridLineWidth;
-            const left = (pastePreview.col + c_idx) * (TILE_SIZE + gridLineWidth) + gridLineWidth;
-            
-            if (top > gridHeight * (TILE_SIZE + gridLineWidth) || left > gridWidth * (TILE_SIZE + gridLineWidth)) return null;
-
-            return (
-                <div
-                    key={`paste-${r_idx}-${c_idx}`}
-                    className="absolute opacity-70"
-                    style={{
-                        top: `${top}px`,
-                        left: `${left}px`,
-                        width: `${TILE_SIZE}px`,
-                        height: `${TILE_SIZE}px`,
-                        zIndex: layers.length + 5,
-                    }}
-                >
-                    <Image
-                        src={tile.src}
-                        alt={tile.name}
-                        fill
-                        sizes={`${TILE_SIZE}px`}
-                        className="object-cover"
-                        unoptimized
-                    />
-                </div>
-            )
-        })
-    );
-  }
 
   return (
     <div
@@ -543,8 +498,6 @@ export const MapGrid: FC<MapGridProps> = ({
           }}
         />
       )}
-
-      {tool === 'paste' && renderPastePreview()}
     </div>
   );
 };

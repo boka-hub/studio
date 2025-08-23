@@ -173,8 +173,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                         autoFocus
                         onFocus={(e) => e.target.select()}
                     />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500" onClick={confirmRename}><Check className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={cancelEditing}><X className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={confirmRename}><Check className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={cancelEditing}><X className="h-4 w-4"/></Button>
                 </div>
               ) : (
                 <>

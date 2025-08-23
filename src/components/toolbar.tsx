@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ZoomIn, ZoomOut, Maximize, RectangleHorizontal, Circle, Slash } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, RectangleHorizontal, Circle, Slash, ClipboardPaste } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import type { Selection, Tool, AutoTileMode, Shape } from '@/lib/types';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';

@@ -143,6 +143,7 @@ export default function Home() {
   const [isPreviewMode, setPreviewMode] = useState(false);
   const [playerPos, setPlayerPos] = useState({ row: 0, col: 0 });
   const [settings, setSettings] = useState<AppSettings>({ layersEnabled: false, exportFormat: 'json' });
+  const [lastMouseCoords, setLastMouseCoords] = useState<{row: number, col: number} | null>(null);
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
@@ -381,18 +382,12 @@ export default function Home() {
     }
     updateGridInLayer(activeLayer.id, newGrid);
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-    setTool('brush'); // Revert to a default tool after pasting
   }, [grid, clipboard, toast, activeLayer, updateGridInLayer]);
 
 
   const handleCellAction = useCallback((row: number, col: number) => {
       if (!activeLayer) return;
       
-      if(tool === 'paste') {
-        handlePasteSelection(row, col);
-        return;
-      }
-
       let newGrid = grid.map(r => [...r]);
       
       // Handle tools that are just simple clicks and don't use the preview system.
@@ -472,7 +467,7 @@ export default function Home() {
       updateGridInLayer(activeLayer.id, newGrid);
       setSelection(null);
     },
-    [grid, selectedTileId, tiles, toast, tool, activeLayer, updateGridInLayer, handlePasteSelection]
+    [grid, selectedTileId, tiles, toast, tool, activeLayer, updateGridInLayer]
   );
   
   const handleDrawCommit = useCallback((newGridState: GridState) => {
@@ -589,14 +584,17 @@ export default function Home() {
     toast({ title: 'Selection Copied', description: 'The selected area has been copied to the clipboard.' });
   }, [grid, selection, toast]);
 
-  const handleActivatePaste = useCallback(() => {
+  const handlePasteAtMouse = useCallback(() => {
     if (!clipboard) {
         toast({ variant: 'destructive', title: 'Paste Failed', description: 'Your clipboard is empty.' });
         return;
     }
-    setTool('paste');
-    toast({ title: 'Paste Mode Activated', description: 'Click on the grid to paste at the desired location.' });
-  }, [clipboard, toast]);
+    if (!lastMouseCoords) {
+        toast({ variant: 'destructive', title: 'Paste Failed', description: 'Could not determine paste location. Move your mouse over the grid.' });
+        return;
+    }
+    handlePasteSelection(lastMouseCoords.row, lastMouseCoords.col);
+  }, [clipboard, lastMouseCoords, toast, handlePasteSelection]);
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -647,8 +645,12 @@ export default function Home() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
-    setDragFileType(null);
+    // Only deactivate if leaving the main grid area entirely
+    const mainArea = mapGridRef.current?.parentElement;
+    if (mainArea && !mainArea.contains(e.relatedTarget as Node)) {
+        setIsDragging(false);
+        setDragFileType(null);
+    }
   };
 
   const handleMouseDown = useCallback((e: MouseEvent) => {
@@ -734,7 +736,7 @@ export default function Home() {
             e.preventDefault();
         }
       if (e.key === 'c' && selection) handleCopySelection();
-      else if (e.key === 'v') handleActivatePaste();
+      else if (e.key === 'v') handlePasteAtMouse();
       else if (e.key === 'z') undo();
       else if (e.key === 'y') redo();
       else if (e.key === 's') setExportOpen(true);
@@ -745,8 +747,6 @@ export default function Home() {
       else if (e.key === 'p') setStorageOpen(true);
       else if (e.key === 'd' && e.shiftKey) {
         e.preventDefault();
-        // This will be handled by the palette, which has the dialog.
-        // We find the button and click it to trigger the dialog.
         document.getElementById('clear-palette-button')?.click();
       }
        else if (e.key === 'd') {
@@ -797,7 +797,7 @@ export default function Home() {
         setTool(keyMap[e.key]);
       }
     }
-  }, [selection, handleCopySelection, handleActivatePaste, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool, togglePreviewMode, handleFillSelection, handleInvertSelection, handleMirrorHorizontal, handleMirrorVertical, openSlicer]);
+  }, [selection, handleCopySelection, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool, togglePreviewMode, handleFillSelection, handleInvertSelection, handleMirrorHorizontal, handleMirrorVertical, openSlicer, handlePasteAtMouse]);
   
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -869,7 +869,6 @@ export default function Home() {
     scatter: { icon: Dices, label: 'Scatter (C)'},
     select: { icon: Lasso, label: 'Select (M)' },
     'magic-wand': { icon: Wand2, label: 'Wand (W)' },
-    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', disabled: !clipboard },
   };
 
   const fileActions = [
@@ -894,6 +893,7 @@ export default function Home() {
   const selectionActions = {
     fill: { icon: FileCheck, label: 'Fill (Enter)', onClick: handleFillSelection },
     copy: { icon: Copy, label: 'Copy (Ctrl+C)', onClick: handleCopySelection },
+    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', onClick: handlePasteAtMouse, disabled: !clipboard },
     delete: { icon: Trash2, label: 'Delete (Del)', onClick: handleDeleteSelection },
     invert: { icon: Replace, label: 'Invert (I)', onClick: handleInvertSelection },
     mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal (H)', onClick: handleMirrorHorizontal },
@@ -924,7 +924,9 @@ export default function Home() {
   }, []);
 
   const renderDragOverlay = () => {
-    if (!dragFileType || dragFileType === 'other') {
+    if (!dragFileType) return null;
+    
+    if (dragFileType === 'other') {
       return (
         <div className="absolute inset-0 bg-destructive/20 border-4 border-dashed border-destructive z-50 flex items-center justify-center pointer-events-none">
           <div className="text-center p-8 bg-background/80 rounded-lg">
@@ -940,8 +942,8 @@ export default function Home() {
        <div className="absolute inset-0 bg-primary/20 border-4 border-dashed border-primary z-50 flex items-center justify-center pointer-events-none">
             <div className="text-center p-8 bg-background/80 rounded-lg">
               {isImage ? <Upload className="h-16 w-16 mx-auto text-primary" /> : <FileText className="h-16 w-16 mx-auto text-primary" />}
-              <h2 className="text-2xl font-bold mt-4">Drop to {isImage ? 'Upload' : 'Import'}</h2>
-              <p className="text-muted-foreground">{isImage ? 'Drop image(s) to open in the Batch Slicer.' : 'Drop a map file to load.'}</p>
+              <h2 className="text-2xl font-bold mt-4">Drop to {isImage ? 'Upload Tilesheet' : 'Import Map'}</h2>
+              <p className="text-muted-foreground">{isImage ? 'Drop image(s) to open in the Batch Slicer.' : 'Drop a map file (.txt, .json) to load it.'}</p>
             </div>
         </div>
     );
@@ -971,9 +973,6 @@ export default function Home() {
         />
         <div 
           className="flex flex-1 overflow-hidden"
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
         >
           <PanelGroup direction="horizontal" onLayout={handleLayout} autoSaveId="tileforge-panels">
             <Panel
@@ -1051,6 +1050,9 @@ export default function Home() {
             <Panel defaultSize={panelLayout[1]} minSize={30}>
               <main 
                 className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full relative"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
               >
                 {isDragging && renderDragOverlay()}
                 <div ref={mapGridRef}>
@@ -1061,6 +1063,7 @@ export default function Home() {
                     onCellAction={handleCellAction}
                     onDrawCommit={handleDrawCommit}
                     onSelectionCommit={handleSelectionCommit}
+                    onCoordsChange={setLastMouseCoords}
                     tool={tool}
                     shape={shape}
                     zoom={zoom}
@@ -1075,7 +1078,6 @@ export default function Home() {
                     sprayRadius={sprayRadius}
                     sprayDensity={sprayDensity}
                     scatterSet={scatterSet}
-                    clipboard={clipboard}
                   />
                 </div>
               </main>
@@ -1112,7 +1114,7 @@ export default function Home() {
                           onRenameTile={handleRenameTile}
                           onDeleteTile={confirmDeleteTile}
                           onToggleSolid={handleToggleSolid}
-                          onReorderTiles={handleReorderTiles}
+                          onReorderTiles={onReorderTiles}
                           isCollapsed={isPaletteCollapsed}
                           onClearPalette={handleClearPalette}
                           />
@@ -1171,7 +1173,7 @@ export default function Home() {
           onClose={() => setExportOpen(false)}
           tiles={tiles.filter((t) => t.id !== 0)}
           layers={layers}
-          settings={settings}
+          exportFormat={settings.exportFormat}
         />
         
          <SettingsModal

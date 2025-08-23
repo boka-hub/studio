@@ -152,7 +152,7 @@ export const StorageModal: React.FC<StorageModalProps> = ({
                               onFocus={(e) => e.target.select()}
                           />
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-green-500" onClick={confirmRename}><Check className="h-4 w-4"/></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={cancelEditing}><X className="h-4 w-4"/></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={cancelEditing}><X className="h-4 w-4"/></Button>
                         </div>
                     ) : (
                       <>

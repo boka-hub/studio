@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Tile, AppSettings, Layer } from '@/lib/types';
+import type { Tile, ExportFormat, Layer } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { Download, FileImage, FileText, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
@@ -23,10 +23,10 @@ interface ExportTilesModalProps {
   onClose: () => void;
   tiles: Tile[];
   layers: Layer[];
-  settings: AppSettings;
+  exportFormat: ExportFormat;
 }
 
-export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, tiles, layers, settings }) => {
+export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, tiles, layers, exportFormat }) => {
   const [columns, setColumns] = useState(8);
   const [gap, setGap] = useState(0);
   const [tileWidth, setTileWidth] = useState(16);
@@ -154,7 +154,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     let blob: Blob;
     let filename: string;
 
-    if (settings.exportFormat === 'json') {
+    if (exportFormat === 'json') {
       const jsonData = {
         tiles: tiles.map(({id, name, solid}) => ({id, name, solid})),
         layers: layers.map(({id, name, grid, isVisible}) => ({id, name, grid, isVisible})),
@@ -230,7 +230,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
               <h4 className="font-medium leading-none">Map Export</h4>
                <Button type="button" variant="outline" onClick={handleExportMap} className="w-full">
                   <Download className="mr-2 h-4 w-4" />
-                  Export Map as .{settings.exportFormat}
+                  Export Map as .{exportFormat}
               </Button>
             </div>
              <div className="space-y-2">
