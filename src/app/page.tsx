@@ -109,6 +109,7 @@ export default function Home() {
     toggleLayerVisibility,
     reorderLayers,
     mergeAllLayers,
+    clearAllLayers,
   } = useProjects();
   
   const { tiles, layers, activeLayerId } = currentProject;
@@ -157,6 +158,7 @@ export default function Home() {
   const mapImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<any>(null);
   const rightPanelRef = useRef<any>(null);
+  const mapGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -392,8 +394,37 @@ export default function Home() {
     event.target.value = '';
   }, [handleImportMap]);
 
+  const handlePasteSelection = useCallback((row: number, col: number) => {
+    if (!clipboard || !activeLayer) return;
+
+    const newGrid = grid.map(r => [...r]);
+    const pasteStartRow = row;
+    const pasteStartCol = col;
+
+    for(let r = 0; r < clipboard.length; r++) {
+        for(let c = 0; c < clipboard[0].length; c++) {
+            const targetRow = pasteStartRow + r;
+            const targetCol = pasteStartCol + c;
+            const copiedCell = clipboard[r][c];
+            if (copiedCell !== -1 && targetRow < grid.length && targetCol < grid[0].length) {
+                newGrid[targetRow][targetCol] = copiedCell;
+            }
+        }
+    }
+    updateGridInLayer(activeLayer.id, newGrid);
+    toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
+    setTool('brush'); // Revert to a default tool after pasting
+  }, [grid, clipboard, toast, activeLayer, updateGridInLayer]);
+
+
   const handleCellAction = useCallback((row: number, col: number) => {
       if (!activeLayer) return;
+      
+      if(tool === 'paste') {
+        handlePasteSelection(row, col);
+        return;
+      }
+
       let newGrid = grid.map(r => [...r]);
       
       // Handle tools that are just simple clicks and don't use the preview system.
@@ -473,7 +504,7 @@ export default function Home() {
       updateGridInLayer(activeLayer.id, newGrid);
       setSelection(null);
     },
-    [grid, selectedTileId, tiles, toast, tool, activeLayer, updateGridInLayer]
+    [grid, selectedTileId, tiles, toast, tool, activeLayer, updateGridInLayer, handlePasteSelection]
   );
   
   const handleDrawCommit = useCallback((newGridState: GridState) => {
@@ -590,26 +621,14 @@ export default function Home() {
     toast({ title: 'Selection Copied', description: 'The selected area has been copied to the clipboard.' });
   }, [grid, selection, toast]);
 
-  const handlePasteSelection = useCallback(() => {
-    if (!selection || !clipboard || !activeLayer) return;
-    
-    const newGrid = grid.map(r => [...r]);
-    const pasteStartRow = selection.minRow;
-    const pasteStartCol = selection.minCol;
-
-    for(let r = 0; r < clipboard.length; r++) {
-        for(let c = 0; c < clipboard[0].length; c++) {
-            const targetRow = pasteStartRow + r;
-            const targetCol = pasteStartCol + c;
-            const copiedCell = clipboard[r][c];
-            if (copiedCell !== -1 && targetRow < grid.length && targetCol < grid[0].length) {
-                newGrid[targetRow][targetCol] = copiedCell;
-            }
-        }
+  const handleActivatePaste = useCallback(() => {
+    if (!clipboard) {
+        toast({ variant: 'destructive', title: 'Paste Failed', description: 'Your clipboard is empty.' });
+        return;
     }
-    updateGridInLayer(activeLayer.id, newGrid);
-    toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-  }, [grid, selection, clipboard, toast, activeLayer, updateGridInLayer]);
+    setTool('paste');
+    toast({ title: 'Paste Mode Activated', description: 'Click on the grid to paste at the desired location.' });
+  }, [clipboard, toast]);
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -673,6 +692,14 @@ export default function Home() {
     }, 50);
   };
 
+  const handleMouseDown = useCallback((e: MouseEvent) => {
+    if (!mapGridRef.current?.contains(e.target as Node)) {
+        if (selection) {
+          // Pressing escape is the only way to deselect
+        }
+    }
+  }, [selection]);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
@@ -709,7 +736,7 @@ export default function Home() {
             e.preventDefault();
         }
       if (e.key === 'c' && selection) handleCopySelection();
-      else if (e.key === 'v' && selection && clipboard) handlePasteSelection();
+      else if (e.key === 'v') handleActivatePaste();
       else if (e.key === 'z') undo();
       else if (e.key === 'y') redo();
       else if (e.key === 's') setExportOpen(true);
@@ -722,6 +749,10 @@ export default function Home() {
         handleDeleteSelection();
     } else if (e.key === 'Escape') {
         e.preventDefault();
+        if (tool === 'paste') {
+          setTool('brush');
+          toast({ title: 'Paste Canceled' });
+        }
         if (selection) setSelection(null);
     } else {
        const keyMap: { [key: string]: Tool } = {
@@ -734,21 +765,27 @@ export default function Home() {
         setTool(keyMap[e.key]);
       }
     }
-  }, [clipboard, grid, handleCopySelection, handleDeleteSelection, handlePasteSelection, isPreviewMode, playerPos, selection, tiles, toast, undo, redo]);
+  }, [selection, handleCopySelection, handleActivatePaste, undo, redo, handleDeleteSelection, isPreviewMode, playerPos, grid, tiles, toast, tool]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    window.addEventListener('mousedown', handleMouseDown as any);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('mousedown', handleMouseDown as any);
+    }
+  }, [handleKeyDown, handleMouseDown]);
 
   const handleToolSelect = useCallback((newTool: Tool) => {
     setTool(newTool);
-    if (newTool !== 'select' && newTool !== 'magic-wand') {
+    if (newTool !== 'select' && newTool !== 'magic-wand' && newTool !== 'paste') {
       setSelection(null);
     }
     const toolsWithSettings: Tool[] = ['spray', 'shape', 'gradient', 'noise', 'scatter', 'auto-tile'];
     if (toolsWithSettings.includes(newTool) || settings.layersEnabled) {
-      leftPanelRef.current?.expand();
+      if (leftPanelRef.current?.isCollapsed()) {
+         leftPanelRef.current?.expand();
+      }
     }
   }, [settings.layersEnabled]);
 
@@ -789,16 +826,15 @@ export default function Home() {
   }, [gridSize, toast, updateGridInLayer, activeLayer]);
   
   const handleClearPalette = useCallback(() => {
-    if(!activeLayer) return;
-    updateGridInLayer(activeLayer.id, createEmptyGrid(gridSize.width, gridSize.height), true);
+    clearAllLayers(gridSize.width, gridSize.height);
     updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
-
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
     setScatterSet([]);
+    setAutoTileSet([]);
     setConfirmClearPaletteOpen(false);
-    toast({ title: "Palette Cleared", description: "All tiles have been removed."});
-  }, [gridSize, toast, updateGridInLayer, updateTiles, activeLayer]);
+    toast({ title: "Palette Cleared", description: "All tiles have been removed and all layers cleared."});
+  }, [gridSize, toast, updateTiles, clearAllLayers]);
   
   const onToggleScatterTile = useCallback((id: number) => {
     setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
@@ -825,6 +861,7 @@ export default function Home() {
     scatter: { icon: Dices, label: 'Scatter (C)'},
     select: { icon: Lasso, label: 'Select (M)' },
     'magic-wand': { icon: Wand2, label: 'Wand (W)' },
+    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)' },
   };
 
   const headerActions = [
@@ -850,7 +887,7 @@ export default function Home() {
   const selectionActions = {
     fill: { icon: FileCheck, label: 'Fill Selection', onClick: handleFillSelection },
     copy: { icon: Copy, label: 'Copy (Ctrl+C)', onClick: handleCopySelection },
-    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', onClick: handlePasteSelection, disabled: !clipboard },
+    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', onClick: handleActivatePaste, disabled: !clipboard },
     delete: { icon: Trash2, label: 'Delete (Del)', onClick: handleDeleteSelection },
     invert: { icon: Replace, label: 'Invert', onClick: handleInvertSelection },
     mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal', onClick: handleMirrorHorizontal },
@@ -1009,28 +1046,31 @@ export default function Home() {
             </PanelResizeHandle>
             <Panel defaultSize={panelLayout[1]} minSize={30}>
               <main className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full">
-                <MapGrid
-                  layers={layers}
-                  activeLayer={activeLayer}
-                  tiles={tiles}
-                  onCellAction={handleCellAction}
-                  onDrawCommit={handleDrawCommit}
-                  onSelectionCommit={handleSelectionCommit}
-                  tool={tool}
-                  shape={shape}
-                  zoom={zoom}
-                  selectedTileId={selectedTileId}
-                  secondarySelectedTileId={secondarySelectedTileId}
-                  selection={selection}
-                  isPreviewMode={isPreviewMode}
-                  playerPos={playerPos}
-                  autoTileMode={autoTileMode}
-                  autoTileSet={autoTileSet}
-                  autoTileOverwrite={autoTileOverwrite}
-                  sprayRadius={sprayRadius}
-                  sprayDensity={sprayDensity}
-                  scatterSet={scatterSet}
-                />
+                <div ref={mapGridRef}>
+                  <MapGrid
+                    layers={layers}
+                    activeLayer={activeLayer}
+                    tiles={tiles}
+                    onCellAction={handleCellAction}
+                    onDrawCommit={handleDrawCommit}
+                    onSelectionCommit={handleSelectionCommit}
+                    tool={tool}
+                    shape={shape}
+                    zoom={zoom}
+                    selectedTileId={selectedTileId}
+                    secondarySelectedTileId={secondarySelectedTileId}
+                    selection={selection}
+                    isPreviewMode={isPreviewMode}
+                    playerPos={playerPos}
+                    autoTileMode={autoTileMode}
+                    autoTileSet={autoTileSet}
+                    autoTileOverwrite={autoTileOverwrite}
+                    sprayRadius={sprayRadius}
+                    sprayDensity={sprayDensity}
+                    scatterSet={scatterSet}
+                    clipboard={clipboard}
+                  />
+                </div>
               </main>
             </Panel>
             <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center">
@@ -1063,7 +1103,7 @@ export default function Home() {
                           onToggleAutoTile={onToggleAutoTile}
                           onClearAutoTileSet={onClearAutoTileSet}
                           onRenameTile={handleRenameTile}
-                          onDeleteTile={confirmDeleteTile}
+                          onDeleteTile={openDeleteTileDialog}
                           onToggleSolid={handleToggleSolid}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
@@ -1186,7 +1226,7 @@ export default function Home() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete all tiles from your palette and clear the map. This action can be undone.
+                This action will permanently delete all tiles from your palette and clear all layers of the map. This action can be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -332,8 +332,9 @@ export const useProjects = () => {
   const mergeAllLayers = useCallback(() => {
     modifyCurrentProject(project => {
         const visibleLayers = project.layers.filter(l => l.isVisible);
-        if (visibleLayers.length === 0) return {};
+        if (visibleLayers.length <= 1) return {};
 
+        // Start with a deep copy of the bottom-most visible layer's grid
         const baseLayer = visibleLayers[0];
         const mergedGrid = JSON.parse(JSON.stringify(baseLayer.grid));
 
@@ -358,6 +359,15 @@ export const useProjects = () => {
         };
     });
   }, [modifyCurrentProject]);
+
+    const clearAllLayers = useCallback((width: number, height: number) => {
+        modifyCurrentProject(() => {
+            const newGrid = createEmptyGrid(width, height);
+            const clearedLayers = currentProject.layers.map(layer => ({ ...layer, grid: newGrid }));
+            return { layers: clearedLayers };
+        });
+    }, [modifyCurrentProject, currentProject.layers]);
+
 
   return {
     projects,
@@ -384,5 +394,8 @@ export const useProjects = () => {
     toggleLayerVisibility,
     reorderLayers,
     mergeAllLayers,
+    clearAllLayers,
   };
 };
+
+    

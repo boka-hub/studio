@@ -1,5 +1,5 @@
 
-export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile';
+export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile' | 'paste';
 
 export type Shape = 'rectangle' | 'circle' | 'line';
 

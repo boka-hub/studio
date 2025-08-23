@@ -285,7 +285,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         unoptimized
                         data-ai-hint="pixel art"
                       />
-                       {!isCollapsed && (
+                       {!isCollapsed && tile.id !== 0 && (
                           <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -392,3 +392,5 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
+
+    

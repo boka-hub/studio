@@ -1,10 +1,11 @@
 
-import React, { useState, useMemo, useCallback, MouseEvent, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, MouseEvent as ReactMouseEvent, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape, Layer } from '@/lib/types';
 import { getAutoTileId9, getAutoTileId13, getAutoTileId47 } from '@/lib/auto-tiler';
+import { ClipboardPaste } from 'lucide-react';
 
 interface MapGridProps {
   layers: Layer[];
@@ -27,6 +28,7 @@ interface MapGridProps {
   sprayRadius: number;
   sprayDensity: number;
   scatterSet: number[];
+  clipboard: GridState | null;
 }
 
 const BASE_TILE_SIZE = 16;
@@ -53,22 +55,24 @@ export const MapGrid: FC<MapGridProps> = ({
   sprayRadius,
   sprayDensity,
   scatterSet,
+  clipboard,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
+  const [pastePreview, setPastePreview] = useState<{grid: GridState, row: number, col: number} | null>(null);
+  const mainGridRef = useRef<HTMLDivElement>(null);
   
   const TILE_SIZE = useMemo(() => BASE_TILE_SIZE * zoom, [zoom]);
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter'].includes(tool);
   
   useEffect(() => {
-    // When the active layer changes, or drawing stops, clear any lingering preview.
     if (!isDrawing) {
       setPreviewGrid(null);
     }
-  }, [activeLayer, isDrawing]);
+  }, [isDrawing]);
   
   const tileMap = useMemo(() => {
     return new Map(tiles.map(tile => [tile.id, tile]));
@@ -230,8 +234,11 @@ export const MapGrid: FC<MapGridProps> = ({
     return newGrid;
   }, [tool, shape, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite]);
 
-  const getCoordsFromEvent = (e: MouseEvent<HTMLDivElement>): { row: number, col: number } | null => {
-    const rect = e.currentTarget.getBoundingClientRect();
+  const getCoordsFromEvent = (e: ReactMouseEvent<HTMLDivElement> | MouseEvent): { row: number, col: number } | null => {
+    const gridEl = mainGridRef.current;
+    if (!gridEl) return null;
+    
+    const rect = gridEl.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
@@ -248,7 +255,7 @@ export const MapGrid: FC<MapGridProps> = ({
     return null;
   };
 
-  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+  const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
     if (isPreviewMode || !activeLayer || !activeLayer.grid || e.button !== 0) return;
     const coords = getCoordsFromEvent(e);
     if (!coords) return;
@@ -265,16 +272,26 @@ export const MapGrid: FC<MapGridProps> = ({
     }
   };
 
-  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !activeLayer || !activeLayer.grid) return;
+  const handleMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
     const coords = getCoordsFromEvent(e);
-    if (!coords) return;
+    if (!coords) {
+      if (tool === 'paste') setPastePreview(null);
+      return;
+    }
+    
+    if (tool === 'paste' && clipboard) {
+      setPastePreview({ grid: clipboard, row: coords.row, col: coords.col });
+    } else {
+      setPastePreview(null);
+    }
+    
+    if (!isDrawing || !activeLayer || !activeLayer.grid) return;
 
     if (currentCell && currentCell.row === coords.row && currentCell.col === coords.col) return;
     setCurrentCell(coords);
     
     const isCtrlPressed = e.ctrlKey || e.metaKey;
-    const baseGrid = isShapeTool ? activeLayer.grid : (previewGrid || activeLayer.grid);
+    const baseGrid = (isBrushLikeTool && !isShapeTool) ? (previewGrid || activeLayer.grid) : activeLayer.grid;
 
     if (isBrushLikeTool || isCtrlPressed) {
       setPreviewGrid(performDraw(baseGrid, coords.row, coords.col, tool, isCtrlPressed, startCell));
@@ -283,37 +300,33 @@ export const MapGrid: FC<MapGridProps> = ({
     }
   };
 
-  const handleMouseUp = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isDrawing || !activeLayer || !activeLayer.grid) return;
+  const handleMouseUp = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (!activeLayer || !activeLayer.grid) return;
     
     const coords = getCoordsFromEvent(e) || currentCell;
-    if (!coords) {
-        setIsDrawing(false);
-        setStartCell(null);
-        setCurrentCell(null);
-        setPreviewGrid(null);
-        return;
+
+    if (isDrawing && coords) {
+      const isClick = startCell && startCell.row === coords.row && startCell.col === coords.col;
+      const isCtrlPressed = e.ctrlKey || e.metaKey;
+
+      if (!isCtrlPressed && (tool === 'picker' || tool === 'fill' || tool === 'magic-wand' || tool === 'paste')) {
+        if(isClick || tool === 'paste') onCellAction(coords.row, coords.col);
+      } else if (!isCtrlPressed && tool === 'select' && startCell) {
+        onSelectionCommit(startCell, coords);
+      } else {
+          const finalGrid = previewGrid || performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
+          if (finalGrid) onDrawCommit(finalGrid);
+      }
     }
     
     setIsDrawing(false);
-    const isClick = startCell && startCell.row === coords.row && startCell.col === coords.col;
-    const isCtrlPressed = e.ctrlKey || e.metaKey;
-
-    if (!isCtrlPressed && (tool === 'picker' || tool === 'fill' || tool === 'magic-wand')) {
-      if(isClick) onCellAction(coords.row, coords.col);
-    } else if (!isCtrlPressed && tool === 'select' && startCell) {
-      onSelectionCommit(startCell, coords);
-    } else {
-        const finalGrid = previewGrid || performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
-        if (finalGrid) onDrawCommit(finalGrid);
-    }
-    
     setStartCell(null);
     setCurrentCell(null);
     setPreviewGrid(null);
   };
   
-  const handleMouseLeave = (e: MouseEvent<HTMLDivElement>) => {
+  const handleMouseLeave = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (tool === 'paste') setPastePreview(null);
     if (isDrawing && activeLayer && activeLayer.grid) {
         if (previewGrid) {
            onDrawCommit(previewGrid);
@@ -337,6 +350,8 @@ export const MapGrid: FC<MapGridProps> = ({
         return 'cursor-crosshair';
       case 'picker': case 'fill': case 'magic-wand':
         return 'cursor-pointer';
+      case 'paste':
+        return 'cursor-copy';
       case 'shape': case 'gradient': case 'noise': case 'scatter': case 'select':
         return 'cursor-crosshair';
       default:
@@ -385,7 +400,6 @@ export const MapGrid: FC<MapGridProps> = ({
                             sizes={`${TILE_SIZE}px`}
                             className="object-cover"
                             unoptimized
-                            data-ai-hint="pixel art tile"
                         />
                     )}
                     {isCellSelectedByWand && (
@@ -396,9 +410,49 @@ export const MapGrid: FC<MapGridProps> = ({
         })
     );
   };
+  
+  const renderPastePreview = () => {
+    if (!pastePreview) return null;
+    return pastePreview.grid.map((row, r_idx) => 
+        row.map((tileId, c_idx) => {
+            if (tileId === -1) return null; // -1 means transparent cell in copied data
+            const tile = tileMap.get(tileId);
+            if (!tile) return null;
+
+            const top = (pastePreview.row + r_idx) * (TILE_SIZE + gridLineWidth) + gridLineWidth;
+            const left = (pastePreview.col + c_idx) * (TILE_SIZE + gridLineWidth) + gridLineWidth;
+            
+            if (top > gridHeight * (TILE_SIZE + gridLineWidth) || left > gridWidth * (TILE_SIZE + gridLineWidth)) return null;
+
+            return (
+                <div
+                    key={`paste-${r_idx}-${c_idx}`}
+                    className="absolute opacity-70"
+                    style={{
+                        top: `${top}px`,
+                        left: `${left}px`,
+                        width: `${TILE_SIZE}px`,
+                        height: `${TILE_SIZE}px`,
+                        zIndex: layers.length + 5,
+                    }}
+                >
+                    <Image
+                        src={tile.src}
+                        alt={tile.name}
+                        fill
+                        sizes={`${TILE_SIZE}px`}
+                        className="object-cover"
+                        unoptimized
+                    />
+                </div>
+            )
+        })
+    );
+  }
 
   return (
     <div
+      ref={mainGridRef}
       className={cn(
         "relative p-px rounded-lg shadow-inner select-none bg-muted/20",
         getCursorClass()
@@ -421,14 +475,13 @@ export const MapGrid: FC<MapGridProps> = ({
             return layer.isVisible && (
               <div
                   key={layer.id}
-                  className="absolute inset-0 grid"
+                  className="absolute inset-0 grid pointer-events-none"
                   style={{
                     gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
                     gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                     gap: `${gridLineWidth}px`,
                     backgroundColor: 'hsla(var(--card) / 0.5)',
                     zIndex: index,
-                    pointerEvents: 'none',
                   }}
               >
                {renderLayerGrid(layer, isLayerActive)}
@@ -473,6 +526,10 @@ export const MapGrid: FC<MapGridProps> = ({
           }}
         />
       )}
+
+      {tool === 'paste' && renderPastePreview()}
     </div>
   );
 };
+
+    

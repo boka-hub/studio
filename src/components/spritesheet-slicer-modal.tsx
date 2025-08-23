@@ -230,7 +230,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                                if(blob) {
                                    const index = y * cols + x;
                                    const tileInfo = tilesFromMetadata?.find((t: any) => t.index === index);
-                                   const tileName = tileInfo?.name || `${fileData.name}_${index}`;
+                                   const tileName = tileInfo?.name || `${fileData.name}_x${x}_y${y}`;
                                    const isSolid = tileInfo?.solid === true;
                                    
                                    const newFile = new File([blob], `${tileName}.png`, { type: 'image/png' });
@@ -419,3 +419,5 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     </Dialog>
   );
 };
+
+    

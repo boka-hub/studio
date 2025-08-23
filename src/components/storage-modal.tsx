@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -160,7 +161,9 @@ export const StorageModal: React.FC<StorageModalProps> = ({
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEditing(project)}><Edit className="h-4 w-4" /></Button>
                               <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={project.id === currentProjectId}>
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                       <AlertDialogHeader>
@@ -224,3 +227,5 @@ export const StorageModal: React.FC<StorageModalProps> = ({
     </Dialog>
   );
 };
+
+    
