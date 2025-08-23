@@ -156,13 +156,6 @@ export default function Home() {
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const mapGridRef = useRef<HTMLDivElement>(null);
 
-  // Sync project state from history back to the global projects store
-  useEffect(() => {
-    if (projectState.id === initialProject.id) {
-       saveProject(projectState);
-    }
-  }, [projectState, initialProject.id, saveProject]);
-
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -176,9 +169,13 @@ export default function Home() {
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     setProjectHistory(currentProject => {
         const changes = modifier(currentProject);
-        return { ...currentProject, ...changes };
+        const newState = { ...currentProject, ...changes };
+        if (newState.id === currentProject.id) {
+          saveProject(newState);
+        }
+        return newState;
     }, batch);
-  }, [setProjectHistory]);
+  }, [setProjectHistory, saveProject]);
 
   const handleSettingsChange = useCallback((newSettings: AppSettings) => {
     // If user is disabling layers, show confirmation dialog first
@@ -1032,6 +1029,7 @@ export default function Home() {
   }, [modifyCurrentProject]);
   
   const handleLoadProject = useCallback((id: string) => {
+    saveProject(projectState); // Save current project before switching
     const projectToLoad = setCurrentProjectById(id);
     if(projectToLoad) {
       resetHistory(projectToLoad);
@@ -1040,7 +1038,7 @@ export default function Home() {
       toast({ variant: 'destructive', title: 'Load Failed', description: 'Could not find the selected project.' });
     }
     setStorageOpen(false);
-  }, [setCurrentProjectById, resetHistory, toast]);
+  }, [setCurrentProjectById, resetHistory, toast, saveProject, projectState]);
 
   const handleOpenSettings = useCallback(() => {
     setSettingsOpen(true);
@@ -1073,7 +1071,7 @@ export default function Home() {
       { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
       { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
       { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: () => setStorageOpen(true) },
-      { icon: Grid, label: 'Clear Map (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
+      { icon: Grid, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
   ], [undo, redo, canUndo, canRedo]);
   
   const gameplayActions = useMemo(() => [
@@ -1427,5 +1425,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-    

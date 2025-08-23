@@ -66,22 +66,20 @@ export const useProjects = () => {
 
   useEffect(() => {
     if (!isLoading && state.projects.length > 0) {
+      // Save state to local storage whenever it changes
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
   }, [state, isLoading]);
 
   const saveProject = useCallback((projectToSave: Project) => {
     setState(currentState => {
-      // Check if it's a new project being added or an existing one being updated
       const existingProjectIndex = currentState.projects.findIndex(p => p.id === projectToSave.id);
       let newProjects;
 
       if (existingProjectIndex > -1) {
-        // Update existing project
         newProjects = [...currentState.projects];
         newProjects[existingProjectIndex] = { ...projectToSave, lastModified: Date.now() };
       } else {
-        // Add new project
         newProjects = [...currentState.projects, projectToSave];
       }
 
@@ -94,16 +92,15 @@ export const useProjects = () => {
   }, []);
   
   const setCurrentProjectById = useCallback((id: string): Project | undefined => {
-    let project: Project | undefined;
-    setState(currentState => {
-      project = currentState.projects.find(p => p.id === id);
-      return {
-        ...currentState,
-        currentProjectId: id,
-      };
-    });
+    const project = state.projects.find(p => p.id === id);
+    if(project) {
+        setState(currentState => ({
+            ...currentState,
+            currentProjectId: id,
+        }));
+    }
     return project;
-  }, []);
+  }, [state.projects]);
 
   const deleteProject = useCallback((id: string) => {
     setState(currentState => {
