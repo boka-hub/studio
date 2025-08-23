@@ -61,7 +61,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
   const dragTargetRef = useRef<HTMLDivElement | null>(null);
 
   const handleStartEditing = (tile: Tile) => {
-    if (tile.id === 0) return;
+    if (tile.id === 0 || isCollapsed) return;
     setEditingTileId(tile.id);
     setEditingName(tile.name);
   };
@@ -124,7 +124,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   // Drag and Drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, tileId: number) => {
-    if (searchQuery) {
+    if (searchQuery || isCollapsed) {
         e.preventDefault();
         return;
     }
@@ -218,40 +218,47 @@ export const TilePalette: FC<TilePaletteProps> = ({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="p-4 pb-2 flex-shrink-0 space-y-2">
-        <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search tiles..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
-          />
+      {!isCollapsed && (
+        <div className="p-4 pb-2 flex-shrink-0 space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">Palette</h3>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tiles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          {tool === 'scatter' && (
+              <div className="p-2 rounded-md bg-muted/50 text-center space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                      <Dices className="h-4 w-4 text-muted-foreground"/>
+                      <p className="text-sm text-muted-foreground">Scatter Set:</p>
+                      <Badge variant="secondary">{scatterSet.length} tiles</Badge>
+                  </div>
+                  {scatterSet.length > 0 && (
+                      <Button variant="outline" size="sm" className="h-7" onClick={onClearScatterSet}>Clear Set</Button>
+                  )}
+              </div>
+          )}
+          {tool === 'auto-tile' && renderAutoTileHelper()}
         </div>
-        {tool === 'scatter' && (
-            <div className="p-2 rounded-md bg-muted/50 text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                    <Dices className="h-4 w-4 text-muted-foreground"/>
-                    <p className="text-sm text-muted-foreground">Scatter Set:</p>
-                    <Badge variant="secondary">{scatterSet.length} tiles</Badge>
-                </div>
-                {scatterSet.length > 0 && (
-                    <Button variant="outline" size="sm" className="h-7" onClick={onClearScatterSet}>Clear Set</Button>
-                )}
-            </div>
-        )}
-        {tool === 'auto-tile' && renderAutoTileHelper()}
-      </div>
+      )}
       <ScrollArea className="flex-grow">
         <div className={cn(
-            "grid gap-2 p-4 pt-2 grid-cols-3"
+            "grid gap-2 p-4 pt-2",
+            isCollapsed ? 'grid-cols-1' : 'grid-cols-3'
           )}>
           {filteredTiles.map((tile) => (
               <div 
                 key={tile.id} 
-                className={cn("group flex flex-col items-center gap-1.5 tile-container w-full", draggedTileId === tile.id && "opacity-50")}
-                draggable={!searchQuery}
+                className={cn(
+                    "group flex flex-col items-center gap-1.5 tile-container w-full", 
+                    draggedTileId === tile.id && "opacity-50",
+                    isCollapsed && 'items-center'
+                )}
+                draggable={!searchQuery && !isCollapsed}
                 onDragStart={(e) => handleDragStart(e, tile.id)}
                 onDragOver={(e) => handleDragOver(e, tile.id)}
                 onDragLeave={handleDragLeave}
@@ -268,7 +275,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       onClick={(e) => handleTileClick(e, tile.id)}
                       className={cn(
                         'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150',
-                         !searchQuery ? 'cursor-grab' : 'cursor-pointer',
+                         !searchQuery && !isCollapsed ? 'cursor-grab' : 'cursor-pointer',
                         getBorderStyle(tile.id)
                       )}
                       aria-label={`Select tile ${tile.name}`}
@@ -287,7 +294,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       {tool === 'auto-tile' && autoTileSet.includes(tile.id) && (
                         <Badge variant="secondary" className="absolute bottom-1 left-1">{autoTileSet.indexOf(tile.id) + 1}</Badge>
                       )}
-                       {tile.id !== 0 && (
+                       {tile.id !== 0 && !isCollapsed && (
                           <div className="absolute top-0.5 right-0.5 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -352,7 +359,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                   </TooltipContent>
                 </Tooltip>
 
-                {tile.id !== 0 && (
+                {tile.id !== 0 && !isCollapsed && (
                   <div className="w-full text-center h-6">
                     {editingTileId === tile.id ? (
                       <Input
@@ -394,5 +401,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    
