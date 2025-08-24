@@ -419,7 +419,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
             <AlertDialogHeader>
               <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete all tiles from your palette and clear all layers of the map. This action can be undone.
+                This will permanently delete all tiles from your palette and clear all layers of the map. This action can be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

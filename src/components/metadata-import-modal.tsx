@@ -36,8 +36,8 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
   const { toast } = useToast();
 
   const processFile = (file: File) => {
-    if (!file || (!file.type.startsWith('text/') && !file.name.endsWith('.txt'))) {
-        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop a valid .txt metadata file.' });
+    if (!file || (!file.type.startsWith('text/') && !file.name.endsWith('.txt') && !file.name.endsWith('.json'))) {
+        toast({ variant: 'destructive', title: 'Invalid File', description: 'Please drop a valid .txt or .json metadata file.' });
         return;
     }
 
@@ -55,46 +55,50 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
             if (!emptyTile) {
               throw new Error("Could not find the essential 'Empty' tile.");
             }
-
-            const currentTilesByName = new Map(tiles.map(tile => [tile.name, tile]));
+            
+            const currentTilesById = new Map(tiles.map(tile => [tile.id, tile]));
             const idRemap: { [oldId: number]: number } = {};
-            const newTiles: Tile[] = [emptyTile];
-            const processedNewIds = new Set<number>([0]);
+            const finalTiles: Tile[] = [emptyTile];
+            const finalIds = new Set<number>([0]);
+            
             const metaTilesByName = new Map(metadata.tiles.map((t: any) => [t.name, t]));
+            const currentTilesByName = new Map(tiles.map(tile => [tile.name, tile]));
 
-
-            // Process tiles from metadata, creating the remap and the new tile set
-            metaTilesByName.forEach((metaTile: any) => {
-                const currentTile = currentTilesByName.get(metaTile.name);
+            // First pass: Match by name, re-ID, and gather new properties
+            for (const [name, metaTile] of metaTilesByName.entries()) {
+                const currentTile = currentTilesByName.get(name);
                 if (currentTile) {
                     const newId = metaTile.id;
-                    if (processedNewIds.has(newId)) {
-                        console.warn(`Duplicate ID ${newId} found in metadata file for tile "${metaTile.name}". Skipping.`);
-                        return;
+                    if (finalIds.has(newId)) {
+                        console.warn(`Duplicate ID ${newId} in metadata file for tile "${name}". It will be assigned a new ID later.`);
+                        continue;
                     }
-                    if (currentTile.id !== newId) {
-                        idRemap[currentTile.id] = newId;
-                    }
-                    newTiles.push({ ...currentTile, id: newId, solid: metaTile.solid ?? currentTile.solid });
-                    processedNewIds.add(newId);
+                    finalTiles.push({
+                        ...currentTile,
+                        id: newId,
+                        solid: metaTile.solid ?? currentTile.solid,
+                        metadata: metaTile.metadata ?? currentTile.metadata,
+                    });
+                    idRemap[currentTile.id] = newId;
+                    finalIds.add(newId);
                 }
-            });
+            }
 
-            // Handle tiles that are in the current project but not in the metadata
+            // Second pass: Handle tiles that are in the project but NOT in the metadata
             let nextAvailableId = 1;
-            tiles.forEach(currentTile => {
-                if (currentTile.id !== 0 && !metaTilesByName.has(currentTile.name)) {
-                     while (processedNewIds.has(nextAvailableId)) {
+            for (const tile of tiles) {
+                if (tile.id !== 0 && !metaTilesByName.has(tile.name)) {
+                     while (finalIds.has(nextAvailableId)) {
                         nextAvailableId++;
                     }
                     const newId = nextAvailableId;
-                    idRemap[currentTile.id] = newId;
-                    newTiles.push({ ...currentTile, id: newId });
-                    processedNewIds.add(newId);
+                    finalTiles.push({ ...tile, id: newId });
+                    idRemap[tile.id] = newId;
+                    finalIds.add(newId);
                 }
-            });
+            }
             
-            onImport(idRemap, newTiles);
+            onImport(idRemap, finalTiles);
             toast({ title: 'Palette & Map Remapped', description: 'Tiles have been re-identified and the map has been updated.' });
             onClose();
 
@@ -147,7 +151,7 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
         <DialogHeader>
           <DialogTitle>Import & Remap Palette</DialogTitle>
           <DialogDescription>
-            Import a metadata file to re-ID your tiles and update the map grid accordingly.
+            Import a metadata file (.txt or .json) to re-ID your tiles and update the map grid accordingly.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh] -mx-6 px-6">
@@ -156,7 +160,7 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
                     <ShieldAlert className="h-4 w-4" />
                     <AlertTitle>Warning</AlertTitle>
                     <AlertDescription>
-                        This is a destructive action. It will change the IDs of your tiles and permanently alter your map grid to match the imported file. This cannot be undone easily.
+                        This is a destructive action. It will change the IDs of your tiles and permanently alter your map grid to match the imported file. This action cannot be easily undone.
                     </AlertDescription>
                 </Alert>
 
@@ -169,7 +173,7 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
                     ) : (
                         <>
                             <FileJson2 className="h-12 w-12 text-muted-foreground/50" />
-                            <p className="text-muted-foreground mt-4">Drag & drop your metadata .txt file here</p>
+                            <p className="text-muted-foreground mt-4">Drag & drop your metadata file here</p>
                             <p className="text-sm text-muted-foreground/80">or</p>
                             <Button variant="outline" size="sm" className="mt-2" onClick={() => fileInputRef.current?.click()}>
                                 <Upload className="mr-2 h-4 w-4" />
@@ -186,7 +190,7 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
         <input 
           ref={fileInputRef} 
           type="file" 
-          accept=".txt" 
+          accept=".txt,.json" 
           className="hidden" 
           onChange={handleFileSelect} 
         />

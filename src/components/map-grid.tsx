@@ -217,17 +217,19 @@ export const MapGrid: FC<MapGridProps> = ({
                    const dy = radiusY === 0 ? 0 : (r - centerY) / radiusY;
                    const distSq = (dx * dx) + (dy * dy);
                    if (distSq <= 1) {
-                      if (shapeStyle === 'fill') {
-                        if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
-                      } else { // outline
-                        const nextR = r + 1, prevR = r - 1;
-                        const nextC = c + 1, prevC = c - 1;
-                        const dx_p1 = radiusX === 0 ? 0 : ((c+1) - centerX) / radiusX;
-                        const dy_p1 = radiusY === 0 ? 0 : ((r+1) - centerY) / radiusY;
-                        const distSq_p1 = (dx_p1 * dx_p1) + (dy_p1 * dy_p1);
-                        if (distSq_p1 <= 1) continue; // Not on the edge yet
-                        if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
-                      }
+                        if (shapeStyle === 'fill') {
+                            if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
+                        } else { // outline
+                            const isEdge = 
+                                (((c + 1 - centerX) / radiusX) ** 2 + ((r - centerY) / radiusY) ** 2 > 1) ||
+                                (((c - 1 - centerX) / radiusX) ** 2 + ((r - centerY) / radiusY) ** 2 > 1) ||
+                                (((c - centerX) / radiusX) ** 2 + ((r + 1 - centerY) / radiusY) ** 2 > 1) ||
+                                (((c - centerX) / radiusX) ** 2 + ((r - 1 - centerY) / radiusY) ** 2 > 1);
+
+                            if (isEdge) {
+                                if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
+                            }
+                        }
                    }
                 }
               }
@@ -312,7 +314,7 @@ export const MapGrid: FC<MapGridProps> = ({
     
     const isCtrlPressed = e.ctrlKey || e.metaKey;
 
-    if (isBrushLikeTool || isShapeTool || isCtrlPressed) {
+    if (isBrushLikeTool || isCtrlPressed) {
       setPreviewGrid(performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, coords));
     }
   };
@@ -332,9 +334,9 @@ export const MapGrid: FC<MapGridProps> = ({
     setCurrentCell(coords);
     
     const isCtrlPressed = e.ctrlKey || e.metaKey;
-    const baseGrid = (isBrushLikeTool && !isShapeTool && previewGrid) ? previewGrid : activeLayer.grid;
-
+    
     if (isBrushLikeTool || isCtrlPressed) {
+      const baseGrid = previewGrid ?? activeLayer.grid;
       setPreviewGrid(performDraw(baseGrid, coords.row, coords.col, tool, isCtrlPressed, startCell));
     } else if (isShapeTool && startCell) {
       setPreviewGrid(performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, startCell));
@@ -342,11 +344,12 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseUp = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (!activeLayer || !activeLayer.grid) return;
+    if (!activeLayer || !activeLayer.grid || !isDrawing) return;
     
     const coords = getCoordsFromEvent(e) || currentCell;
+    setIsDrawing(false);
 
-    if (isDrawing && coords) {
+    if (coords) {
       const isClick = startCell && startCell.row === coords.row && startCell.col === coords.col;
       const isCtrlPressed = e.ctrlKey || e.metaKey;
 
@@ -355,18 +358,18 @@ export const MapGrid: FC<MapGridProps> = ({
       } else if (!isCtrlPressed && tool === 'select' && startCell) {
         onSelectionCommit(startCell, coords);
       } else {
-          const finalGrid = previewGrid || performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, startCell);
-          if (finalGrid) onDrawCommit(finalGrid);
+          if (previewGrid) {
+            onDrawCommit(previewGrid);
+          }
       }
     }
     
-    setIsDrawing(false);
     setStartCell(null);
     setCurrentCell(null);
     setPreviewGrid(null);
   };
   
-  const handleMouseLeave = (e: ReactMouseEvent<HTMLDivElement>) => {
+  const handleMouseLeave = () => {
     onCoordsChange(null);
     if (isDrawing && activeLayer && activeLayer.grid) {
         if (previewGrid) {

@@ -90,15 +90,15 @@ function HomeComponent() {
   const {
     projects,
     currentProjectId,
-    isLoading,
+    isLoading: isProjectsLoading,
     saveProject,
     deleteProject,
     renameProject,
     setCurrentProjectById,
   } = useProjects();
   
-  const activeProject = useMemo(() => 
-    projects.find(p => p.id === currentProjectId), 
+  const activeProjectData = useMemo(() => 
+    projects.find(p => p.id === currentProjectId),
   [projects, currentProjectId]);
 
   const { 
@@ -109,20 +109,21 @@ function HomeComponent() {
     canUndo, 
     canRedo,
     reset: resetHistory,
-  } = useHistoryState(activeProject);
+  } = useHistoryState(activeProjectData);
   
+  // This effect synchronizes the history state when the user loads a different project.
   useEffect(() => {
-    if (activeProject && activeProject.id !== projectState?.id) {
-        resetHistory(activeProject);
+    if (activeProjectData && activeProjectData.id !== projectState?.id) {
+        resetHistory(activeProjectData);
     }
-  }, [activeProject, projectState?.id, resetHistory]);
+  }, [activeProjectData, projectState?.id, resetHistory]);
   
-  // Auto-save when projectState changes from user actions
+  // This effect handles auto-saving the project state whenever it changes.
   useEffect(() => {
-    if (!isLoading && projectState) {
+    if (!isProjectsLoading && projectState) {
       saveProject(projectState);
     }
-  }, [projectState, saveProject, isLoading]);
+  }, [projectState, saveProject, isProjectsLoading]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -188,12 +189,12 @@ function HomeComponent() {
   }, []);
 
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
+    if (!projectState) return;
     setProjectState(currentProject => {
-      if (!currentProject) return null;
         const changes = modifier(currentProject);
-        return { ...currentProject, ...changes, lastModified: Date.now() };
+        return { ...currentProject, ...changes };
     }, batch);
-  }, [setProjectState]);
+  }, [setProjectState, projectState]);
 
   const mergeAllLayers = useCallback(() => {
     modifyCurrentProject(project => {
@@ -254,6 +255,10 @@ function HomeComponent() {
     setConfirmMergeLayersOpen(false);
   }, [pendingSettings, mergeAllLayers]);
 
+  const cancelMergeLayers = useCallback(() => {
+    setPendingSettings(null);
+    setConfirmMergeLayersOpen(false);
+  }, []);
 
   // Sync grid size state when grid changes from project load
   useEffect(() => {
@@ -268,6 +273,10 @@ function HomeComponent() {
     setPreviewMode(false);
     setPlayerPos({ row: 0, col: 0 });
     setZoom(1);
+    setSelectedTileId(0);
+    setSecondarySelectedTileId(0);
+    setScatterSet([]);
+    setAutoTileSet([]);
   }, [projectState?.id]);
   
   const toggleToolbar = useCallback(() => {
@@ -510,7 +519,7 @@ function HomeComponent() {
             const targetRow = pasteStartRow + r;
             const targetCol = pasteStartCol + c;
             const copiedCell = clipboard[r][c];
-            if (copiedCell !== -1 && targetRow < layerGrid.length && targetCol < layerGrid[0].length) {
+            if (copiedCell !== -1 && targetRow < newGrid.length && targetCol < newGrid[0].length) {
                 newGrid[targetRow][targetCol] = copiedCell;
             }
         }
@@ -560,9 +569,13 @@ function HomeComponent() {
             }
           }
         }
+         updateGridInLayer(activeLayer.id, newGrid);
       } else if (tool === 'magic-wand') {
         const targetId = newGrid[row][col];
-        if (targetId === 0) return;
+        if (targetId === 0) {
+          setSelection(null);
+          return;
+        }
 
         const queue: [number, number][] = [[row, col]];
         const visited = new Set<string>();
@@ -597,7 +610,6 @@ function HomeComponent() {
         return; 
       }
       
-      updateGridInLayer(activeLayer.id, newGrid);
       setSelection(null);
     },
     [grid, selectedTileId, tiles, toast, tool, activeLayer, updateGridInLayer]
@@ -1017,14 +1029,22 @@ function HomeComponent() {
     }, [modifyCurrentProject]);
   
   const handleClearPalette = useCallback(() => {
-    clearAllLayers();
-    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false, metadata: {} }]);
+     modifyCurrentProject((project) => {
+        const clearedLayers = project.layers.map(layer => {
+            const newGrid = createEmptyGrid(layer.grid[0]?.length || 0, layer.grid.length);
+            return { ...layer, grid: newGrid };
+        });
+        return { 
+            layers: clearedLayers,
+            tiles: [{ id: 0, name: 'Empty', src: '', solid: false, metadata: {} }]
+        };
+    });
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
     setScatterSet([]);
     setAutoTileSet([]);
     toast({ title: "Palette Cleared", description: "All tiles have been removed and all layers cleared."});
-  }, [clearAllLayers, toast, updateTiles]);
+  }, [modifyCurrentProject, toast]);
   
   const onToggleScatterTile = useCallback((id: number) => {
     setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
@@ -1232,7 +1252,7 @@ function HomeComponent() {
     }
   }, [selection]);
 
-  if (isLoading || !projectState) {
+  if (isProjectsLoading || !projectState) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <ToyBrick className="h-12 w-12 text-primary animate-pulse" />
@@ -1523,7 +1543,7 @@ function HomeComponent() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingSettings(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={cancelMergeLayers}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={confirmMergeLayers}>Merge Layers</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
