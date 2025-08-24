@@ -61,14 +61,14 @@ const MetadataEditor = ({ tile, onUpdateMetadata }: { tile: Tile, onUpdateMetada
         <div className="space-y-2 p-1">
             {Object.entries(metadata).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-1">
-                    <Input value={key} disabled className="h-7 text-xs bg-muted/50" />
-                    <Input value={value as string} disabled className="h-7 text-xs bg-muted/50" />
+                    <Input value={key} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
+                    <Input value={value as string} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
                     <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleDelete(key)}><Trash className="h-3 w-3"/></Button>
                 </div>
             ))}
              <div className="flex items-center gap-1">
-                <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs"/>
-                <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs"/>
+                <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs flex-grow"/>
+                <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs flex-grow"/>
                 <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}><ListPlus className="h-3 w-3"/></Button>
             </div>
             <div className="flex">
