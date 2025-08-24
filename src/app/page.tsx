@@ -104,6 +104,12 @@ function HomeComponent() {
     reset: resetHistory,
   } = useHistoryState(currentProject);
   
+  useEffect(() => {
+    if (currentProject && currentProject.id) {
+        resetHistory(currentProject);
+    }
+  }, [currentProject.id, resetHistory]);
+
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
   const grid = activeLayer?.grid ?? [[]];
@@ -877,7 +883,6 @@ function HomeComponent() {
     handleInvertSelection, 
     handleMirrorHorizontal, 
     handleMirrorVertical,
-    grid, // Add grid dependency for collision checks in preview mode
   ]);
   
   useEffect(() => {
@@ -1132,7 +1137,7 @@ function HomeComponent() {
     if (!isLoading) {
         saveProject(projectState);
     }
-  }, [projectState.id]);
+  }, [projectState]);
 
   if (isLoading) {
     return (
