@@ -71,10 +71,12 @@ const MetadataEditor = ({ tile, onUpdateMetadata }: { tile: Tile, onUpdateMetada
                 <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs"/>
                 <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}><ListPlus className="h-3 w-3"/></Button>
             </div>
-            <Button size="sm" className="w-full h-8 mt-2" onClick={handleUpdate}>
-                <Check className="mr-2 h-4 w-4"/>
-                Save Properties
-            </Button>
+            <div className="flex">
+                <Button size="sm" className="w-full h-8 mt-2" onClick={handleUpdate}>
+                    <Check className="mr-2 h-4 w-4"/>
+                    Save Properties
+                </Button>
+            </div>
         </div>
     );
 };
