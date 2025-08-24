@@ -58,24 +58,26 @@ const MetadataEditor = ({ tile, onUpdateMetadata }: { tile: Tile, onUpdateMetada
     }
 
     return (
-        <div className="space-y-2 p-1">
-            {Object.entries(metadata).map(([key, value]) => (
-                <div key={key} className="flex items-center gap-1">
-                    <Input value={key} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
-                    <Input value={String(value)} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleDelete(key)}><Trash className="h-3 w-3"/></Button>
+        <div className="w-full mt-2 p-2 border rounded-md bg-background" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+                {Object.entries(metadata).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-1">
+                        <Input value={key} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
+                        <Input value={String(value)} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleDelete(key)}><Trash className="h-3 w-3"/></Button>
+                    </div>
+                ))}
+                <div className="flex items-center gap-1">
+                    <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs flex-grow"/>
+                    <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs flex-grow"/>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}><ListPlus className="h-3 w-3"/></Button>
                 </div>
-            ))}
-             <div className="flex items-center gap-1">
-                <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs flex-grow"/>
-                <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs flex-grow"/>
-                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}><ListPlus className="h-3 w-3"/></Button>
-            </div>
-            <div className="flex justify-center mt-2">
-                <Button size="sm" className="h-8" onClick={handleUpdate}>
-                    <Check className="mr-2 h-4 w-4"/>
-                    Save Properties
-                </Button>
+                <div className="flex justify-center mt-2">
+                    <Button size="sm" className="h-8" onClick={handleUpdate}>
+                        <Check className="mr-2 h-4 w-4"/>
+                        Save Properties
+                    </Button>
+                </div>
             </div>
         </div>
     );
@@ -334,7 +336,6 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 className={cn(
                     "group flex flex-col items-center gap-1.5 tile-container", 
                     draggedTileId === tile.id && "opacity-50",
-                    isCollapsed && 'w-16 h-16',
                 )}
                 draggable={!searchQuery && !isCollapsed}
                 onDragStart={(e) => handleDragStart(e, tile.id)}
@@ -352,7 +353,8 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTileClick(e as any, tile.id); }}
                       onClick={(e) => handleTileClick(e, tile.id)}
                       className={cn(
-                        'relative aspect-square w-full rounded-md overflow-hidden border-2 transition-all duration-150',
+                        'relative aspect-square rounded-md overflow-hidden border-2 transition-all duration-150',
+                         isCollapsed ? 'w-16 h-16' : 'w-full',
                          !searchQuery && !isCollapsed ? 'cursor-grab' : 'cursor-pointer',
                         getBorderStyle(tile.id)
                       )}
@@ -483,9 +485,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 )}
 
                  {!isCollapsed && editingMetadataTileId === tile.id && (
-                  <div className="w-full mt-2 p-2 border rounded-md bg-background" onClick={(e) => e.stopPropagation()}>
-                    <MetadataEditor tile={tile} onUpdateMetadata={onUpdateMetadata} />
-                  </div>
+                  <MetadataEditor tile={tile} onUpdateMetadata={onUpdateMetadata} />
                 )}
               </div>
             ))}
