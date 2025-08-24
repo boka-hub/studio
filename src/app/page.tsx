@@ -340,14 +340,6 @@ function HomeComponent() {
     toast({ title: 'Tile Renamed', description: `Tile has been renamed to "${newName}".` });
   }, [tiles, toast, updateTiles]);
 
-  const handleUpdateTileMetadata = useCallback((tileId: number, metadata: Record<string, any>) => {
-    const newTiles = tiles.map(t =>
-      t.id === tileId ? { ...t, metadata } : t
-    );
-    updateTiles(newTiles);
-    toast({ title: 'Metadata Updated', description: `Custom properties for tile have been saved.` });
-  }, [tiles, updateTiles, toast]);
-
   const handleToggleSolid = useCallback((tileId: number) => {
     const newTiles = tiles.map(t =>
       t.id === tileId ? { ...t, solid: !t.solid } : t
@@ -1403,7 +1395,6 @@ function HomeComponent() {
                           onRenameTile={handleRenameTile}
                           onDeleteTile={confirmDeleteTile}
                           onToggleSolid={handleToggleSolid}
-                          onUpdateMetadata={handleUpdateTileMetadata}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
                           onClearPalette={handleClearPalette}

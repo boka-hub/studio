@@ -12,6 +12,27 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
+interface TilePaletteProps {
+  tiles: Tile[];
+  selectedTileId: number;
+  secondarySelectedTileId: number;
+  scatterSet: number[];
+  autoTileSet: number[];
+  autoTileMode: AutoTileMode;
+  tool: Tool;
+  onSelectTile: (id: number) => void;
+  onSelectSecondaryTile: (id: number) => void;
+  onToggleScatterTile: (id: number) => void;
+  onClearScatterSet: () => void;
+  onToggleAutoTile: (id: number) => void;
+  onClearAutoTileSet: () => void;
+  onRenameTile: (id: number, newName: string) => void;
+  onDeleteTile: (id: number) => void;
+  onToggleSolid: (id: number) => void;
+  onReorderTiles: (reorderedTiles: Tile[]) => void;
+  isCollapsed: boolean;
+  onClearPalette: () => void;
+}
 
 export const TilePalette: FC<TilePaletteProps> = ({
   tiles,
@@ -30,13 +51,11 @@ export const TilePalette: FC<TilePaletteProps> = ({
   onRenameTile,
   onDeleteTile,
   onToggleSolid,
-  onUpdateMetadata,
   onReorderTiles,
   isCollapsed,
   onClearPalette,
 }) => {
   const [editingTileId, setEditingTileId] = useState<number | null>(null);
-  const [editingMetadataTileId, setEditingMetadataTileId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [draggedTileId, setDraggedTileId] = useState<number | null>(null);
@@ -48,17 +67,6 @@ export const TilePalette: FC<TilePaletteProps> = ({
     if (tile.id === 0 || isCollapsed) return;
     setEditingTileId(tile.id);
     setEditingName(tile.name);
-    setEditingMetadataTileId(null);
-  };
-
-  const handleToggleMetadataEditor = (e: React.MouseEvent, tileId: number) => {
-    e.stopPropagation();
-    if (editingMetadataTileId === tileId) {
-      setEditingMetadataTileId(null);
-    } else {
-      setEditingMetadataTileId(tileId);
-      setEditingTileId(null);
-    }
   };
 
   const handleConfirmRename = () => {
@@ -214,58 +222,6 @@ export const TilePalette: FC<TilePaletteProps> = ({
     );
   };
 
-  const MetadataEditor = ({ tile, onUpdateMetadata }: { tile: Tile, onUpdateMetadata: (id: number, metadata: Record<string, any>) => void }) => {
-    const [metadata, setMetadata] = useState(tile.metadata || {});
-    const [newKey, setNewKey] = useState('');
-    const [newValue, setNewValue] = useState('');
-
-    const handleAdd = () => {
-        if (!newKey.trim()) return;
-        setMetadata({ ...metadata, [newKey]: newValue });
-        setNewKey('');
-        setNewValue('');
-    };
-
-    const handleUpdate = () => {
-        onUpdateMetadata(tile.id, metadata);
-    }
-    
-    const handleDelete = (key: string) => {
-        const newMeta = { ...metadata };
-        delete newMeta[key];
-        setMetadata(newMeta);
-    }
-
-    return (
-      <div className="w-full mt-2 p-2 border rounded-md bg-background" onClick={(e) => e.stopPropagation()}>
-        <div className="space-y-2">
-          {Object.entries(metadata).map(([key, value]) => (
-            <div key={key} className="flex items-center gap-1">
-              <Input value={key} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
-              <Input value={String(value)} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
-              <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-destructive" onClick={() => handleDelete(key)}>
-                <Trash className="h-3 w-3"/>
-              </Button>
-            </div>
-          ))}
-          <div className="flex items-center gap-1">
-            <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs flex-grow"/>
-            <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs flex-grow"/>
-            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}>
-              <ListPlus className="h-3 w-3"/>
-            </Button>
-          </div>
-          <div className="flex justify-center mt-2">
-            <Button size="sm" className="h-8" onClick={handleUpdate}>
-              <Check className="mr-2 h-4 w-4"/>
-              Save Properties
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {!isCollapsed && (
@@ -372,20 +328,6 @@ export const TilePalette: FC<TilePaletteProps> = ({
                                 <p>{tile.solid ? "Make Passable" : "Make Solid"}</p>
                               </TooltipContent>
                             </Tooltip>
-
-                             <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant={editingMetadataTileId === tile.id ? 'secondary' : 'ghost'}
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={(e) => handleToggleMetadataEditor(e, tile.id)}
-                                >
-                                  <ListPlus className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="left"><p>Edit Properties</p></TooltipContent>
-                            </Tooltip>
                             
                             <AlertDialog>
                               <Tooltip>
@@ -462,10 +404,6 @@ export const TilePalette: FC<TilePaletteProps> = ({
                       </p>
                     )}
                   </div>
-                )}
-
-                 {!isCollapsed && editingMetadataTileId === tile.id && (
-                  <MetadataEditor tile={tile} onUpdateMetadata={onUpdateMetadata} />
                 )}
               </div>
             ))}
