@@ -1,109 +1,102 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 const MAX_HISTORY_SIZE = 50;
 
 type HistoryState<T> = {
   past: T[];
-  present: T;
+  present: T | null;
   future: T[];
 };
 
-export function useHistoryState<T>(initialState: T) {
+export function useHistoryState<T>(initialPresent: T | undefined) {
   const [state, setState] = useState<HistoryState<T>>({
     past: [],
-    present: initialState,
+    present: initialPresent || null,
     future: [],
   });
 
   const canUndo = state.past.length > 0;
   const canRedo = state.future.length > 0;
+  
+  // A ref to hold the current state during batch operations.
+  const batchRef = useRef<T | null>(null);
 
-  // Use a ref to track batched state to prevent re-renders on each tiny change
-  const batchedStateRef = useRef<T | null>(null);
-
-  const set = useCallback((newState: T | ((prevState: T) => T), batch = false) => {
-    if (batch) {
-      // If batching, just update the ref. The final commit will be done by calling set(..., false)
-      const newPresent = typeof newState === 'function'
-        ? (newState as (prevState: T) => T)(batchedStateRef.current ?? state.present)
-        : newState;
-      batchedStateRef.current = newPresent;
-      // We also update the *visual* state so the user sees feedback (e.g., during drawing)
-      setState(s => ({ ...s, present: newPresent }));
-      return;
-    }
-
-    // This is the commit action (not batching)
-    setState(currentState => {
-      // If there was a batched state, use it as the starting point. Otherwise, use the current state.
-      const currentPresent = batchedStateRef.current ?? currentState.present;
-      batchedStateRef.current = null; // Clear the ref after commit
-
-      const newPresent = typeof newState === 'function'
-        ? (newState as (prevState: T) => T)(currentPresent)
-        : newState;
-      
-      // Don't add to history if state is identical
-      if (newPresent === currentPresent) {
-          return currentState;
-      }
-      
-      const newPast = [...currentState.past, currentPresent];
-      if (newPast.length > MAX_HISTORY_SIZE) {
-        newPast.shift(); // Keep history size in check
+  const set = useCallback((newStateFn: (prevState: T) => T, batch = false) => {
+      if (batch) {
+          // If batching, update the ref but don't commit to history yet.
+          // Update the immediate state for UI responsiveness.
+          setState(s => {
+              const current = batchRef.current ?? s.present;
+              if (!current) return s;
+              batchRef.current = newStateFn(current);
+              return { ...s, present: batchRef.current };
+          });
+          return;
       }
 
+      // Not batching, or committing a batch.
+      setState(s => {
+          const current = s.present;
+          if (!current) return s;
+
+          const newPresent = batchRef.current ?? newStateFn(current);
+          batchRef.current = null; // Clear batch ref after commit.
+
+          if (newPresent === current) {
+              return s;
+          }
+
+          const newPast = [...s.past, current].slice(-MAX_HISTORY_SIZE);
+
+          return {
+              past: newPast,
+              present: newPresent,
+              future: [], // Clear future on a new action.
+          };
+      });
+  }, []);
+
+
+  const undo = useCallback(() => {
+    setState(s => {
+      if (s.past.length === 0 || !s.present) {
+        return s;
+      }
+      const newFuture = [s.present, ...s.future];
+      const newPresent = s.past[s.past.length - 1];
+      const newPast = s.past.slice(0, s.past.length - 1);
       return {
         past: newPast,
         present: newPresent,
-        future: [], // Clear future on new action
-      };
-    });
-  }, [state.present]);
-
-  const undo = useCallback(() => {
-    setState(currentState => {
-      if (currentState.past.length === 0) {
-        return currentState;
-      }
-      
-      const previous = currentState.past[currentState.past.length - 1];
-      const newPast = currentState.past.slice(0, currentState.past.length - 1);
-      
-      return {
-        past: newPast,
-        present: previous,
-        future: [currentState.present, ...currentState.future],
-      };
-    });
-  }, []);
-
-  const redo = useCallback(() => {
-    setState(currentState => {
-      if (currentState.future.length === 0) {
-        return currentState;
-      }
-      
-      const next = currentState.future[0];
-      const newFuture = currentState.future.slice(1);
-
-      return {
-        past: [...currentState.past, currentState.present],
-        present: next,
         future: newFuture,
       };
     });
   }, []);
 
-  const reset = useCallback((newState: T) => {
-    setState({
-        past: [],
-        present: newState,
-        future: [],
-    })
+  const redo = useCallback(() => {
+    setState(s => {
+      if (s.future.length === 0 || !s.present) {
+        return s;
+      }
+      const newPast = [...s.past, s.present];
+      const newPresent = s.future[0];
+      const newFuture = s.future.slice(1);
+      return {
+        past: newPast,
+        present: newPresent,
+        future: newFuture,
+      };
+    });
   }, []);
 
+  const reset = useCallback((newPresent: T) => {
+      setState({
+          past: [],
+          present: newPresent,
+          future: [],
+      });
+  }, []);
 
   return {
     state: state.present,
@@ -112,6 +105,6 @@ export function useHistoryState<T>(initialState: T) {
     redo,
     canUndo,
     canRedo,
-    reset
+    reset,
   };
 }

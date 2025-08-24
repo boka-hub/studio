@@ -28,23 +28,6 @@ export const useProjects = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const currentProject = useMemo(() => {
-    const project = state.projects.find(p => p.id === state.currentProjectId);
-    if (project) {
-        return project;
-    }
-    // Return a temporary, minimal project object during initial load to prevent errors
-    if (isLoading) {
-        return createNewProject("Loading...");
-    }
-    // If no project is found after loading, create a new one. This is a fallback.
-    const newProject = createNewProject('New Project');
-    // We shouldn't directly set state here as it's a side effect.
-    // This will be handled by the main useEffect.
-    return newProject;
-  }, [state.projects, state.currentProjectId, isLoading]);
-
-
   useEffect(() => {
     setIsLoading(true);
     try {
@@ -59,12 +42,18 @@ export const useProjects = () => {
         }
       }
 
-      if (savedState && Array.isArray(savedState.projects) && savedState.projects.length > 0 && savedState.currentProjectId) {
-        const projectToLoad = savedState.projects.find(p => p.id === savedState.currentProjectId) || [...savedState.projects].sort((a, b) => b.lastModified - a.lastModified)[0];
+      if (savedState && Array.isArray(savedState.projects) && savedState.projects.length > 0) {
+        // Sort by most recently modified to find the default project to load
+        const sortedProjects = [...savedState.projects].sort((a, b) => b.lastModified - a.lastModified);
+        const projectToLoadId = savedState.currentProjectId && savedState.projects.some(p => p.id === savedState.currentProjectId)
+            ? savedState.currentProjectId
+            : sortedProjects[0].id;
+        
         setState({
           projects: savedState.projects,
-          currentProjectId: projectToLoad.id,
+          currentProjectId: projectToLoadId,
         });
+
       } else {
         const defaultProject = createNewProject('New Project');
         setState({ projects: [defaultProject], currentProjectId: defaultProject.id });
@@ -78,11 +67,11 @@ export const useProjects = () => {
     }
   }, [toast]);
 
-  useEffect(() => {
-    if (!isLoading && state.projects.length > 0) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const saveStateToLocalStorage = useCallback((newState: ProjectsState) => {
+    if (!isLoading) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
     }
-  }, [state, isLoading]);
+  }, [isLoading]);
 
   const saveProject = useCallback((projectToSave: Project) => {
     setState(currentState => {
@@ -91,58 +80,75 @@ export const useProjects = () => {
 
       if (existingProjectIndex > -1) {
         newProjects = [...currentState.projects];
-        newProjects[existingProjectIndex] = { ...projectToSave, lastModified: Date.now() };
+        newProjects[existingProjectIndex] = projectToSave;
       } else {
         newProjects = [...currentState.projects, projectToSave];
       }
-
-      return {
+      
+      const newState = {
         ...currentState,
         projects: newProjects,
         currentProjectId: projectToSave.id,
       };
+      saveStateToLocalStorage(newState);
+      return newState;
     });
-  }, []);
+  }, [saveStateToLocalStorage]);
   
   const setCurrentProjectById = useCallback((id: string) => {
-    const project = state.projects.find(p => p.id === id);
-    if(project) {
-        setState(currentState => ({
-            ...currentState,
-            currentProjectId: id,
-        }));
-        toast({ title: 'Project Loaded', description: `Successfully loaded "${project.name}".`});
+    const projectExists = state.projects.some(p => p.id === id);
+    if(projectExists) {
+        setState(currentState => {
+            const newState = {
+                ...currentState,
+                currentProjectId: id,
+            };
+            saveStateToLocalStorage(newState);
+            return newState;
+        });
+        const projectName = state.projects.find(p => p.id === id)?.name;
+        toast({ title: 'Project Loaded', description: `Successfully loaded "${projectName}".`});
     } else {
         toast({ variant: 'destructive', title: 'Load Failed', description: 'Could not find the selected project.' });
     }
-  }, [state.projects, toast]);
+  }, [state.projects, saveStateToLocalStorage, toast]);
 
   const deleteProject = useCallback((id: string) => {
     setState(currentState => {
       const remainingProjects = currentState.projects.filter(p => p.id !== id);
+      
       if (remainingProjects.length === 0) {
         const newDefault = createNewProject('New Project');
-        return { projects: [newDefault], currentProjectId: newDefault.id };
+        const newState = { projects: [newDefault], currentProjectId: newDefault.id };
+        saveStateToLocalStorage(newState);
+        return newState;
       }
+      
       const newCurrentId = currentState.currentProjectId === id
         ? [...remainingProjects].sort((a, b) => b.lastModified - a.lastModified)[0].id
         : currentState.currentProjectId;
-      return { projects: remainingProjects, currentProjectId: newCurrentId };
+      
+      const newState = { projects: remainingProjects, currentProjectId: newCurrentId };
+      saveStateToLocalStorage(newState);
+      return newState;
     });
     toast({ title: 'Project Deleted' });
-  }, [toast]);
+  }, [saveStateToLocalStorage, toast]);
 
   const renameProject = useCallback((id: string, newName: string) => {
-    setState(currentState => ({
-      ...currentState,
-      projects: currentState.projects.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p),
-    }));
-  }, []);
+    setState(currentState => {
+      const newState = {
+        ...currentState,
+        projects: currentState.projects.map(p => p.id === id ? { ...p, name: newName, lastModified: Date.now() } : p),
+      };
+      saveStateToLocalStorage(newState);
+      return newState;
+    });
+  }, [saveStateToLocalStorage]);
 
   return {
     projects: state.projects,
     currentProjectId: state.currentProjectId,
-    currentProject,
     isLoading,
     saveProject,
     deleteProject,

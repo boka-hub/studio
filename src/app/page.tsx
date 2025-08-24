@@ -88,15 +88,19 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 
 function HomeComponent() {
   const {
-    currentProject: loadedProject,
+    projects,
+    currentProjectId,
+    isLoading,
     saveProject,
     deleteProject,
     renameProject,
-    projects,
-    isLoading,
     setCurrentProjectById,
   } = useProjects();
   
+  const activeProject = useMemo(() => 
+    projects.find(p => p.id === currentProjectId), 
+  [projects, currentProjectId]);
+
   const { 
     state: projectState, 
     set: setProjectState, 
@@ -105,15 +109,23 @@ function HomeComponent() {
     canUndo, 
     canRedo,
     reset: resetHistory,
-  } = useHistoryState(loadedProject);
+  } = useHistoryState(activeProject);
   
   useEffect(() => {
-    if (loadedProject && loadedProject.id !== projectState.id) {
-        resetHistory(loadedProject);
+    if (activeProject && activeProject.id !== projectState?.id) {
+        resetHistory(activeProject);
     }
-  }, [loadedProject, resetHistory, projectState.id]);
+  }, [activeProject, projectState?.id, resetHistory]);
+  
+  // Auto-save when projectState changes from user actions
+  useEffect(() => {
+    if (!isLoading && projectState) {
+      saveProject(projectState);
+    }
+  }, [projectState, saveProject, isLoading]);
 
-  const { tiles, layers, activeLayerId } = projectState;
+
+  const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
   const grid = activeLayer?.grid ?? [[]];
 
@@ -177,6 +189,7 @@ function HomeComponent() {
 
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     setProjectState(currentProject => {
+      if (!currentProject) return null;
         const changes = modifier(currentProject);
         return { ...currentProject, ...changes, lastModified: Date.now() };
     }, batch);
@@ -249,12 +262,13 @@ function HomeComponent() {
 
   // Reset relevant state when project changes
   useEffect(() => {
+    if (!projectState) return;
     setSelection(null);
     setClipboard(null);
     setPreviewMode(false);
     setPlayerPos({ row: 0, col: 0 });
     setZoom(1);
-  }, [projectState.id]);
+  }, [projectState?.id]);
   
   const toggleToolbar = useCallback(() => {
     const panel = leftPanelRef.current;
@@ -985,11 +999,12 @@ function HomeComponent() {
   }, [settings.layersEnabled]);
 
   const clearLayer = useCallback((layerId: string) => {
+    if (!projectState) return;
     const layer = projectState.layers.find(l => l.id === layerId);
     if (!layer) return;
     const newGrid = createEmptyGrid(layer.grid[0]?.length || 0, layer.grid.length);
     updateGridInLayer(layerId, newGrid);
-  }, [projectState.layers, updateGridInLayer]);
+  }, [projectState, updateGridInLayer]);
   
   const handleClearMap = useCallback(() => {
     if (!activeLayer) return;
@@ -1101,31 +1116,9 @@ function HomeComponent() {
   }, [modifyCurrentProject]);
   
   const handleLoadProject = useCallback((id: string) => {
-    saveProject(projectState); // Save current project before switching
     setCurrentProjectById(id);
     setStorageOpen(false);
-  }, [setCurrentProjectById, saveProject, projectState]);
-
-  useEffect(() => {
-    if (isLoading) return;
-    const unsavedChanges = loadedProject && loadedProject.lastModified < projectState.lastModified;
-    if (unsavedChanges) {
-      saveProject(projectState);
-    }
-  }, [projectState, loadedProject, isLoading, saveProject]);
-
-  // Save on exit
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-        if (loadedProject && loadedProject.lastModified < projectState.lastModified) {
-            saveProject(projectState);
-        }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [projectState, loadedProject, saveProject]);
+  }, [setCurrentProjectById]);
 
   const handleOpenSettings = useCallback(() => {
     setSettingsOpen(true);
@@ -1246,7 +1239,7 @@ function HomeComponent() {
     }
   }, [selection]);
 
-  if (isLoading) {
+  if (isLoading || !projectState) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <ToyBrick className="h-12 w-12 text-primary animate-pulse" />
