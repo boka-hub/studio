@@ -47,12 +47,14 @@ import {
   Lasso,
   ArrowRightLeft,
   ArrowUpDown,
+  ListPlus,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
 import { LayersPanel } from '@/components/layers-panel';
 import { TilePalette } from '@/components/tile-palette';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
+import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
@@ -144,6 +146,7 @@ function HomeComponent() {
   const [clipboard, setClipboard] = useState<GridState | null>(null);
   const [isSlicerOpen, setSlicerOpen] = useState(false);
   const [slicerInitialFiles, setSlicerInitialFiles] = useState<File[]>([]);
+  const [isMetaImportOpen, setMetaImportOpen] = useState(false);
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isStorageOpen, setStorageOpen] = useState(false);
@@ -326,6 +329,10 @@ function HomeComponent() {
     setSelection(null);
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   }, [modifyCurrentProject, toast]);
+  
+  const updateTiles = useCallback((newTiles: Tile[]) => {
+    modifyCurrentProject(() => ({ tiles: newTiles }));
+  }, [modifyCurrentProject]);
   
   const handleRenameTile = useCallback((tileId: number, newName: string) => {
     modifyCurrentProject(project => {
@@ -1124,6 +1131,7 @@ function HomeComponent() {
     { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet (Ctrl+O)', onClick: () => openSlicer() },
     { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => mapImportRef.current?.click() },
+    { icon: ListPlus, label: 'Remap Palette (Ctrl+M)', onClick: () => setMetaImportOpen(true) },
     { icon: Package, label: 'Export... (Ctrl+S)', onClick: () => setExportOpen(true) },
   ], [openSlicer]);
   
@@ -1454,6 +1462,12 @@ function HomeComponent() {
           onClose={() => setSlicerOpen(false)}
           onSlice={addTiles}
           initialFiles={slicerInitialFiles}
+        />
+        <MetadataImportModal
+          isOpen={isMetaImportOpen}
+          onClose={() => setMetaImportOpen(false)}
+          tiles={tiles}
+          onRemap={updateTiles}
         />
         <ExportTilesModal
           isOpen={isExportOpen}
