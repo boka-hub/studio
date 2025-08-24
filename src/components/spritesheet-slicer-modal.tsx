@@ -210,8 +210,9 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
 
     for (const fileData of files) {
         const img = new Image();
+        img.src = fileData.src;
+
         await new Promise<void>((resolve, reject) => {
-            img.src = fileData.src;
             img.onload = async () => {
                 const cols = Math.floor(img.width / fileData.tileWidth);
                 const rows = Math.floor(img.height / fileData.tileHeight);
@@ -230,20 +231,12 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                         const isTransparent = await isTileTransparent(dataUrl);
                         if (isTransparent) continue;
 
-                        await new Promise<void>(resolveBlob => {
-                           sliceCanvas.toBlob(blob => {
-                               if(blob) {
-                                   const index = y * cols + x;
-                                   const tileInfo = tilesFromMetadata?.find((t: any) => t.index === index);
-                                   const tileName = tileInfo?.name || `${fileData.name}_x${x}_y${y}`;
-                                   const isSolid = tileInfo?.solid === true;
-                                   
-                                   const newFile = new File([blob], `${tileName}.png`, { type: 'image/png' });
-                                   allSlicedData.push({ file: newFile, isSolid });
-                               }
-                               resolveBlob();
-                           }, 'image/png');
-                        });
+                        const index = y * cols + x;
+                        const tileInfo = tilesFromMetadata?.find((t: any) => t.index === index);
+                        const tileName = tileInfo?.name || `${fileData.name}_x${x}_y${y}`;
+                        const isSolid = tileInfo?.solid === true;
+                        
+                        allSlicedData.push({ name: tileName, src: dataUrl, isSolid });
                     }
                 }
                 resolve();

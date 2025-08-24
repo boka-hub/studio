@@ -51,6 +51,7 @@ export interface AppSettings {
 }
 
 export interface TileImportData {
-  file: File;
+  name: string;
+  src: string; // Now a data URL
   isSolid: boolean;
 }

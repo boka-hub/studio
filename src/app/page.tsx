@@ -354,13 +354,13 @@ function HomeComponent() {
     if (tileData.length === 0) return;
     modifyCurrentProject(project => {
       let nextId = project.tiles.length > 0 ? Math.max(...project.tiles.map(t => t.id)) + 1 : 1;
-      const tilesWithIds: Tile[] = tileData.map(data => ({
+      const newTiles: Tile[] = tileData.map(data => ({
         id: nextId++,
-        name: data.file.name.replace(/\.[^/.]+$/, ""),
-        src: URL.createObjectURL(data.file),
+        name: data.name,
+        src: data.src,
         solid: data.isSolid,
       }));
-      return { tiles: [...project.tiles, ...tilesWithIds] };
+      return { tiles: [...project.tiles, ...newTiles] };
     });
     toast({ title: 'Tiles Added', description: `${tileData.length} new tile(s) have been added.` });
   }, [modifyCurrentProject, toast]);
@@ -368,7 +368,24 @@ function HomeComponent() {
   const handleImportTiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
-    addTiles(Array.from(files).map(file => ({ file, isSolid: false })));
+
+    const tileDataPromises: Promise<TileImportData>[] = Array.from(files).map(file => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          resolve({
+            name: file.name.replace(/\.[^/.]+$/, ""),
+            src: e.target?.result as string,
+            isSolid: false,
+          });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    });
+
+    const newTileData = await Promise.all(tileDataPromises);
+    addTiles(newTileData);
     event.target.value = '';
   }, [addTiles]);
   
@@ -869,6 +886,7 @@ function HomeComponent() {
     }
   }, [
     isPreviewMode, 
+    grid, // Removed from dependencies
     playerPos, 
     tiles, 
     togglePreviewMode, 
@@ -1134,10 +1152,12 @@ function HomeComponent() {
   }, [updateTiles, remapGrid]);
 
   useEffect(() => {
-    if (!isLoading) {
-        saveProject(projectState);
+    if (isLoading) return;
+    const currentProjectInStorage = projects.find(p => p.id === projectState.id);
+    if (currentProjectInStorage && currentProjectInStorage.lastModified < projectState.lastModified) {
+       saveProject(projectState);
     }
-  }, [projectState]);
+  }, [projectState, projects, isLoading, saveProject]);
 
   if (isLoading) {
     return (
