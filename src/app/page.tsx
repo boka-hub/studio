@@ -114,13 +114,15 @@ function HomeComponent() {
     if (activeProjectData && activeProjectData.id !== projectState?.id) {
         resetHistory(activeProjectData);
     }
-  }, [activeProjectData?.id, resetHistory, projectState?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProjectData?.id, resetHistory]);
   
   useEffect(() => {
     if (!isProjectsLoading && projectState) {
       saveProject(projectState);
     }
-  }, [projectState, saveProject, isProjectsLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectState, saveProject]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -187,6 +189,7 @@ function HomeComponent() {
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
     if (!projectState) return;
     setProjectState(currentProject => {
+        if (!currentProject) return null;
         const changes = modifier(currentProject);
         return { ...currentProject, ...changes };
     }, batch);
@@ -239,7 +242,7 @@ function HomeComponent() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, layers, toast]);
+  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -353,9 +356,6 @@ function HomeComponent() {
   }, [modifyCurrentProject]);
 
   const confirmDeleteTile = useCallback((tileId: number) => {
-    const tileToDelete = tiles.find(t => t.id === tileId);
-    if (!tileToDelete) return;
-
     modifyCurrentProject(project => {
         const newTiles = project.tiles.filter(t => t.id !== tileId);
         const newLayers = project.layers.map(layer => ({
@@ -371,7 +371,7 @@ function HomeComponent() {
     if (autoTileSet.includes(tileId)) {
       setAutoTileSet([]);
     }
-  }, [tiles, selectedTileId, secondarySelectedTileId, autoTileSet, modifyCurrentProject]);
+  }, [selectedTileId, secondarySelectedTileId, autoTileSet, modifyCurrentProject]);
   
   const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
     modifyCurrentProject(() => ({ tiles: reorderedTiles }));
@@ -977,6 +977,7 @@ function HomeComponent() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('mousedown', handleMouseDownOnPage);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleKeyDown, handleMouseDownOnPage]);
 
   const handleToolSelect = useCallback((newTool: Tool) => {
