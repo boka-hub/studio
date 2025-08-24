@@ -1,5 +1,5 @@
 
-export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile';
+export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile' | 'pan';
 
 export type Shape = 'rectangle' | 'circle' | 'line';
 export type ShapeStyle = 'fill' | 'outline';
@@ -50,6 +50,7 @@ export interface ProjectsState {
 export interface AppSettings {
     layersEnabled: boolean;
     exportFormat: ExportFormat;
+    gridVisible: boolean;
 }
 
 export interface TileImportData {

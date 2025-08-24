@@ -48,6 +48,7 @@ import {
   ArrowRightLeft,
   ArrowUpDown,
   ListPlus,
+  Hand,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -113,17 +114,17 @@ function HomeComponent() {
   } = useHistoryState(activeProjectData);
   
   useEffect(() => {
-    if (activeProjectData && activeProjectData.id !== projectState?.id) {
+    if (activeProjectData && (!projectState || activeProjectData.id !== projectState.id)) {
         resetHistory(activeProjectData);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProjectData?.id, resetHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProjectData, resetHistory]);
   
   useEffect(() => {
     if (!isProjectsLoading && projectState) {
       saveProject(projectState);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectState, saveProject]);
 
 
@@ -160,7 +161,7 @@ function HomeComponent() {
   const [dragFileType, setDragFileType] = useState<'image' | 'map' | 'other' | null>(null);
   const [isPreviewMode, setPreviewMode] = useState(false);
   const [playerPos, setPlayerPos] = useState({ row: 0, col: 0 });
-  const [settings, setSettings] = useState<AppSettings>({ layersEnabled: false, exportFormat: 'json' });
+  const [settings, setSettings] = useState<AppSettings>({ layersEnabled: false, exportFormat: 'json', gridVisible: true });
   const [lastMouseCoords, setLastMouseCoords] = useState<{row: number, col: number} | null>(null);
   
   const [sprayRadius, setSprayRadius] = useState(3);
@@ -173,7 +174,7 @@ function HomeComponent() {
   const mapImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
-  const mapGridRef = useRef<HTMLDivElement>(null);
+  const mapContainerRef = useRef<HTMLElement>(null);
 
 
   useEffect(() => {
@@ -181,7 +182,12 @@ function HomeComponent() {
         const savedSettings = window.localStorage.getItem(SETTINGS_KEY);
         if (savedSettings) {
             try {
-              setSettings(JSON.parse(savedSettings));
+              const parsedSettings = JSON.parse(savedSettings);
+              // Ensure gridVisible has a default value
+              if (typeof parsedSettings.gridVisible === 'undefined') {
+                parsedSettings.gridVisible = true;
+              }
+              setSettings(parsedSettings);
             } catch(e) {
               console.error("Failed to parse settings from localStorage", e);
             }
@@ -812,7 +818,7 @@ function HomeComponent() {
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const mainArea = mapGridRef.current?.parentElement;
+    const mainArea = mapContainerRef.current;
     if (mainArea && !mainArea.contains(e.relatedTarget as Node)) {
         setIsDragging(false);
         setDragFileType(null);
@@ -820,7 +826,7 @@ function HomeComponent() {
   };
 
   const handleMouseDownOnPage = useCallback((e: MouseEvent) => {
-    if (selection && mapGridRef.current && !mapGridRef.current.contains(e.target as Node)) {
+    if (selection && mapContainerRef.current && !mapContainerRef.current.contains(e.target as Node)) {
         setSelection(null);
     }
   }, [selection]);
@@ -952,6 +958,7 @@ function HomeComponent() {
         'b': 'brush', 'e': 'eraser', 'p': 'picker', 'g': 'fill',
         'r': 'shape', 'm': 'select', 'w': 'magic-wand', 's': 'spray',
         'l': 'gradient', 'n': 'noise', 'c': 'scatter', 'a': 'auto-tile',
+        'h': 'pan',
       };
 
       if (keyMap[e.key] && !e.ctrlKey && !e.metaKey) {
@@ -1112,7 +1119,12 @@ function HomeComponent() {
     setSettingsOpen(true);
   }, []);
 
+  const handleToggleGridVisibility = useCallback(() => {
+    setSettings(s => ({ ...s, gridVisible: !s.gridVisible }));
+  }, []);
+
   const toolbarActions = {
+    pan: { icon: Hand, label: 'Pan (H)' },
     brush: { icon: Brush, label: 'Brush (B)' },
     eraser: { icon: Eraser, label: 'Eraser (E)' },
     picker: { icon: Pipette, label: 'Picker (P)' },
@@ -1131,7 +1143,7 @@ function HomeComponent() {
     { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet (Ctrl+O)', onClick: () => openSlicer() },
     { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => mapImportRef.current?.click() },
-    { icon: ListPlus, label: 'Remap Palette (Ctrl+M)', onClick: () => setMetaImportOpen(true) },
+    { icon: ListPlus, label: 'Remap Palette from Metadata', onClick: () => setMetaImportOpen(true) },
     { icon: Package, label: 'Export... (Ctrl+S)', onClick: () => setExportOpen(true) },
   ], [openSlicer]);
   
@@ -1139,8 +1151,9 @@ function HomeComponent() {
       { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
       { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
       { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: () => setStorageOpen(true) },
-      { icon: Grid, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
-  ], [undo, redo, canUndo, canRedo]);
+      { icon: Grid, label: 'Toggle Grid Visibility', onClick: handleToggleGridVisibility, isActive: settings.gridVisible },
+      { icon: ArchiveX, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
+  ], [undo, redo, canUndo, canRedo, handleToggleGridVisibility, settings.gridVisible]);
 
   const transformActions = useMemo(() => [
     { icon: ArrowRightLeft, label: 'Flip Map Horizontally', onClick: handleFlipMapHorizontal },
@@ -1319,14 +1332,15 @@ function HomeComponent() {
             </PanelResizeHandle>
             <Panel defaultSize={panelLayout[1]} minSize={30}>
               <main 
+                ref={mapContainerRef}
                 className="flex-1 flex flex-col items-center justify-center p-4 bg-muted/20 overflow-auto h-full relative"
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
               >
                 {isDragging && renderDragOverlay()}
-                <div ref={mapGridRef}>
-                  <MapGrid
+                <MapGrid
+                    containerRef={mapContainerRef}
                     layers={layers}
                     activeLayer={activeLayer}
                     tiles={tiles}
@@ -1338,6 +1352,7 @@ function HomeComponent() {
                     shape={shape}
                     shapeStyle={shapeStyle}
                     zoom={zoom}
+                    onZoomChange={setZoom}
                     selectedTileId={selectedTileId}
                     secondarySelectedTileId={secondarySelectedTileId}
                     selection={selection}
@@ -1349,8 +1364,8 @@ function HomeComponent() {
                     sprayRadius={sprayRadius}
                     sprayDensity={sprayDensity}
                     scatterSet={scatterSet}
+                    gridVisible={settings.gridVisible}
                   />
-                </div>
               </main>
             </Panel>
             <PanelResizeHandle className="w-2 bg-border/50 hover:bg-border transition-colors flex items-center justify-center">

@@ -7,6 +7,7 @@ import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape, Layer, Shap
 import { getAutoTileId } from '@/lib/auto-tiler';
 
 interface MapGridProps {
+  containerRef: React.RefObject<HTMLElement>;
   layers: Layer[];
   activeLayer: Layer | null;
   tiles: Tile[];
@@ -17,7 +18,8 @@ interface MapGridProps {
   onDrawCommit: (newGrid: GridState) => void;
   onSelectionCommit: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
   onCoordsChange: (coords: {row: number, col: number} | null) => void;
-  zoom?: number;
+  zoom: number;
+  onZoomChange: (zoom: number) => void;
   selectedTileId: number;
   secondarySelectedTileId: number;
   selection: Selection | null;
@@ -29,10 +31,10 @@ interface MapGridProps {
   sprayRadius: number;
   sprayDensity: number;
   scatterSet: number[];
+  gridVisible: boolean;
 }
 
 const BASE_TILE_SIZE = 16;
-const gridLineWidth = 1;
 
 // Memoized TileCell component for performance optimization
 const TileCell = React.memo(function TileCell({
@@ -65,6 +67,7 @@ const TileCell = React.memo(function TileCell({
 
 
 export const MapGrid: FC<MapGridProps> = ({ 
+  containerRef,
   layers,
   activeLayer, 
   tiles, 
@@ -76,6 +79,7 @@ export const MapGrid: FC<MapGridProps> = ({
   onSelectionCommit,
   onCoordsChange,
   zoom = 1, 
+  onZoomChange,
   selectedTileId, 
   secondarySelectedTileId, 
   selection,
@@ -87,16 +91,20 @@ export const MapGrid: FC<MapGridProps> = ({
   sprayRadius,
   sprayDensity,
   scatterSet,
+  gridVisible,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
-  const mainGridRef = useRef<HTMLDivElement>(null);
+  const gridWrapperRef = useRef<HTMLDivElement>(null);
   
   const TILE_SIZE = useMemo(() => BASE_TILE_SIZE * zoom, [zoom]);
   const isBrushLikeTool = ['brush', 'eraser', 'spray', 'auto-tile'].includes(tool);
   const isShapeTool = ['shape', 'gradient', 'noise', 'scatter'].includes(tool);
+  
+  const gridLineWidth = useMemo(() => gridVisible ? 1 : 0, [gridVisible]);
   
   useEffect(() => {
     if (!isDrawing) {
@@ -281,8 +289,8 @@ export const MapGrid: FC<MapGridProps> = ({
     return newGrid;
   }, [tool, shape, shapeStyle, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite]);
 
-  const getCoordsFromEvent = (e: ReactMouseEvent<HTMLDivElement> | MouseEvent): { row: number, col: number } | null => {
-    const gridEl = mainGridRef.current;
+  const getCoordsFromEvent = (e: ReactMouseEvent<HTMLDivElement> | MouseEvent | WheelEvent): { row: number, col: number } | null => {
+    const gridEl = gridWrapperRef.current;
     if (!gridEl) return null;
     
     const rect = gridEl.getBoundingClientRect();
@@ -304,10 +312,16 @@ export const MapGrid: FC<MapGridProps> = ({
 
   const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
     if (isPreviewMode || !activeLayer || !activeLayer.grid || e.button !== 0) return;
+    e.preventDefault();
+
+    if (tool === 'pan') {
+      setIsPanning(true);
+      return;
+    }
+
     const coords = getCoordsFromEvent(e);
     if (!coords) return;
     
-    e.preventDefault();
     setIsDrawing(true);
     setStartCell(coords);
     setCurrentCell(coords);
@@ -327,6 +341,12 @@ export const MapGrid: FC<MapGridProps> = ({
       onCoordsChange(null);
     }
     
+    if (isPanning && containerRef.current) {
+      containerRef.current.scrollLeft -= e.movementX;
+      containerRef.current.scrollTop -= e.movementY;
+      return;
+    }
+
     if (!isDrawing || !activeLayer || !activeLayer.grid) return;
     if (!coords) return;
 
@@ -344,6 +364,10 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseUp = (e: ReactMouseEvent<HTMLDivElement>) => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
     if (!activeLayer || !activeLayer.grid || !isDrawing) return;
     
     const coords = getCoordsFromEvent(e) || currentCell;
@@ -371,6 +395,8 @@ export const MapGrid: FC<MapGridProps> = ({
   
   const handleMouseLeave = () => {
     onCoordsChange(null);
+    if (isPanning) setIsPanning(false);
+
     if (isDrawing && activeLayer && activeLayer.grid) {
         if (previewGrid) {
            onDrawCommit(previewGrid);
@@ -383,11 +409,60 @@ export const MapGrid: FC<MapGridProps> = ({
         setPreviewGrid(null);
     }
   };
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = -Math.sign(e.deltaY);
+        const newZoom = Math.max(0.1, Math.min(2, zoom + delta * 0.1));
+
+        const container = containerRef.current;
+        const gridEl = gridWrapperRef.current;
+        if (!container || !gridEl) return;
+
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const scrollLeft = container.scrollLeft;
+        const scrollTop = container.scrollTop;
+
+        // Position on map before zoom
+        const mapX = scrollLeft + mouseX;
+        const mapY = scrollTop + mouseY;
+
+        // Ratio of position on map
+        const mapXRatio = mapX / (gridEl.offsetWidth * zoom);
+        const mapYRatio = mapY / (gridEl.offsetHeight * zoom);
+        
+        onZoomChange(newZoom);
+        
+        // After zoom change, scroll to keep the same point under the cursor
+        requestAnimationFrame(() => {
+          const newMapX = mapXRatio * (gridEl.offsetWidth * newZoom);
+          const newMapY = mapYRatio * (gridEl.offsetHeight * newZoom);
+          container.scrollLeft = newMapX - mouseX;
+          container.scrollTop = newMapY - mouseY;
+        });
+    }
+  }, [zoom, onZoomChange, containerRef]);
+
+  useEffect(() => {
+      const container = containerRef.current;
+      if (container) {
+          container.addEventListener('wheel', handleWheel, { passive: false });
+          return () => {
+              container.removeEventListener('wheel', handleWheel);
+          };
+      }
+  }, [containerRef, handleWheel]);
   
   const getCursorClass = () => {
     if (isPreviewMode) return 'cursor-none';
     if (!activeLayer) return 'cursor-not-allowed';
+    if (isPanning) return 'cursor-grabbing';
     switch (tool) {
+      case 'pan': return 'cursor-grab';
       case 'brush': case 'auto-tile': case 'spray':
         return 'cursor-cell';
       case 'eraser':
@@ -442,7 +517,7 @@ export const MapGrid: FC<MapGridProps> = ({
 
   return (
     <div
-      ref={mainGridRef}
+      ref={gridWrapperRef}
       className={cn(
         "relative rounded-lg shadow-inner select-none bg-muted/20",
         getCursorClass()
@@ -451,7 +526,8 @@ export const MapGrid: FC<MapGridProps> = ({
           width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
-          padding: `${gridLineWidth}px`
+          padding: `${gridLineWidth}px`,
+          transition: 'width 0.2s, height 0.2s',
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -471,7 +547,7 @@ export const MapGrid: FC<MapGridProps> = ({
                     gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
                     gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                     gap: `${gridLineWidth}px`,
-                    backgroundColor: 'hsl(var(--border) / 0.75)',
+                    backgroundColor: gridVisible ? 'hsl(var(--border) / 0.75)' : 'transparent',
                     opacity: isLayerActive ? 1 : 0.75,
                     zIndex: index,
                   }}
