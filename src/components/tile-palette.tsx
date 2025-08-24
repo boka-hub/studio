@@ -273,7 +273,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                 className={cn(
                     "group flex flex-col items-center gap-1.5 tile-container", 
                     draggedTileId === tile.id && "opacity-50",
-                    isCollapsed && 'w-12 h-12',
+                    isCollapsed && 'w-16 h-16',
                 )}
                 draggable={!searchQuery && !isCollapsed}
                 onDragStart={(e) => handleDragStart(e, tile.id)}
@@ -432,5 +432,3 @@ export const TilePalette: FC<TilePaletteProps> = ({
     </div>
   );
 };
-
-    
