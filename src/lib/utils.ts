@@ -15,7 +15,7 @@ export function isTileTransparent(imageSrc: string): Promise<boolean> {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
       if (!ctx) {
         return resolve(false); // Cannot check, assume not transparent

@@ -18,6 +18,7 @@ import { Upload, X, FileJson2, FilePlus2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { TileImportData } from '@/lib/types';
+import { isTileTransparent } from '@/lib/utils';
 
 interface SpritesheetSlicerModalProps {
   isOpen: boolean;
@@ -201,7 +202,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     let allSlicedData: TileImportData[] = [];
 
     const sliceCanvas = document.createElement('canvas');
-    const ctx = sliceCanvas.getContext('2d');
+    const ctx = sliceCanvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) {
         toast({ variant: 'destructive', title: 'Slicing Error', description: 'Could not create a canvas for slicing.' });
         return;
@@ -225,6 +226,10 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                         ctx.clearRect(0, 0, sliceCanvas.width, sliceCanvas.height);
                         ctx.drawImage(img, x * fileData.tileWidth, y * fileData.tileHeight, fileData.tileWidth, fileData.tileHeight, 0, 0, fileData.tileWidth, fileData.tileHeight);
                         
+                        const dataUrl = sliceCanvas.toDataURL();
+                        const isTransparent = await isTileTransparent(dataUrl);
+                        if (isTransparent) continue;
+
                         await new Promise<void>(resolveBlob => {
                            sliceCanvas.toBlob(blob => {
                                if(blob) {
