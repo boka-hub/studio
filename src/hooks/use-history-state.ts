@@ -1,76 +1,66 @@
 
-import { useState, useCallback } from 'react';
-import type { Project } from '@/lib/types';
+import { useState, useCallback, useRef } from 'react';
 
 const MAX_HISTORY_SIZE = 50;
 
-// A simple deep-enough equality check for our project state
-const areStatesEqual = (a: Project, b: Project): boolean => {
-    if (!a || !b) return a === b;
-    if (a.id !== b.id || a.activeLayerId !== b.activeLayerId) return false;
-    if (a.tiles.length !== b.tiles.length || a.layers.length !== b.layers.length) return false;
-
-    // Quick check on tiles and layers based on their JSON representation
-    // This is not perfectly performant, but more reliable than shallow checks.
-    try {
-        const aTiles = JSON.stringify(a.tiles);
-        const bTiles = JSON.stringify(b.tiles);
-        if (aTiles !== bTiles) return false;
-
-        const aLayers = JSON.stringify(a.layers);
-        const bLayers = JSON.stringify(b.layers);
-        if (aLayers !== bLayers) return false;
-
-    } catch (e) {
-        // If stringify fails, assume they are not equal
-        return false;
-    }
-
-    return true;
+type HistoryState<T> = {
+  past: T[];
+  present: T;
+  future: T[];
 };
 
-
-export function useHistoryState<T extends Project>(initialState: T) {
-  const [state, setState] = useState({
-    past: [] as T[],
+export function useHistoryState<T>(initialState: T) {
+  const [state, setState] = useState<HistoryState<T>>({
+    past: [],
     present: initialState,
-    future: [] as T[],
+    future: [],
   });
 
   const canUndo = state.past.length > 0;
   const canRedo = state.future.length > 0;
 
-  const set = useCallback((newState: T | ((prevState: T) => T), batch = false) => {
-    setState(currentState => {
-      const newPresent = typeof newState === 'function' 
-        ? (newState as (prevState: T) => T)(currentState.present) 
-        : newState;
+  // Use a ref to track batched state to prevent re-renders on each tiny change
+  const batchedStateRef = useRef<T | null>(null);
 
-      if (areStatesEqual(currentState.present, newPresent)) {
+  const set = useCallback((newState: T | ((prevState: T) => T), batch = false) => {
+    if (batch) {
+      // If batching, just update the ref. The final commit will be done by calling set(..., false)
+      const newPresent = typeof newState === 'function'
+        ? (newState as (prevState: T) => T)(batchedStateRef.current ?? state.present)
+        : newState;
+      batchedStateRef.current = newPresent;
+      // We also update the *visual* state so the user sees feedback (e.g., during drawing)
+      setState(s => ({ ...s, present: newPresent }));
+      return;
+    }
+
+    // This is the commit action (not batching)
+    setState(currentState => {
+      // If there was a batched state, use it as the starting point. Otherwise, use the current state.
+      const currentPresent = batchedStateRef.current ?? currentState.present;
+      batchedStateRef.current = null; // Clear the ref after commit
+
+      const newPresent = typeof newState === 'function'
+        ? (newState as (prevState: T) => T)(currentPresent)
+        : newState;
+      
+      // Don't add to history if state is identical
+      if (newPresent === currentPresent) {
           return currentState;
       }
       
-      const newPast = [...currentState.past, currentState.present];
+      const newPast = [...currentState.past, currentPresent];
       if (newPast.length > MAX_HISTORY_SIZE) {
-        newPast.shift();
-      }
-      
-      // When batching, we just update the present state without adding to history yet.
-      // The calling component is responsible for a final `set(..., false)` to commit.
-      if (batch) {
-          return {
-              ...currentState,
-              present: newPresent,
-          };
+        newPast.shift(); // Keep history size in check
       }
 
       return {
         past: newPast,
         present: newPresent,
-        future: [],
+        future: [], // Clear future on new action
       };
     });
-  }, []);
+  }, [state.present]);
 
   const undo = useCallback(() => {
     setState(currentState => {

@@ -88,7 +88,7 @@ const createEmptyGrid = (width: number, height: number): GridState =>
 
 function HomeComponent() {
   const {
-    currentProject,
+    currentProject: loadedProject,
     saveProject,
     deleteProject,
     renameProject,
@@ -99,19 +99,19 @@ function HomeComponent() {
   
   const { 
     state: projectState, 
-    set: setProjectHistory, 
+    set: setProjectState, 
     undo, 
     redo, 
     canUndo, 
     canRedo,
     reset: resetHistory,
-  } = useHistoryState(currentProject);
+  } = useHistoryState(loadedProject);
   
   useEffect(() => {
-    if (currentProject && currentProject.id !== projectState.id) {
-        resetHistory(currentProject);
+    if (loadedProject && loadedProject.id !== projectState.id) {
+        resetHistory(loadedProject);
     }
-  }, [currentProject, projectState.id, resetHistory]);
+  }, [loadedProject, projectState.id, resetHistory]);
 
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
@@ -176,11 +176,11 @@ function HomeComponent() {
   }, []);
 
   const modifyCurrentProject = useCallback((modifier: (project: Project) => Partial<Project>, batch = false) => {
-    setProjectHistory(currentProject => {
+    setProjectState(currentProject => {
         const changes = modifier(currentProject);
         return { ...currentProject, ...changes, lastModified: Date.now() };
     }, batch);
-  }, [setProjectHistory]);
+  }, [setProjectState]);
 
   const mergeAllLayers = useCallback(() => {
     modifyCurrentProject(project => {
@@ -254,14 +254,7 @@ function HomeComponent() {
     setPreviewMode(false);
     setPlayerPos({ row: 0, col: 0 });
     setZoom(1);
-    
-    // Add this effect to re-sync history state when the project ID actually changes.
-    // This is the key fix for project loading.
-    const project = projects.find(p => p.id === projectState.id);
-    if (project) {
-        resetHistory(project);
-    }
-  }, [projectState.id, projects, resetHistory]);
+  }, [projectState.id]);
   
   const toggleToolbar = useCallback(() => {
     const panel = leftPanelRef.current;
@@ -1113,6 +1106,27 @@ function HomeComponent() {
     setStorageOpen(false);
   }, [setCurrentProjectById, saveProject, projectState]);
 
+  useEffect(() => {
+    if (isLoading) return;
+    const unsavedChanges = loadedProject && loadedProject.lastModified < projectState.lastModified;
+    if (unsavedChanges) {
+      saveProject(projectState);
+    }
+  }, [projectState, loadedProject, isLoading, saveProject]);
+
+  // Save on exit
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+        if (loadedProject && loadedProject.lastModified < projectState.lastModified) {
+            saveProject(projectState);
+        }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [projectState, loadedProject, saveProject]);
+
   const handleOpenSettings = useCallback(() => {
     setSettingsOpen(true);
   }, []);
@@ -1221,14 +1235,6 @@ function HomeComponent() {
     updateTiles(newTiles, true);
     remapGrid(remap);
   }, [updateTiles, remapGrid]);
-
-  useEffect(() => {
-    if (isLoading) return;
-    const currentProjectInStorage = projects.find(p => p.id === projectState.id);
-    if (currentProjectInStorage && currentProjectInStorage.lastModified < projectState.lastModified) {
-       saveProject(projectState);
-    }
-  }, [projectState, projects, isLoading, saveProject]);
 
   const selectedTile = useMemo(() => tiles.find(t => t.id === selectedTileId), [tiles, selectedTileId]);
   const secondarySelectedTile = useMemo(() => tiles.find(t => t.id === secondarySelectedTileId), [tiles, secondarySelectedTileId]);
@@ -1556,5 +1562,3 @@ export default function Page() {
 
   return <HomeComponent />;
 }
-
-    
