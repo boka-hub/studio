@@ -111,14 +111,14 @@ export function Toolbar<T extends Tool>({
                         <Button
                             variant={selectedAction === key ? 'secondary' : 'ghost'}
                             className={cn(
-                                'w-full flex h-auto py-2 gap-2 items-center',
-                                isCollapsed ? 'justify-center' : 'justify-start pl-3'
+                                'w-full flex h-auto gap-2 items-center',
+                                isCollapsed ? 'justify-center py-3' : 'justify-start py-2 pl-3'
                             )}
                             onClick={() => onActionSelect(key)}
                             disabled={action.disabled}
                             aria-label={action.label}
                         >
-                            <Icon className={cn('h-5 w-5')} />
+                            <Icon className={cn(isCollapsed ? 'h-6 w-6' : 'h-5 w-5')} />
                             {!isCollapsed && <span>{action.label.split('(')[0].trim()}</span>}
                         </Button>
                     </div>
