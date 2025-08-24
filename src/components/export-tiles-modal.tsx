@@ -1,6 +1,6 @@
 
 import type { FC } from 'react';
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -137,6 +137,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
         name: tile.name,
         index: index,
         solid: tile.solid,
+        metadata: tile.metadata || {},
       })),
     };
     const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: 'application/json' });
@@ -155,7 +156,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
     if (exportFormat === 'json') {
       const jsonData = {
-        tiles: tiles.map(({id, name, solid}) => ({id, name, solid})),
+        tiles: tiles.map(({id, name, solid, metadata}) => ({id, name, solid, metadata: metadata || {}})),
         layers: layers.map(({id, name, grid, isVisible}) => ({id, name, grid, isVisible})),
         tileWidth: tileWidth,
         tileHeight: tileHeight,

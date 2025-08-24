@@ -3,7 +3,7 @@ import React, { useState, useMemo, useCallback, MouseEvent as ReactMouseEvent, u
 import type { FC } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape, Layer } from '@/lib/types';
+import type { GridState, Tile, Tool, Selection, AutoTileMode, Shape, Layer, ShapeStyle } from '@/lib/types';
 import { getAutoTileId } from '@/lib/auto-tiler';
 
 interface MapGridProps {
@@ -12,6 +12,7 @@ interface MapGridProps {
   tiles: Tile[];
   tool: Tool;
   shape: Shape;
+  shapeStyle: ShapeStyle;
   onCellAction: (row: number, col: number) => void;
   onDrawCommit: (newGrid: GridState) => void;
   onSelectionCommit: (start: { row: number, col: number }, end: { row: number, col: number }) => void;
@@ -69,6 +70,7 @@ export const MapGrid: FC<MapGridProps> = ({
   tiles, 
   tool,
   shape,
+  shapeStyle,
   onCellAction, 
   onDrawCommit,
   onSelectionCommit,
@@ -199,7 +201,9 @@ export const MapGrid: FC<MapGridProps> = ({
           if (shape === 'rectangle') {
             for (let r = minRow; r <= maxRow; r++) {
               for (let c = minCol; c <= maxCol; c++) {
-                if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
+                if (shapeStyle === 'fill' || r === minRow || r === maxRow || c === minCol || c === maxCol) {
+                  if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
+                }
               }
             }
           } else if (shape === 'circle') {
@@ -211,8 +215,19 @@ export const MapGrid: FC<MapGridProps> = ({
                 for (let c = minCol; c <= maxCol; c++) {
                    const dx = radiusX === 0 ? 0 : (c - centerX) / radiusX;
                    const dy = radiusY === 0 ? 0 : (r - centerY) / radiusY;
-                   if ((dx * dx) + (dy * dy) <= 1) {
-                      if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
+                   const distSq = (dx * dx) + (dy * dy);
+                   if (distSq <= 1) {
+                      if (shapeStyle === 'fill') {
+                        if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
+                      } else { // outline
+                        const nextR = r + 1, prevR = r - 1;
+                        const nextC = c + 1, prevC = c - 1;
+                        const dx_p1 = radiusX === 0 ? 0 : ((c+1) - centerX) / radiusX;
+                        const dy_p1 = radiusY === 0 ? 0 : ((r+1) - centerY) / radiusY;
+                        const distSq_p1 = (dx_p1 * dx_p1) + (dy_p1 * dy_p1);
+                        if (distSq_p1 <= 1) continue; // Not on the edge yet
+                        if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
+                      }
                    }
                 }
               }
@@ -262,7 +277,7 @@ export const MapGrid: FC<MapGridProps> = ({
         }
     }
     return newGrid;
-  }, [tool, shape, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite]);
+  }, [tool, shape, shapeStyle, selectedTileId, secondarySelectedTileId, sprayRadius, sprayDensity, scatterSet, autoTileSet, autoTileMode, autoTileOverwrite]);
 
   const getCoordsFromEvent = (e: ReactMouseEvent<HTMLDivElement> | MouseEvent): { row: number, col: number } | null => {
     const gridEl = mainGridRef.current;
@@ -453,7 +468,7 @@ export const MapGrid: FC<MapGridProps> = ({
                     gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
                     gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                     gap: `${gridLineWidth}px`,
-                    backgroundColor: 'hsla(var(--border) / 0.75)',
+                    backgroundColor: 'hsl(var(--border) / 0.75)',
                     opacity: isLayerActive ? 1 : 0.75,
                     zIndex: index,
                   }}

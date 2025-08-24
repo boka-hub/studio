@@ -2,6 +2,7 @@
 export type Tool = 'brush' | 'eraser' | 'picker' | 'fill' | 'shape' | 'select' | 'spray' | 'gradient' | 'noise' | 'magic-wand' | 'scatter' | 'auto-tile';
 
 export type Shape = 'rectangle' | 'circle' | 'line';
+export type ShapeStyle = 'fill' | 'outline';
 
 export type AutoTileMode = '9-tile' | '13-tile' | '47-tile';
 
@@ -12,6 +13,7 @@ export interface Tile {
   name: string;
   src: string;
   solid?: boolean;
+  metadata?: Record<string, any>;
 }
 
 export type GridState = number[][];
@@ -54,4 +56,5 @@ export interface TileImportData {
   name: string;
   src: string; // Now a data URL
   isSolid: boolean;
+  metadata?: Record<string, any>;
 }

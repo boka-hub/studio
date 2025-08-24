@@ -18,7 +18,7 @@ const createNewProject = (name: string): Project => {
       name,
       layers: [defaultLayer],
       activeLayerId: defaultLayer.id,
-      tiles: [{ id: 0, name: 'Empty', src: '', solid: false }],
+      tiles: [{ id: 0, name: 'Empty', src: '', solid: false, metadata: {} }],
       lastModified: Date.now(),
     };
 };
@@ -150,5 +150,3 @@ export const useProjects = () => {
     setCurrentProjectById,
   };
 };
-
-    

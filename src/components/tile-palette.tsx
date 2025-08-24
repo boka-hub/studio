@@ -7,7 +7,7 @@ import type { Tile, Tool, AutoTileMode } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search, Dices, Wand, ArchiveX } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Dices, Wand, ArchiveX, ListPlus, Check, Trash } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -29,10 +29,56 @@ interface TilePaletteProps {
   onRenameTile: (id: number, newName: string) => void;
   onDeleteTile: (id: number) => void;
   onToggleSolid: (id: number) => void;
+  onUpdateMetadata: (id: number, metadata: Record<string, any>) => void;
   onReorderTiles: (reorderedTiles: Tile[]) => void;
   isCollapsed: boolean;
   onClearPalette: () => void;
 }
+
+const MetadataEditor = ({ tile, onUpdateMetadata }: { tile: Tile, onUpdateMetadata: (id: number, metadata: Record<string, any>) => void }) => {
+    const [metadata, setMetadata] = useState(tile.metadata || {});
+    const [newKey, setNewKey] = useState('');
+    const [newValue, setNewValue] = useState('');
+    
+    const handleAdd = () => {
+        if (!newKey.trim()) return;
+        setMetadata({ ...metadata, [newKey]: newValue });
+        setNewKey('');
+        setNewValue('');
+    };
+
+    const handleUpdate = () => {
+        onUpdateMetadata(tile.id, metadata);
+    }
+    
+    const handleDelete = (key: string) => {
+        const newMeta = { ...metadata };
+        delete newMeta[key];
+        setMetadata(newMeta);
+    }
+
+    return (
+        <div className="space-y-2 p-1">
+            {Object.entries(metadata).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-1">
+                    <Input value={key} disabled className="h-7 text-xs bg-muted/50" />
+                    <Input value={value as string} disabled className="h-7 text-xs bg-muted/50" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleDelete(key)}><Trash className="h-3 w-3"/></Button>
+                </div>
+            ))}
+             <div className="flex items-center gap-1">
+                <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs"/>
+                <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs"/>
+                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}><ListPlus className="h-3 w-3"/></Button>
+            </div>
+            <Button size="sm" className="w-full h-8 mt-2" onClick={handleUpdate}>
+                <Check className="mr-2 h-4 w-4"/>
+                Save Properties
+            </Button>
+        </div>
+    );
+};
+
 
 export const TilePalette: FC<TilePaletteProps> = ({
   tiles,
@@ -51,11 +97,13 @@ export const TilePalette: FC<TilePaletteProps> = ({
   onRenameTile,
   onDeleteTile,
   onToggleSolid,
+  onUpdateMetadata,
   onReorderTiles,
   isCollapsed,
   onClearPalette,
 }) => {
   const [editingTileId, setEditingTileId] = useState<number | null>(null);
+  const [editingMetadataTileId, setEditingMetadataTileId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [draggedTileId, setDraggedTileId] = useState<number | null>(null);
@@ -67,6 +115,17 @@ export const TilePalette: FC<TilePaletteProps> = ({
     if (tile.id === 0 || isCollapsed) return;
     setEditingTileId(tile.id);
     setEditingName(tile.name);
+    setEditingMetadataTileId(null);
+  };
+
+  const handleToggleMetadataEditor = (e: React.MouseEvent, tileId: number) => {
+    e.stopPropagation();
+    if (editingMetadataTileId === tileId) {
+      setEditingMetadataTileId(null);
+    } else {
+      setEditingMetadataTileId(tileId);
+      setEditingTileId(null);
+    }
   };
 
   const handleConfirmRename = () => {
@@ -265,7 +324,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
       <ScrollArea className="flex-grow">
         <div className={cn(
             "grid gap-2 p-4 pt-2",
-            isCollapsed ? 'grid-cols-1 justify-items-center' : 'grid-cols-3'
+            isCollapsed ? 'grid-cols-1 justify-items-center' : 'grid-cols-2'
           )}>
           {filteredTiles.map((tile) => (
               <div 
@@ -328,6 +387,20 @@ export const TilePalette: FC<TilePaletteProps> = ({
                               <TooltipContent side="left">
                                 <p>{tile.solid ? "Make Passable" : "Make Solid"}</p>
                               </TooltipContent>
+                            </Tooltip>
+
+                             <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant={editingMetadataTileId === tile.id ? 'secondary' : 'ghost'}
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={(e) => handleToggleMetadataEditor(e, tile.id)}
+                                >
+                                  <ListPlus className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left"><p>Edit Properties</p></TooltipContent>
                             </Tooltip>
                             
                             <AlertDialog>
@@ -404,6 +477,12 @@ export const TilePalette: FC<TilePaletteProps> = ({
                         {tile.name}
                       </p>
                     )}
+                  </div>
+                )}
+
+                 {!isCollapsed && editingMetadataTileId === tile.id && (
+                  <div className="w-full mt-2 p-2 border rounded-md bg-background" onClick={(e) => e.stopPropagation()}>
+                    <MetadataEditor tile={tile} onUpdateMetadata={onUpdateMetadata} />
                   </div>
                 )}
               </div>

@@ -45,6 +45,8 @@ import {
   Shapes,
   FileUp,
   Lasso,
+  ArrowRightLeft,
+  ArrowUpDown,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -55,7 +57,7 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat, Project, TileImportData } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat, Project, TileImportData, ShapeStyle } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { useHistoryState } from '@/hooks/use-history-state';
@@ -105,10 +107,10 @@ function HomeComponent() {
   } = useHistoryState(currentProject);
   
   useEffect(() => {
-    if (currentProject && currentProject.id) {
+    if (currentProject && currentProject.id !== projectState.id) {
         resetHistory(currentProject);
     }
-  }, [currentProject.id, resetHistory]);
+  }, [currentProject, projectState.id, resetHistory]);
 
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
@@ -124,6 +126,7 @@ function HomeComponent() {
   const [autoTileOverwrite, setAutoTileOverwrite] = useState<boolean>(false);
   const [tool, setTool] = useState<Tool>('brush');
   const [shape, setShape] = useState<Shape>('rectangle');
+  const [shapeStyle, setShapeStyle] = useState<ShapeStyle>('fill');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
   const [isSlicerOpen, setSlicerOpen] = useState(false);
@@ -280,22 +283,26 @@ function HomeComponent() {
   }, [modifyCurrentProject]);
 
   const handleGridResize = useCallback((newWidth: number, newHeight: number) => {
-    if (!activeLayer) return;
-    const oldGrid = grid;
-    const oldHeight = oldGrid.length;
-    const oldWidth = oldGrid[0]?.length || 0;
-    const newGrid = createEmptyGrid(newWidth, newHeight);
+    modifyCurrentProject(project => {
+      const newLayers = project.layers.map(layer => {
+        const oldGrid = layer.grid;
+        const oldHeight = oldGrid.length;
+        const oldWidth = oldGrid[0]?.length || 0;
+        const newGrid = createEmptyGrid(newWidth, newHeight);
 
-    for (let r = 0; r < Math.min(oldHeight, newHeight); r++) {
-      for (let c = 0; c < Math.min(oldWidth, newWidth); c++) {
-        newGrid[r][c] = oldGrid[r][c];
-      }
-    }
-    updateGridInLayer(activeLayer.id, newGrid);
-    setGridSize({ width: newGrid[0]?.length || 0, height: newGrid.length || 0 });
+        for (let r = 0; r < Math.min(oldHeight, newHeight); r++) {
+          for (let c = 0; c < Math.min(oldWidth, newWidth); c++) {
+            newGrid[r][c] = oldGrid[r][c];
+          }
+        }
+        return { ...layer, grid: newGrid };
+      });
+      return { layers: newLayers };
+    });
+    setGridSize({ width: newWidth, height: newHeight });
     setSelection(null);
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
-  }, [grid, activeLayer, updateGridInLayer, toast]);
+  }, [modifyCurrentProject, toast]);
   
   const updateTiles = useCallback((tiles: Tile[], batch = false) => {
       modifyCurrentProject(() => ({ tiles }), batch);
@@ -317,6 +324,14 @@ function HomeComponent() {
     updateTiles(newTiles);
     toast({ title: 'Tile Renamed', description: `Tile has been renamed to "${newName}".` });
   }, [tiles, toast, updateTiles]);
+
+  const handleUpdateTileMetadata = useCallback((tileId: number, metadata: Record<string, any>) => {
+    const newTiles = tiles.map(t =>
+      t.id === tileId ? { ...t, metadata } : t
+    );
+    updateTiles(newTiles);
+    toast({ title: 'Metadata Updated', description: `Custom properties for tile have been saved.` });
+  }, [tiles, updateTiles, toast]);
 
   const handleToggleSolid = useCallback((tileId: number) => {
     const newTiles = tiles.map(t =>
@@ -357,37 +372,18 @@ function HomeComponent() {
   const addTiles = useCallback((newTileData: TileImportData[]) => {
     if (newTileData.length === 0) return;
   
-    const readerPromises = newTileData.map(data => {
-      return new Promise<TileImportData>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          resolve({
-            ...data,
-            src: e.target?.result as string,
-          });
-        };
-        reader.onerror = reject;
-        // The src is already a data URL, but let's re-read to be safe
-        fetch(data.src).then(res => res.blob()).then(blob => reader.readAsDataURL(blob));
-      });
-    });
-  
-    Promise.all(readerPromises).then(processedTileData => {
       modifyCurrentProject(project => {
         let nextId = project.tiles.length > 0 ? Math.max(...project.tiles.map(t => t.id)) + 1 : 1;
-        const newTiles: Tile[] = processedTileData.map(data => ({
+        const newTiles: Tile[] = newTileData.map(data => ({
           id: nextId++,
           name: data.name,
           src: data.src,
           solid: data.isSolid,
+          metadata: data.metadata || {},
         }));
         return { tiles: [...project.tiles, ...newTiles] };
       });
-      toast({ title: 'Tiles Added', description: `${processedTileData.length} new tile(s) have been added.` });
-    }).catch(error => {
-      console.error("Failed to process tiles for adding", error);
-      toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not process one or more tile images.' });
-    });
+      toast({ title: 'Tiles Added', description: `${newTileData.length} new tile(s) have been added.` });
   }, [modifyCurrentProject, toast]);
 
   const handleImportTiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -415,18 +411,7 @@ function HomeComponent() {
       });
 
       const newTileData = await Promise.all(tileDataPromises);
-      
-      modifyCurrentProject(project => {
-        let nextId = project.tiles.length > 0 ? Math.max(...project.tiles.map(t => t.id)) + 1 : 1;
-        const newTiles: Tile[] = newTileData.map(data => ({
-          id: nextId++,
-          name: data.name,
-          src: data.src,
-          solid: data.isSolid,
-        }));
-        return { tiles: [...project.tiles, ...newTiles] };
-      });
-      toast({ title: 'Tiles Added', description: `${newTileData.length} new tile(s) have been added.` });
+      addTiles(newTileData);
 
     } catch (error) {
        console.error("Failed to import tiles", error);
@@ -434,7 +419,7 @@ function HomeComponent() {
     }
     
     event.target.value = '';
-  }, [modifyCurrentProject, toast]);
+  }, [addTiles, toast]);
   
   const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
@@ -704,6 +689,32 @@ function HomeComponent() {
     });
      toast({ title: 'Selection Mirrored', description: 'The selected area has been mirrored vertically.' });
   }, [selection, grid, applyToSelection, toast]);
+
+  const transformAllLayers = useCallback((transformer: (grid: GridState) => GridState) => {
+    modifyCurrentProject(project => {
+        const newLayers = project.layers.map(layer => ({
+            ...layer,
+            grid: transformer(layer.grid),
+        }));
+        return { layers: newLayers };
+    });
+  }, [modifyCurrentProject]);
+
+  const handleFlipMapHorizontal = useCallback(() => {
+    transformAllLayers(currentGrid => {
+        if (!currentGrid || currentGrid.length === 0) return [[]];
+        return currentGrid.map(row => [...row].reverse());
+    });
+    toast({ title: 'Map Flipped', description: 'Entire map has been flipped horizontally.' });
+  }, [transformAllLayers, toast]);
+
+  const handleFlipMapVertical = useCallback(() => {
+      transformAllLayers(currentGrid => {
+          if (!currentGrid || currentGrid.length === 0) return [[]];
+          return [...currentGrid].reverse();
+      });
+      toast({ title: 'Map Flipped', description: 'Entire map has been flipped vertically.' });
+  }, [transformAllLayers, toast]);
 
   const handleCopySelection = useCallback(() => {
     if (!selection) return;
@@ -998,7 +1009,7 @@ function HomeComponent() {
   
   const handleClearPalette = useCallback(() => {
     clearAllLayers();
-    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false }]);
+    updateTiles([{ id: 0, name: 'Empty', src: '', solid: false, metadata: {} }]);
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
     setScatterSet([]);
@@ -1127,12 +1138,17 @@ function HomeComponent() {
       { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: () => setStorageOpen(true) },
       { icon: Grid, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
   ], [undo, redo, canUndo, canRedo]);
+
+  const transformActions = useMemo(() => [
+    { icon: ArrowRightLeft, label: 'Flip Map Horizontally', onClick: handleFlipMapHorizontal },
+    { icon: ArrowUpDown, label: 'Flip Map Vertically', onClick: handleFlipMapVertical },
+  ], [handleFlipMapHorizontal, handleFlipMapVertical]);
   
   const gameplayActions = useMemo(() => [
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (F5)' : 'Live Preview (F5)', onClick: togglePreviewMode, isActive: isPreviewMode },
   ], [isPreviewMode, togglePreviewMode]);
 
-  const actionGroups = useMemo(() => [fileActions, projectActions, gameplayActions], [fileActions, projectActions, gameplayActions]);
+  const actionGroups = useMemo(() => [fileActions, projectActions, transformActions, gameplayActions], [fileActions, projectActions, transformActions, gameplayActions]);
   
   const selectionActions = {
     fill: { icon: FileCheck, label: 'Fill (Enter)', onClick: handleFillSelection },
@@ -1206,6 +1222,16 @@ function HomeComponent() {
     }
   }, [projectState, projects, isLoading, saveProject]);
 
+  const selectedTile = useMemo(() => tiles.find(t => t.id === selectedTileId), [tiles, selectedTileId]);
+  const secondarySelectedTile = useMemo(() => tiles.find(t => t.id === secondarySelectedTileId), [tiles, secondarySelectedTileId]);
+  const selectionSize = useMemo(() => {
+    if (!selection) return null;
+    return {
+        width: selection.maxCol - selection.minCol + 1,
+        height: selection.maxRow - selection.minRow + 1,
+    }
+  }, [selection]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -1260,6 +1286,8 @@ function HomeComponent() {
                       onAutoTileOverwriteChange={setAutoTileOverwrite}
                       shape={shape}
                       onShapeChange={setShape}
+                      shapeStyle={shapeStyle}
+                      onShapeStyleChange={setShapeStyle}
                       layersEnabled={settings.layersEnabled}
                       layersPanel={
                         <LayersPanel
@@ -1318,6 +1346,7 @@ function HomeComponent() {
                     onCoordsChange={setLastMouseCoords}
                     tool={tool}
                     shape={shape}
+                    shapeStyle={shapeStyle}
                     zoom={zoom}
                     selectedTileId={selectedTileId}
                     secondarySelectedTileId={secondarySelectedTileId}
@@ -1366,6 +1395,7 @@ function HomeComponent() {
                           onRenameTile={handleRenameTile}
                           onDeleteTile={confirmDeleteTile}
                           onToggleSolid={handleToggleSolid}
+                          onUpdateMetadata={handleUpdateTileMetadata}
                           onReorderTiles={handleReorderTiles}
                           isCollapsed={isPaletteCollapsed}
                           onClearPalette={handleClearPalette}
@@ -1394,6 +1424,23 @@ function HomeComponent() {
             </Panel>
           </PanelGroup>
         </div>
+        
+        <footer className="flex items-center justify-between px-4 py-1 border-t text-xs text-muted-foreground bg-background flex-shrink-0">
+          <div className="flex items-center gap-4">
+              <span>{`Coords: ${lastMouseCoords ? `(${lastMouseCoords.col}, ${lastMouseCoords.row})` : '(-, -)'}`}</span>
+              <Separator orientation="vertical" className="h-4" />
+              <span>{`Map: ${gridSize.width} x ${gridSize.height}`}</span>
+              {selectionSize && (
+                  <>
+                    <Separator orientation="vertical" className="h-4" />
+                    <span>{`Selection: ${selectionSize.width} x ${selectionSize.height}`}</span>
+                  </>
+              )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span>{`Tile: ${selectedTile?.name || 'None'}`}</span>
+          </div>
+        </footer>
 
         <input
           type="file"
