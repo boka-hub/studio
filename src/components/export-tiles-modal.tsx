@@ -46,7 +46,6 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
 
       const imagePromises = tilesToExport.map(tile => new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = "anonymous";
         img.src = tile.src;
         img.onload = () => resolve(img);
         img.onerror = () => reject(new Error(`Failed to load image: ${tile.name}`));
@@ -234,7 +233,7 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
               </Button>
             </div>
              <div className="space-y-2">
-              <h4 className="font-medium leading-none">Spritesheet Export</h4>
+              <h4 className="font-medium leading-none">Tiles Export</h4>
             </div>
              {dimensionMismatch && (
                 <Alert variant="destructive">
@@ -296,3 +295,5 @@ export const ExportTilesModal: FC<ExportTilesModalProps> = ({ isOpen, onClose, t
     </Dialog>
   );
 };
+
+    

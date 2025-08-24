@@ -162,7 +162,11 @@ function HomeComponent() {
     if (typeof window !== 'undefined') {
         const savedSettings = window.localStorage.getItem(SETTINGS_KEY);
         if (savedSettings) {
-            setSettings(JSON.parse(savedSettings));
+            try {
+              setSettings(JSON.parse(savedSettings));
+            } catch(e) {
+              console.error("Failed to parse settings from localStorage", e);
+            }
         }
     }
   }, []);
@@ -369,25 +373,36 @@ function HomeComponent() {
     const files = event.target.files;
     if (!files) return;
 
-    const tileDataPromises: Promise<TileImportData>[] = Array.from(files).map(file => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          resolve({
-            name: file.name.replace(/\.[^/.]+$/, ""),
-            src: e.target?.result as string,
-            isSolid: false,
-          });
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+    try {
+      const tileDataPromises: Promise<TileImportData>[] = Array.from(files).map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            if (e.target?.result) {
+              resolve({
+                name: file.name.replace(/\.[^/.]+$/, ""),
+                src: e.target.result as string,
+                isSolid: false,
+              });
+            } else {
+              reject(new Error(`Failed to read file: ${file.name}`));
+            }
+          };
+          reader.onerror = (e) => reject(new Error(`Error reading file ${file.name}: ${e}`));
+          reader.readAsDataURL(file);
+        });
       });
-    });
 
-    const newTileData = await Promise.all(tileDataPromises);
-    addTiles(newTileData);
+      const newTileData = await Promise.all(tileDataPromises);
+      addTiles(newTileData);
+    } catch (error) {
+       console.error("Failed to import tiles", error);
+       toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not import one or more tiles.' });
+    }
+    
+    // Clear the input value to allow re-selecting the same file
     event.target.value = '';
-  }, [addTiles]);
+  }, [addTiles, toast]);
   
   const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
@@ -886,7 +901,7 @@ function HomeComponent() {
     }
   }, [
     isPreviewMode, 
-    grid, // Removed from dependencies
+    grid,
     playerPos, 
     tiles, 
     togglePreviewMode, 
@@ -1454,3 +1469,5 @@ export default function Page() {
 
   return <HomeComponent />;
 }
+
+    

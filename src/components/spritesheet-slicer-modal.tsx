@@ -57,7 +57,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   const fileListRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const parseMetadata = async (fileData: FileData, textFile: File): Promise<FileData> => {
+  const parseMetadata = useCallback(async (fileData: FileData, textFile: File): Promise<FileData> => {
     try {
       const jsonContent = await textFile.text();
       const metadata = JSON.parse(jsonContent);
@@ -70,51 +70,56 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
       toast({ variant: 'destructive', title: 'Metadata Error', description: `Could not parse ${textFile.name}.` });
       return fileData; // Return original data on error
     }
-  }
+  }, [toast]);
 
   const handleFiles = useCallback(async (incomingFiles: FileList | null) => {
     if (!incomingFiles) return;
 
-    const newFiles: FileData[] = [];
     const fileList = Array.from(incomingFiles);
-
     const imageFiles = fileList.filter(f => f.type.startsWith('image/'));
     const textFiles = fileList.filter(f => f.name.endsWith('.txt'));
 
+    const newFiles: FileData[] = [];
+
     for (const imageFile of imageFiles) {
-      const baseName = imageFile.name.replace(EXTENSION_REGEX, '');
-      const companionText = textFiles.find(txtFile => txtFile.name.replace(EXTENSION_REGEX, '') === baseName);
+        // Prevent adding duplicates
+        if (files.some(f => f.file.name === imageFile.name && f.file.lastModified === imageFile.lastModified)) {
+            continue;
+        }
 
-      let fileData: FileData = {
-        id: `${imageFile.name}-${imageFile.lastModified}-${Math.random()}`,
-        file: imageFile,
-        src: await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target?.result as string);
-            reader.readAsDataURL(imageFile);
-        }),
-        name: imageFile.name.split('.')[0],
-        tileWidth: 16,
-        tileHeight: 16,
-      };
-      
-      if (companionText) {
-        fileData = await parseMetadata(fileData, companionText);
-      }
-      
-      newFiles.push(fileData);
+        const baseName = imageFile.name.replace(EXTENSION_REGEX, '');
+        const companionText = textFiles.find(txtFile => txtFile.name.replace(EXTENSION_REGEX, '') === baseName);
+        
+        let fileData: FileData = {
+            id: `${imageFile.name}-${imageFile.lastModified}`,
+            file: imageFile,
+            src: URL.createObjectURL(imageFile),
+            name: baseName,
+            tileWidth: 16,
+            tileHeight: 16,
+        };
+
+        if (companionText) {
+            fileData = await parseMetadata(fileData, companionText);
+        }
+        
+        newFiles.push(fileData);
     }
-
+    
     if (newFiles.length > 0) {
       setFiles(f => {
         const updatedFiles = [...f, ...newFiles];
-        if (!selectedFileId) {
+        // Select the first of the *newly* added files
+        if (!selectedFileId || !f.some(file => file.id === selectedFileId)) {
           setSelectedFileId(newFiles[0]?.id || null);
         }
         return updatedFiles;
       });
     }
-  }, [selectedFileId]);
+    // Reset file input to allow selecting the same file again
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+  }, [files, parseMetadata, selectedFileId]);
   
   useEffect(() => {
     if(isOpen && initialFiles.length > 0) {
@@ -170,6 +175,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
   }, [isOpen, drawPreview, selectedFileId]);
 
   const resetState = () => {
+    files.forEach(f => URL.revokeObjectURL(f.src));
     setFiles([]);
     setSelectedFileId(null);
     if (fileInputRef.current) {
@@ -327,6 +333,10 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
                                         className="h-6 w-6 flex-shrink-0"
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            const fileToRemove = files.find(f => f.id === file.id);
+                                            if (fileToRemove) {
+                                                URL.revokeObjectURL(fileToRemove.src);
+                                            }
                                             const newFiles = files.filter(f => f.id !== file.id);
                                             setFiles(newFiles);
                                             if (selectedFileId === file.id) {
@@ -417,3 +427,5 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     </Dialog>
   );
 };
+
+    
