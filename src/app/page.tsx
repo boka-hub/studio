@@ -354,19 +354,40 @@ function HomeComponent() {
     updateTiles(reorderedTiles, false);
   }, [updateTiles]);
   
-  const addTiles = useCallback((tileData: TileImportData[]) => {
-    if (tileData.length === 0) return;
-    modifyCurrentProject(project => {
-      let nextId = project.tiles.length > 0 ? Math.max(...project.tiles.map(t => t.id)) + 1 : 1;
-      const newTiles: Tile[] = tileData.map(data => ({
-        id: nextId++,
-        name: data.name,
-        src: data.src,
-        solid: data.isSolid,
-      }));
-      return { tiles: [...project.tiles, ...newTiles] };
+  const addTiles = useCallback((newTileData: TileImportData[]) => {
+    if (newTileData.length === 0) return;
+  
+    const readerPromises = newTileData.map(data => {
+      return new Promise<TileImportData>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          resolve({
+            ...data,
+            src: e.target?.result as string,
+          });
+        };
+        reader.onerror = reject;
+        // The src is already a data URL, but let's re-read to be safe
+        fetch(data.src).then(res => res.blob()).then(blob => reader.readAsDataURL(blob));
+      });
     });
-    toast({ title: 'Tiles Added', description: `${tileData.length} new tile(s) have been added.` });
+  
+    Promise.all(readerPromises).then(processedTileData => {
+      modifyCurrentProject(project => {
+        let nextId = project.tiles.length > 0 ? Math.max(...project.tiles.map(t => t.id)) + 1 : 1;
+        const newTiles: Tile[] = processedTileData.map(data => ({
+          id: nextId++,
+          name: data.name,
+          src: data.src,
+          solid: data.isSolid,
+        }));
+        return { tiles: [...project.tiles, ...newTiles] };
+      });
+      toast({ title: 'Tiles Added', description: `${processedTileData.length} new tile(s) have been added.` });
+    }).catch(error => {
+      console.error("Failed to process tiles for adding", error);
+      toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not process one or more tile images.' });
+    });
   }, [modifyCurrentProject, toast]);
 
   const handleImportTiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -394,15 +415,26 @@ function HomeComponent() {
       });
 
       const newTileData = await Promise.all(tileDataPromises);
-      addTiles(newTileData);
+      
+      modifyCurrentProject(project => {
+        let nextId = project.tiles.length > 0 ? Math.max(...project.tiles.map(t => t.id)) + 1 : 1;
+        const newTiles: Tile[] = newTileData.map(data => ({
+          id: nextId++,
+          name: data.name,
+          src: data.src,
+          solid: data.isSolid,
+        }));
+        return { tiles: [...project.tiles, ...newTiles] };
+      });
+      toast({ title: 'Tiles Added', description: `${newTileData.length} new tile(s) have been added.` });
+
     } catch (error) {
        console.error("Failed to import tiles", error);
        toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not import one or more tiles.' });
     }
     
-    // Clear the input value to allow re-selecting the same file
     event.target.value = '';
-  }, [addTiles, toast]);
+  }, [modifyCurrentProject, toast]);
   
   const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
@@ -1309,7 +1341,7 @@ function HomeComponent() {
                 ref={rightPanelRef}
                 defaultSize={panelLayout[2]}
                 collapsible={true}
-                collapsedSize={4}
+                collapsedSize={6}
                 minSize={10}
                 onCollapse={() => setPaletteCollapsed(true)}
                 onExpand={() => setPaletteCollapsed(false)}
