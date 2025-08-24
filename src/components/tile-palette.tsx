@@ -12,77 +12,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
-interface TilePaletteProps {
-  tiles: Tile[];
-  selectedTileId: number;
-  secondarySelectedTileId: number;
-  scatterSet: number[];
-  autoTileSet: number[];
-  autoTileMode: AutoTileMode;
-  tool: Tool;
-  onSelectTile: (id: number) => void;
-  onSelectSecondaryTile: (id: number) => void;
-  onToggleScatterTile: (id: number) => void;
-  onClearScatterSet: () => void;
-  onToggleAutoTile: (id: number) => void;
-  onClearAutoTileSet: () => void;
-  onRenameTile: (id: number, newName: string) => void;
-  onDeleteTile: (id: number) => void;
-  onToggleSolid: (id: number) => void;
-  onUpdateMetadata: (id: number, metadata: Record<string, any>) => void;
-  onReorderTiles: (reorderedTiles: Tile[]) => void;
-  isCollapsed: boolean;
-  onClearPalette: () => void;
-}
-
-const MetadataEditor = ({ tile, onUpdateMetadata }: { tile: Tile, onUpdateMetadata: (id: number, metadata: Record<string, any>) => void }) => {
-    const [metadata, setMetadata] = useState(tile.metadata || {});
-    const [newKey, setNewKey] = useState('');
-    const [newValue, setNewValue] = useState('');
-    
-    const handleAdd = () => {
-        if (!newKey.trim()) return;
-        setMetadata({ ...metadata, [newKey]: newValue });
-        setNewKey('');
-        setNewValue('');
-    };
-
-    const handleUpdate = () => {
-        onUpdateMetadata(tile.id, metadata);
-    }
-    
-    const handleDelete = (key: string) => {
-        const newMeta = { ...metadata };
-        delete newMeta[key];
-        setMetadata(newMeta);
-    }
-
-    return (
-        <div className="w-full mt-2 p-2 border rounded-md bg-background" onClick={(e) => e.stopPropagation()}>
-            <div className="space-y-2">
-                {Object.entries(metadata).map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-1">
-                        <Input value={key} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
-                        <Input value={String(value)} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
-                        <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => handleDelete(key)}><Trash className="h-3 w-3"/></Button>
-                    </div>
-                ))}
-                <div className="flex items-center gap-1">
-                    <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs flex-grow"/>
-                    <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs flex-grow"/>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}><ListPlus className="h-3 w-3"/></Button>
-                </div>
-                <div className="flex justify-center mt-2">
-                    <Button size="sm" className="h-8" onClick={handleUpdate}>
-                        <Check className="mr-2 h-4 w-4"/>
-                        Save Properties
-                    </Button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 
 export const TilePalette: FC<TilePaletteProps> = ({
   tiles,
@@ -285,6 +214,57 @@ export const TilePalette: FC<TilePaletteProps> = ({
     );
   };
 
+  const MetadataEditor = ({ tile, onUpdateMetadata }: { tile: Tile, onUpdateMetadata: (id: number, metadata: Record<string, any>) => void }) => {
+    const [metadata, setMetadata] = useState(tile.metadata || {});
+    const [newKey, setNewKey] = useState('');
+    const [newValue, setNewValue] = useState('');
+
+    const handleAdd = () => {
+        if (!newKey.trim()) return;
+        setMetadata({ ...metadata, [newKey]: newValue });
+        setNewKey('');
+        setNewValue('');
+    };
+
+    const handleUpdate = () => {
+        onUpdateMetadata(tile.id, metadata);
+    }
+    
+    const handleDelete = (key: string) => {
+        const newMeta = { ...metadata };
+        delete newMeta[key];
+        setMetadata(newMeta);
+    }
+
+    return (
+      <div className="w-full mt-2 p-2 border rounded-md bg-background" onClick={(e) => e.stopPropagation()}>
+        <div className="space-y-2">
+          {Object.entries(metadata).map(([key, value]) => (
+            <div key={key} className="flex items-center gap-1">
+              <Input value={key} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
+              <Input value={String(value)} disabled className="h-7 text-xs bg-muted/50 flex-grow" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 text-destructive" onClick={() => handleDelete(key)}>
+                <Trash className="h-3 w-3"/>
+              </Button>
+            </div>
+          ))}
+          <div className="flex items-center gap-1">
+            <Input placeholder="key" value={newKey} onChange={e => setNewKey(e.target.value)} className="h-7 text-xs flex-grow"/>
+            <Input placeholder="value" value={newValue} onChange={e => setNewValue(e.target.value)} className="h-7 text-xs flex-grow"/>
+            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={handleAdd}>
+              <ListPlus className="h-3 w-3"/>
+            </Button>
+          </div>
+          <div className="flex justify-center mt-2">
+            <Button size="sm" className="h-8" onClick={handleUpdate}>
+              <Check className="mr-2 h-4 w-4"/>
+              Save Properties
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
