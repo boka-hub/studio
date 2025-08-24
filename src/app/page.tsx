@@ -111,7 +111,7 @@ function HomeComponent() {
     if (loadedProject && loadedProject.id !== projectState.id) {
         resetHistory(loadedProject);
     }
-  }, [loadedProject, projectState.id, resetHistory]);
+  }, [loadedProject, resetHistory, projectState.id]);
 
   const { tiles, layers, activeLayerId } = projectState;
   const activeLayer = layers.find(l => l.id === activeLayerId) || null;
