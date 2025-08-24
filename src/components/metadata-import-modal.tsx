@@ -60,14 +60,15 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
             const idRemap: { [oldId: number]: number } = {};
             const newTiles: Tile[] = [emptyTile];
             const processedNewIds = new Set<number>([0]);
+            const metaTilesByName = new Map(metadata.tiles.map((t: any) => [t.name, t]));
+
 
             // Process tiles from metadata, creating the remap and the new tile set
-            metadata.tiles.forEach((metaTile: any) => {
+            metaTilesByName.forEach((metaTile: any) => {
                 const currentTile = currentTilesByName.get(metaTile.name);
                 if (currentTile) {
                     const newId = metaTile.id;
                     if (processedNewIds.has(newId)) {
-                        // This would be a problem in the metadata file itself.
                         console.warn(`Duplicate ID ${newId} found in metadata file for tile "${metaTile.name}". Skipping.`);
                         return;
                     }
@@ -80,10 +81,10 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
             });
 
             // Handle tiles that are in the current project but not in the metadata
-            let nextAvailableId = Math.max(...Array.from(processedNewIds), 0) + 1;
+            let nextAvailableId = 1;
             tiles.forEach(currentTile => {
-                if (currentTile.id !== 0 && !newTiles.some(nt => nt.name === currentTile.name)) {
-                    while (processedNewIds.has(nextAvailableId)) {
+                if (currentTile.id !== 0 && !metaTilesByName.has(currentTile.name)) {
+                     while (processedNewIds.has(nextAvailableId)) {
                         nextAvailableId++;
                     }
                     const newId = nextAvailableId;

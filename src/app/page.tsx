@@ -508,7 +508,8 @@ function HomeComponent() {
   const handlePasteSelection = useCallback((row: number, col: number) => {
     if (!clipboard || !activeLayer) return;
 
-    const newGrid = grid.map(r => [...r]);
+    const layerGrid = activeLayer.grid;
+    const newGrid = layerGrid.map(r => [...r]);
     const pasteStartRow = row;
     const pasteStartCol = col;
 
@@ -517,14 +518,14 @@ function HomeComponent() {
             const targetRow = pasteStartRow + r;
             const targetCol = pasteStartCol + c;
             const copiedCell = clipboard[r][c];
-            if (copiedCell !== -1 && targetRow < grid.length && targetCol < grid[0].length) {
+            if (copiedCell !== -1 && targetRow < layerGrid.length && targetCol < layerGrid[0].length) {
                 newGrid[targetRow][targetCol] = copiedCell;
             }
         }
     }
     updateGridInLayer(activeLayer.id, newGrid);
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-  }, [grid, clipboard, toast, activeLayer, updateGridInLayer]);
+  }, [clipboard, toast, activeLayer, updateGridInLayer]);
 
 
   const handleCellAction = useCallback((row: number, col: number) => {
