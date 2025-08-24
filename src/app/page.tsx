@@ -75,6 +75,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MapGrid } from '@/components/map-grid';
 import { useMounted } from '@/hooks/use-mounted';
+import { Separator } from '@/components/ui/separator';
 
 
 const INITIAL_GRID_SIZE = 32;
@@ -253,7 +254,14 @@ function HomeComponent() {
     setPreviewMode(false);
     setPlayerPos({ row: 0, col: 0 });
     setZoom(1);
-  }, [projectState.id]);
+    
+    // Add this effect to re-sync history state when the project ID actually changes.
+    // This is the key fix for project loading.
+    const project = projects.find(p => p.id === projectState.id);
+    if (project) {
+        resetHistory(project);
+    }
+  }, [projectState.id, projects, resetHistory]);
   
   const toggleToolbar = useCallback(() => {
     const panel = leftPanelRef.current;
