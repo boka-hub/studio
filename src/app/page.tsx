@@ -53,7 +53,6 @@ import { Toolbar } from '@/components/toolbar';
 import { LayersPanel } from '@/components/layers-panel';
 import { TilePalette } from '@/components/tile-palette';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
-import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
@@ -111,14 +110,12 @@ function HomeComponent() {
     reset: resetHistory,
   } = useHistoryState(activeProjectData);
   
-  // This effect synchronizes the history state when the user loads a different project.
   useEffect(() => {
     if (activeProjectData && activeProjectData.id !== projectState?.id) {
         resetHistory(activeProjectData);
     }
-  }, [activeProjectData, projectState?.id, resetHistory]);
+  }, [activeProjectData?.id, resetHistory, projectState?.id]);
   
-  // This effect handles auto-saving the project state whenever it changes.
   useEffect(() => {
     if (!isProjectsLoading && projectState) {
       saveProject(projectState);
@@ -148,7 +145,6 @@ function HomeComponent() {
   const [isExportOpen, setExportOpen] = useState(false);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isStorageOpen, setStorageOpen] = useState(false);
-  const [isMetadataModalOpen, setMetadataModalOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [isConfirmClearMapOpen, setConfirmClearMapOpen] = useState(false);
   const [isConfirmMergeLayersOpen, setConfirmMergeLayersOpen] = useState(false);
@@ -243,7 +239,7 @@ function HomeComponent() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
+  }, [settings.layersEnabled, layers, toast]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -895,7 +891,7 @@ function HomeComponent() {
     if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.getAttribute('role') === 'slider') return;
 
     if (e.ctrlKey || e.metaKey) {
-        if (['c', 'v', 'z', 'y', 's', 'o', 'i', 'u', 'm', 'p'].includes(e.key) || e.key.startsWith('Arrow')) {
+        if (['c', 'v', 'z', 'y', 's', 'o', 'u', 'p'].includes(e.key) || e.key.startsWith('Arrow')) {
             e.preventDefault();
         }
       if (e.key === 'c' && selection) handleCopySelection();
@@ -905,7 +901,6 @@ function HomeComponent() {
       else if (e.key === 's') setExportOpen(true);
       else if (e.key === 'i') tileImportRef.current?.click();
       else if (e.key === 'o') openSlicer();
-      else if (e.key === 'm') setMetadataModalOpen(true);
       else if (e.key === 'u') mapImportRef.current?.click();
       else if (e.key === 'p') setStorageOpen(true);
       else if (e.key === 'd' && e.shiftKey) {
@@ -1100,18 +1095,6 @@ function HomeComponent() {
       modifyCurrentProject(() => ({ layers: newLayers }));
   }, [modifyCurrentProject]);
   
-  const remapGrid = useCallback((remap: { [oldId: number]: number }) => {
-    modifyCurrentProject(project => {
-        const newLayers = project.layers.map(layer => ({
-            ...layer,
-            grid: layer.grid.map(row => 
-                row.map(cell => remap[cell] ?? cell)
-            )
-        }));
-        return { layers: newLayers };
-    });
-  }, [modifyCurrentProject]);
-  
   const handleLoadProject = useCallback((id: string) => {
     setCurrentProjectById(id);
     setStorageOpen(false);
@@ -1139,7 +1122,6 @@ function HomeComponent() {
   const fileActions = useMemo(() => [
     { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => tileImportRef.current?.click() },
     { icon: Scissors, label: 'Slice Sheet (Ctrl+O)', onClick: () => openSlicer() },
-    { icon: FileJson2, label: 'Import Metadata (Ctrl+M)', onClick: () => setMetadataModalOpen(true) },
     { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => mapImportRef.current?.click() },
     { icon: Package, label: 'Export... (Ctrl+S)', onClick: () => setExportOpen(true) },
   ], [openSlicer]);
@@ -1220,11 +1202,6 @@ function HomeComponent() {
         </div>
     );
   };
-
-  const handleMetadataImport = useCallback((remap: { [oldId: number]: number }, newTiles: Tile[]) => {
-    modifyCurrentProject(() => ({ tiles: newTiles }), true);
-    remapGrid(remap);
-  }, [modifyCurrentProject, remapGrid]);
 
   const selectedTile = useMemo(() => tiles.find(t => t.id === selectedTileId), [tiles, selectedTileId]);
   const secondarySelectedTile = useMemo(() => tiles.find(t => t.id === secondarySelectedTileId), [tiles, secondarySelectedTileId]);
@@ -1442,6 +1419,13 @@ function HomeComponent() {
           </div>
           <div className="flex items-center gap-2">
             <span>{`Tile: ${selectedTile?.name || 'None'}`}</span>
+            {secondarySelectedTile && secondarySelectedTileId !== 0 && (
+                <div className="flex items-center gap-1 text-xs">
+                   <Separator orientation="vertical" className="h-4" />
+                   <span className="text-muted-foreground/80">2nd:</span>
+                   <span>{secondarySelectedTile.name}</span>
+                </div>
+            )}
           </div>
         </footer>
 
@@ -1494,13 +1478,6 @@ function HomeComponent() {
           onSaveProject={saveProject}
           onDeleteProject={deleteProject}
           onRenameProject={renameProject}
-        />
-
-        <MetadataImportModal
-          isOpen={isMetadataModalOpen}
-          onClose={() => setMetadataModalOpen(false)}
-          tiles={tiles}
-          onImport={handleMetadataImport}
         />
         
         <AlertDialog open={isConfirmClearMapOpen} onOpenChange={setConfirmClearMapOpen}>

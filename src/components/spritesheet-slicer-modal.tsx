@@ -127,7 +127,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
         initialFiles.forEach(file => dataTransfer.items.add(file));
         handleFiles(dataTransfer.files);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialFiles]);
 
 
@@ -427,5 +427,3 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
     </Dialog>
   );
 };
-
-    
