@@ -426,13 +426,14 @@ export const MapGrid: FC<MapGridProps> = ({
     <div
       ref={mainGridRef}
       className={cn(
-        "relative p-px rounded-lg shadow-inner select-none bg-muted/20",
+        "relative rounded-lg shadow-inner select-none bg-muted/20",
         getCursorClass()
       )}
       style={{
           width: `${gridWidth * TILE_SIZE + (gridWidth + 1) * gridLineWidth}px`,
           height: `${gridHeight * TILE_SIZE + (gridHeight + 1) * gridLineWidth}px`,
           imageRendering: zoom < 1 ? 'auto' : 'pixelated',
+          padding: `${gridLineWidth}px`
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
