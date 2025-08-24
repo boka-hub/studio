@@ -453,7 +453,7 @@ export const MapGrid: FC<MapGridProps> = ({
                     gridTemplateColumns: `repeat(${gridWidth}, 1fr)`,
                     gridTemplateRows: `repeat(${gridHeight}, 1fr)`,
                     gap: `${gridLineWidth}px`,
-                    backgroundColor: 'hsla(var(--card) / 0.5)',
+                    backgroundColor: 'hsla(var(--border) / 0.75)',
                     opacity: isLayerActive ? 1 : 0.75,
                     zIndex: index,
                   }}
