@@ -6,7 +6,8 @@ function isTileInSet(grid: GridState, r: number, c: number, tileSet: Set<number>
     if (r < 0 || r >= grid.length || c < 0 || c >= grid[0].length) {
         return true; // Out of bounds counts as a "match" to create edges.
     }
-    return tileSet.has(grid[r][c]);
+    const tileId = grid[r][c];
+    return tileSet.has(tileId);
 }
 
 /**
@@ -129,98 +130,102 @@ function getAutoTileId13(grid: GridState, r: number, c: number, autoTileSet: num
     return center;
 }
 
-
 /**
  * Calculates the appropriate tile ID for a cell based on its neighbors,
  * using a 47-tile "blob" auto-tiling logic. This is the industry standard.
- * It uses the Godot Engine standard for 3x3 bitmasking.
+ * It uses the Godot Engine standard for 3x3 minimal bitmasking.
  */
-function getAutoTileId47(grid: GridState, r: number, c: number, autoTileSet: number[], mode: AutoTileMode): number {
-    const requiredTiles = (mode === '47-tile') ? 47 : 0;
-    if (autoTileSet.length < requiredTiles) {
-        // Fallback for incomplete sets
-        if(autoTileSet.length >= 16) return getAutoTileId47(grid, r, c, autoTileSet, '13-tile'); // a bit of a lie, but it's a 16-tile mapping
-        if(autoTileSet.length >= 13) return getAutoTileId13(grid, r, c, autoTileSet);
-        if(autoTileSet.length >= 9) return getAutoTileId9(grid, r, c, autoTileSet);
+function getAutoTileId47(grid: GridState, r: number, c: number, autoTileSet: number[]): number {
+    if (autoTileSet.length < 47) {
+        if (autoTileSet.length >= 13) return getAutoTileId13(grid, r, c, autoTileSet);
+        if (autoTileSet.length >= 9) return getAutoTileId9(grid, r, c, autoTileSet);
         return autoTileSet[0] ?? 0;
     }
     
     const tileSet = new Set(autoTileSet);
 
-    let bitmask = 0;
-    if (isTileInSet(grid, r - 1, c, tileSet)) bitmask |= 1;  // North
-    if (isTileInSet(grid, r, c + 1, tileSet)) bitmask |= 2;  // East
-    if (isTileInSet(grid, r + 1, c, tileSet)) bitmask |= 4;  // South
-    if (isTileInSet(grid, r, c - 1, tileSet)) bitmask |= 8;  // West
+    // 3x3 minimal bitmasking (Godot standard)
+    const n = isTileInSet(grid, r - 1, c, tileSet);
+    const e = isTileInSet(grid, r, c + 1, tileSet);
+    const s = isTileInSet(grid, r + 1, c, tileSet);
+    const w = isTileInSet(grid, r, c - 1, tileSet);
     
-    let index = bitmaskMap[bitmask];
+    const ne = isTileInSet(grid, r - 1, c + 1, tileSet);
+    const se = isTileInSet(grid, r + 1, c + 1, tileSet);
+    const sw = isTileInSet(grid, r + 1, c - 1, tileSet);
+    const nw = isTileInSet(grid, r - 1, c - 1, tileSet);
+
+    let bitmask = 0;
+    if (n) bitmask |= 1;
+    if (e) bitmask |= 2;
+    if (s) bitmask |= 4;
+    if (w) bitmask |= 8;
+    
+    let index = godotBitmaskMap[bitmask] ?? 1; // Default to solid tile
 
     if (bitmask === 15) { // Center tile, check for concave corners
-      if (!isTileInSet(grid, r-1, c-1, tileSet)) index = 16;
-      else if (!isTileInSet(grid, r-1, c+1, tileSet)) index = 17;
-      else if (!isTileInSet(grid, r+1, c-1, tileSet)) index = 18;
-      else if (!isTileInSet(grid, r+1, c+1, tileSet)) index = 19;
-      else { // It's a truly solid center piece, check all 8 directions
-        if (isTileInSet(grid, r-1, c-1, tileSet) && isTileInSet(grid, r-1, c+1, tileSet) && isTileInSet(grid, r+1, c-1, tileSet) && isTileInSet(grid, r+1, c+1, tileSet)) {
-           // All 8 neighbors are tiles, choose a random center piece
-           index = 29 + Math.floor(Math.random() * 4); // 29, 30, 31, 32
-        } else {
-           index = 1; // Default center
-        }
+      if (!nw) index = 16;
+      else if (!ne) index = 17;
+      else if (!sw) index = 18;
+      else if (!se) index = 19;
+      else {
+        let center_bitmask = 0;
+        if(isTileInSet(grid, r-1, c-1, tileSet)) center_bitmask |= 1;
+        if(isTileInSet(grid, r-1, c+1, tileSet)) center_bitmask |= 2;
+        if(isTileInSet(grid, r+1, c-1, tileSet)) center_bitmask |= 4;
+        if(isTileInSet(grid, r+1, c+1, tileSet)) center_bitmask |= 8;
+        
+        index = godotCenterMap[center_bitmask] ?? 1;
       }
-    } else if (bitmask === 11) { // North, West, South
-        if (!isTileInSet(grid, r+1, c+1, tileSet)) index = 21;
-    } else if (bitmask === 7) { // North, East, South
-        if (!isTileInSet(grid, r+1, c-1, tileSet)) index = 22;
-    } else if (bitmask === 14) { // West, South, East
-        if (!isTileInSet(grid, r-1, c-1, tileSet)) index = 23;
-    } else if (bitmask === 13) { // West, North, East
-        if (!isTileInSet(grid, r-1, c+1, tileSet)) index = 24;
-    } else if (bitmask === 5) { // North, South
-        if (!isTileInSet(grid, r+1, c+1, tileSet) && !isTileInSet(grid, r+1, c-1, tileSet)) index = 25;
-        else if (!isTileInSet(grid, r-1, c+1, tileSet) && !isTileInSet(grid, r-1, c-1, tileSet)) index = 26;
-        else if (!isTileInSet(grid, r+1, c-1, tileSet) && !isTileInSet(grid, r-1, c-1, tileSet)) index = 34; // All right open
-        else if (!isTileInSet(grid, r+1, c+1, tileSet) && !isTileInSet(grid, r-1, c+1, tileSet)) index = 36; // All left open
-        else if (!isTileInSet(grid, r-1, c-1, tileSet) && !isTileInSet(grid, r+1, c+1, tileSet)) index = 34;
-        else if (!isTileInSet(grid, r-1, c+1, tileSet) && !isTileInSet(grid, r+1, c-1, tileSet)) index = 36;
-    } else if (bitmask === 10) { // West, East
-        if (!isTileInSet(grid, r+1, c-1, tileSet) && !isTileInSet(grid, r-1, c-1, tileSet)) index = 27;
-        else if (!isTileInSet(grid, r+1, c+1, tileSet) && !isTileInSet(grid, r-1, c+1, tileSet)) index = 28;
-        else if (!isTileInSet(grid, r-1, c-1, tileSet) && !isTileInSet(grid, r-1, c+1, tileSet)) index = 35; // All top open
-        else if (!isTileInSet(grid, r+1, c-1, tileSet) && !isTileInSet(grid, r+1, c+1, tileSet)) index = 37; // All bottom open
-        else if (!isTileInSet(grid, r-1, c-1, tileSet) && !isTileInSet(grid, r+1, c+1, tileSet)) index = 35;
-        else if (!isTileInSet(grid, r-1, c+1, tileSet) && !isTileInSet(grid, r+1, c-1, tileSet)) index = 37;
-    } else if (bitmask === 3) { // N, E
-         if (!isTileInSet(grid, r+1, c-1, tileSet)) index = 38;
-    } else if (bitmask === 9) { // N, W
-         if (!isTileInSet(grid, r+1, c+1, tileSet)) index = 39;
-    } else if (bitmask === 6) { // S, E
-         if (!isTileInSet(grid, r-1, c-1, tileSet)) index = 40;
-    } else if (bitmask === 12) { // S, W
-         if (!isTileInSet(grid, r-1, c+1, tileSet)) index = 41;
-    } else if (bitmask === 1) { // N
-         if (!isTileInSet(grid, r+1,c+1, tileSet) && !isTileInSet(grid, r+1, c-1, tileSet)) index = 42;
-    } else if (bitmask === 4) { // S
-         if (!isTileInSet(grid, r-1,c+1, tileSet) && !isTileInSet(grid, r-1, c-1, tileSet)) index = 43;
-    } else if (bitmask === 2) { // E
-         if (!isTileInSet(grid, r+1,c-1, tileSet) && !isTileInSet(grid, r-1, c-1, tileSet)) index = 44;
-    } else if (bitmask === 8) { // W
-         if (!isTileInSet(grid, r+1,c+1, tileSet) && !isTileInSet(grid, r-1, c+1, tileSet)) index = 45;
-    } else if (bitmask === 0) { // No neighbors
-         if (isTileInSet(grid, r-1, c-1, tileSet) && isTileInSet(grid, r-1, c+1, tileSet) && isTileInSet(grid, r+1, c-1, tileSet) && isTileInSet(grid, r+1, c+1, tileSet)) {
-             index = 46;
-         }
+    } else { // Edges and corners, check for extra neighbors to use alternative tiles
+        const alternate_bitmask = 
+            (bitmask & 1) && !n ? 1 : 0 |
+            (bitmask & 2) && !e ? 2 : 0 |
+            (bitmask & 4) && !s ? 4 : 0 |
+            (bitmask & 8) && !w ? 8 : 0;
+        
+        switch(bitmask) {
+            case 11: if(!se) index = 21; break;
+            case 7: if(!sw) index = 22; break;
+            case 14: if(!nw) index = 23; break;
+            case 13: if(!ne) index = 24; break;
+            
+            case 5: // N, S
+                if(!nw && !ne && !sw && !se) index = 8;
+                else if(!nw && !ne) index = 26;
+                else if(!sw && !se) index = 25;
+                else if(!nw && !sw) index = 36;
+                else if(!ne && !se) index = 34;
+                break;
+            case 10: // W, E
+                if(!nw && !ne && !sw && !se) index = 13;
+                else if(!nw && !sw) index = 28;
+                else if(!ne && !se) index = 27;
+                else if(!nw && !ne) index = 37;
+                else if(!sw && !se) index = 35;
+                break;
+            
+            case 3: if(!sw) index = 38; break;
+            case 9: if(!se) index = 39; break;
+            case 6: if(!nw) index = 40; break;
+            case 12: if(!ne) index = 41; break;
+            
+            case 1: if(!sw && !se) index = 42; break;
+            case 4: if(!nw && !ne) index = 43; break;
+            case 2: if(!nw && !sw) index = 44; break;
+            case 8: if(!ne && !se) index = 45; break;
+            
+            case 0:
+                if (nw && ne && sw && se) index = 46;
+                break;
+        }
     }
 
-
-    if (index === undefined) {
-      return autoTileSet[1]; // Default to solid center
-    }
     return autoTileSet[index];
 }
 
 // Godot Engine 3.x 47-tile blob bitmask standard
-const bitmaskMap: { [key: number]: number } = {
+const godotBitmaskMap: { [key: number]: number } = {
   0: 0,   // isolated
   15: 1,  // center
   13: 2,  // n, w, e
@@ -237,4 +242,16 @@ const bitmaskMap: { [key: number]: number } = {
   10: 13, // w, e (horizontal)
   8: 14,  // w
   2: 15,  // e
+};
+
+const godotCenterMap: { [key: number]: number } = {
+    15: 1,  // All corners filled
+    14: 29, // Missing NW
+    13: 30, // Missing NE
+    11: 31, // Missing SW
+    7: 32,  // Missing SE
+    12: 33, // N corners missing
+    5: 34,  // E corners missing
+    3: 35,  // S corners missing
+    10: 36, // W corners missing
 };

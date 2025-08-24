@@ -243,7 +243,7 @@ function HomeComponent() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, layers, toast]);
+  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -328,35 +328,38 @@ function HomeComponent() {
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
   }, [modifyCurrentProject, toast]);
   
-  const updateTiles = useCallback((tiles: Tile[], batch = false) => {
-      modifyCurrentProject(() => ({ tiles }), batch);
-  }, [modifyCurrentProject]);
-  
   const handleRenameTile = useCallback((tileId: number, newName: string) => {
-    const tileBeingRenamed = tiles.find(t => t.id === tileId);
-    if (tileBeingRenamed && tileBeingRenamed.name === newName) {
-      return;
-    }
-    const isNameTaken = tiles.some(t => t.name === newName);
-    if (isNameTaken) {
-      toast({ variant: 'destructive', title: 'Rename Failed', description: 'A tile with that name already exists.' });
-      return;
-    }
-    const newTiles = tiles.map((tile) =>
-      tile.id === tileId ? { ...tile, name: newName } : tile
-    );
-    updateTiles(newTiles);
-    toast({ title: 'Tile Renamed', description: `Tile has been renamed to "${newName}".` });
-  }, [tiles, toast, updateTiles]);
+    modifyCurrentProject(project => {
+      const tileBeingRenamed = project.tiles.find(t => t.id === tileId);
+      if (tileBeingRenamed && tileBeingRenamed.name === newName) {
+        return {};
+      }
+      const isNameTaken = project.tiles.some(t => t.name === newName);
+      if (isNameTaken) {
+        toast({ variant: 'destructive', title: 'Rename Failed', description: 'A tile with that name already exists.' });
+        return {};
+      }
+      const newTiles = project.tiles.map((tile) =>
+        tile.id === tileId ? { ...tile, name: newName } : tile
+      );
+      toast({ title: 'Tile Renamed', description: `Tile has been renamed to "${newName}".` });
+      return { tiles: newTiles };
+    });
+  }, [modifyCurrentProject, toast]);
 
   const handleToggleSolid = useCallback((tileId: number) => {
-    const newTiles = tiles.map(t =>
-      t.id === tileId ? { ...t, solid: !t.solid } : t
-    );
-    updateTiles(newTiles);
-  }, [tiles, updateTiles]);
+    modifyCurrentProject(project => {
+      const newTiles = project.tiles.map(t =>
+        t.id === tileId ? { ...t, solid: !t.solid } : t
+      );
+      return { tiles: newTiles };
+    });
+  }, [modifyCurrentProject]);
 
-  const deleteTile = useCallback((tileId: number) => {
+  const confirmDeleteTile = useCallback((tileId: number) => {
+    const tileToDelete = tiles.find(t => t.id === tileId);
+    if (!tileToDelete) return;
+
     modifyCurrentProject(project => {
         const newTiles = project.tiles.filter(t => t.id !== tileId);
         const newLayers = project.layers.map(layer => ({
@@ -365,25 +368,18 @@ function HomeComponent() {
         }));
         return { tiles: newTiles, layers: newLayers };
     });
-  }, [modifyCurrentProject]);
-  
-  const confirmDeleteTile = useCallback((tileId: number) => {
-    const tileToDelete = tiles.find(t => t.id === tileId);
-    if (!tileToDelete) return;
     
-    deleteTile(tileToDelete.id);
-    
-    if (selectedTileId === tileToDelete.id) setSelectedTileId(0);
-    if (secondarySelectedTileId === tileToDelete.id) setSecondarySelectedTileId(0);
-    setScatterSet(s => s.filter(id => id !== tileToDelete.id));
-    if (autoTileSet.includes(tileToDelete.id)) {
+    if (selectedTileId === tileId) setSelectedTileId(0);
+    if (secondarySelectedTileId === tileId) setSecondarySelectedTileId(0);
+    setScatterSet(s => s.filter(id => id !== tileId));
+    if (autoTileSet.includes(tileId)) {
       setAutoTileSet([]);
     }
-  }, [tiles, selectedTileId, secondarySelectedTileId, autoTileSet, deleteTile]);
+  }, [tiles, selectedTileId, secondarySelectedTileId, autoTileSet, modifyCurrentProject]);
   
   const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
-    updateTiles(reorderedTiles, false);
-  }, [updateTiles]);
+    modifyCurrentProject(() => ({ tiles: reorderedTiles }));
+  }, [modifyCurrentProject]);
   
   const addTiles = useCallback((newTileData: TileImportData[]) => {
     if (newTileData.length === 0) return;
@@ -443,7 +439,7 @@ function HomeComponent() {
   }, []);
   
   const handleImportMap = useCallback((file: File) => {
-      if (!file) return;
+      if (!file || !activeLayer) return;
 
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -472,24 +468,23 @@ function HomeComponent() {
               if (!newGrid.every(row => row.length === width)) {
                   throw new Error('Map rows have inconsistent lengths.');
               }
+              
+              updateGridInLayer(activeLayer.id, newGrid);
 
-              if(activeLayer) {
-                updateGridInLayer(activeLayer.id, newGrid);
-
-                const availableTileIds = new Set(tiles.map(t => t.id));
-                const importedTileIds = new Set(newGrid.flat());
-                const missingIds = Array.from(importedTileIds).filter(id => !availableTileIds.has(id));
-                
-                if (missingIds.length > 0) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Map Imported with Warnings',
-                        description: `Some tile IDs (${missingIds.join(', ')}) were not found and have been rendered as empty.`,
-                    });
-                } else {
-                    toast({ title: 'Map Imported', description: `Successfully loaded map into current layer from ${file.name}` });
-                }
+              const availableTileIds = new Set(tiles.map(t => t.id));
+              const importedTileIds = new Set(newGrid.flat());
+              const missingIds = Array.from(importedTileIds).filter(id => !availableTileIds.has(id));
+              
+              if (missingIds.length > 0) {
+                  toast({
+                      variant: 'destructive',
+                      title: 'Map Imported with Warnings',
+                      description: `Some tile IDs (${missingIds.join(', ')}) were not found and have been rendered as empty.`,
+                  });
+              } else {
+                  toast({ title: 'Map Imported', description: `Successfully loaded map into current layer from ${file.name}` });
               }
+
           } catch (error: any) {
               console.error("Failed to parse map file", error);
               toast({ variant: 'destructive', title: 'Import Failed', description: error.message || 'Could not parse the map file.' });
@@ -532,10 +527,8 @@ function HomeComponent() {
   const handleCellAction = useCallback((row: number, col: number) => {
       if (!activeLayer) return;
       
-      let newGrid = grid.map(r => [...r]);
-      
       if (tool === 'picker') {
-        const tileId = newGrid[row][col];
+        const tileId = grid[row][col];
         const pickedTile = tiles.find(t => t.id === tileId);
         if (pickedTile) {
           setSelectedTileId(tileId);
@@ -544,11 +537,12 @@ function HomeComponent() {
         }
         return; 
       } else if (tool === 'fill') {
-        const targetId = newGrid[row][col];
+        const targetId = grid[row][col];
         const replacementId = selectedTileId;
 
         if (targetId === replacementId) return;
-
+        
+        let newGrid = grid.map(r => [...r]);
         const queue: [number, number][] = [[row, col]];
         const visited = new Set<string>();
         visited.add(`${row},${col}`);
@@ -571,7 +565,7 @@ function HomeComponent() {
         }
          updateGridInLayer(activeLayer.id, newGrid);
       } else if (tool === 'magic-wand') {
-        const targetId = newGrid[row][col];
+        const targetId = grid[row][col];
         if (targetId === 0) {
           setSelection(null);
           return;
@@ -581,8 +575,8 @@ function HomeComponent() {
         const visited = new Set<string>();
         visited.add(`${row},${col}`);
         let minRow = row, maxRow = row, minCol = col, maxCol = col;
-        const width = newGrid[0].length;
-        const height = newGrid.length;
+        const width = grid[0].length;
+        const height = grid.length;
 
         while (queue.length > 0) {
           const [r, c] = queue.shift()!;
@@ -1018,16 +1012,6 @@ function HomeComponent() {
     toast({ title: "Current Layer Cleared", description: "The grid for the active layer has been reset."});
   }, [activeLayer, clearLayer, toast]);
   
-  const clearAllLayers = useCallback(() => {
-        modifyCurrentProject((project) => {
-            const clearedLayers = project.layers.map(layer => {
-                const newGrid = createEmptyGrid(layer.grid[0]?.length || 0, layer.grid.length);
-                return { ...layer, grid: newGrid };
-            });
-            return { layers: clearedLayers };
-        });
-    }, [modifyCurrentProject]);
-  
   const handleClearPalette = useCallback(() => {
      modifyCurrentProject((project) => {
         const clearedLayers = project.layers.map(layer => {
@@ -1238,9 +1222,9 @@ function HomeComponent() {
   };
 
   const handleMetadataImport = useCallback((remap: { [oldId: number]: number }, newTiles: Tile[]) => {
-    updateTiles(newTiles, true);
+    modifyCurrentProject(() => ({ tiles: newTiles }), true);
     remapGrid(remap);
-  }, [updateTiles, remapGrid]);
+  }, [modifyCurrentProject, remapGrid]);
 
   const selectedTile = useMemo(() => tiles.find(t => t.id === selectedTileId), [tiles, selectedTileId]);
   const secondarySelectedTile = useMemo(() => tiles.find(t => t.id === secondarySelectedTileId), [tiles, secondarySelectedTileId]);
