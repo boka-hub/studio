@@ -6,6 +6,7 @@ const MAX_HISTORY_SIZE = 50;
 
 // A simple deep-enough equality check for our project state
 const areStatesEqual = (a: Project, b: Project): boolean => {
+    if (!a || !b) return a === b;
     if (a.id !== b.id || a.activeLayerId !== b.activeLayerId) return false;
     if (a.tiles.length !== b.tiles.length || a.layers.length !== b.layers.length) return false;
 
@@ -48,28 +49,19 @@ export function useHistoryState<T extends Project>(initialState: T) {
       if (areStatesEqual(currentState.present, newPresent)) {
           return currentState;
       }
-
-      if (batch) {
-        const lastPastState = currentState.past[currentState.past.length - 1];
-        // If batching, we update the present but only add to past if it differs from the last past state
-        if (lastPastState && areStatesEqual(lastPastState, newPresent)) {
-          return { ...currentState, present: newPresent, future: [] };
-        }
-        // This is the commit point of the batch, so we add the *previous* present state to history
-        const newPast = [...currentState.past, currentState.present];
-         if (newPast.length > MAX_HISTORY_SIZE) {
-            newPast.shift();
-         }
-        return {
-          past: newPast,
-          present: newPresent,
-          future: [],
-        };
-      }
       
       const newPast = [...currentState.past, currentState.present];
       if (newPast.length > MAX_HISTORY_SIZE) {
         newPast.shift();
+      }
+      
+      // When batching, we just update the present state without adding to history yet.
+      // The calling component is responsible for a final `set(..., false)` to commit.
+      if (batch) {
+          return {
+              ...currentState,
+              present: newPresent,
+          };
       }
 
       return {
