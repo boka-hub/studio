@@ -59,7 +59,7 @@ import { MetadataImportModal } from '@/components/metadata-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
-import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, ExportFormat, Project, TileImportData, ShapeStyle } from '@/lib/types';
+import type { Tool, Tile, GridState, Selection, AutoTileMode, Shape, Layer, AppSettings, Project, TileImportData, ShapeStyle } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 import { useProjects } from '@/hooks/use-projects';
 import { useHistoryState } from '@/hooks/use-history-state';
@@ -251,7 +251,7 @@ function HomeComponent() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
+  }, [settings.layersEnabled, layers, toast]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -281,10 +281,12 @@ function HomeComponent() {
     setPreviewMode(false);
     setPlayerPos({ row: 0, col: 0 });
     setZoom(1);
+    setLastMouseCoords(null);
     setSelectedTileId(0);
     setSecondarySelectedTileId(0);
     setScatterSet([]);
     setAutoTileSet([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectState?.id]);
   
   const toggleToolbar = useCallback(() => {
@@ -546,33 +548,38 @@ function HomeComponent() {
         }
         return; 
       } else if (tool === 'fill') {
-        const targetId = grid[row][col];
-        const replacementId = selectedTileId;
+        modifyCurrentProject(project => {
+            const currentLayer = project.layers.find(l => l.id === project.activeLayerId);
+            if (!currentLayer) return {};
 
-        if (targetId === replacementId) return;
-        
-        let newGrid = grid.map(r => [...r]);
-        const queue: [number, number][] = [[row, col]];
-        const visited = new Set<string>();
-        visited.add(`${row},${col}`);
-        const width = newGrid[0].length;
-        const height = newGrid.length;
+            const targetId = currentLayer.grid[row][col];
+            const replacementId = selectedTileId;
 
-        while (queue.length > 0) {
-          const [r, c] = queue.shift()!;
-          if (newGrid[r][c] === targetId) {
-            newGrid[r][c] = replacementId;
-            const neighbors: [number, number][] = [ [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1] ];
-            for (const [nr, nc] of neighbors) {
-              const key = `${nr},${nc}`;
-              if (nr >= 0 && nr < height && nc >= 0 && nc < width && !visited.has(key)) {
-                if(newGrid[nr][nc] === targetId) queue.push([nr, nc]);
-                visited.add(key);
-              }
+            if (targetId === replacementId) return {};
+            
+            let newGrid = currentLayer.grid.map(r => [...r]);
+            const queue: [number, number][] = [[row, col]];
+            const visited = new Set<string>();
+            visited.add(`${row},${col}`);
+            const width = newGrid[0].length;
+            const height = newGrid.length;
+
+            while (queue.length > 0) {
+            const [r, c] = queue.shift()!;
+            if (newGrid[r][c] === targetId) {
+                newGrid[r][c] = replacementId;
+                const neighbors: [number, number][] = [ [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1] ];
+                for (const [nr, nc] of neighbors) {
+                const key = `${nr},${nc}`;
+                if (nr >= 0 && nr < height && nc >= 0 && nc < width && !visited.has(key)) {
+                    if(newGrid[nr][nc] === targetId) queue.push([nr, nc]);
+                    visited.add(key);
+                }
+                }
             }
-          }
-        }
-         updateGridInLayer(activeLayer.id, newGrid);
+            }
+            return { layers: project.layers.map(l => l.id === project.activeLayerId ? { ...l, grid: newGrid } : l) };
+        });
       } else if (tool === 'magic-wand') {
         const targetId = grid[row][col];
         if (targetId === 0) {
@@ -615,7 +622,7 @@ function HomeComponent() {
       
       setSelection(null);
     },
-    [grid, selectedTileId, tiles, toast, tool, activeLayer, updateGridInLayer]
+    [grid, selectedTileId, tiles, toast, tool, activeLayer, modifyCurrentProject]
   );
   
   const handleDrawCommit = useCallback((newGridState: GridState) => {
@@ -645,23 +652,27 @@ function HomeComponent() {
   const applyToSelection = useCallback((callback: (currentValue: number, rowIndex: number, colIndex: number, selection: Selection) => number) => {
      if (!selection || !activeLayer) return;
 
-    const newGrid = grid.map((r, rowIndex) => {
-        if (rowIndex < selection.minRow || rowIndex > selection.maxRow) {
-            return r;
-        }
-        return r.map((cell, colIndex) => {
-            if (colIndex >= selection.minCol && colIndex <= selection.maxCol) {
-                if (selection.selectedCells && selection.selectedCells[rowIndex][colIndex] === 0) {
-                    return cell;
-                }
-                return callback(cell, rowIndex, colIndex, selection);
-            }
-            return cell;
-        });
-    });
+    modifyCurrentProject(project => {
+      const currentLayer = project.layers.find(l => l.id === project.activeLayerId);
+      if (!currentLayer) return {};
 
-    updateGridInLayer(activeLayer.id, newGrid);
-  }, [selection, grid, activeLayer, updateGridInLayer]);
+      const newGrid = currentLayer.grid.map((r, rowIndex) => {
+          if (rowIndex < selection.minRow || rowIndex > selection.maxRow) {
+              return r;
+          }
+          return r.map((cell, colIndex) => {
+              if (colIndex >= selection.minCol && colIndex <= selection.maxCol) {
+                  if (selection.selectedCells && selection.selectedCells[rowIndex][colIndex] === 0) {
+                      return cell;
+                  }
+                  return callback(cell, rowIndex, colIndex, selection);
+              }
+              return cell;
+          });
+      });
+      return { layers: project.layers.map(l => l.id === project.activeLayerId ? { ...l, grid: newGrid } : l) };
+    });
+  }, [selection, activeLayer, modifyCurrentProject]);
 
   const handleFillSelection = useCallback(() => {
     applyToSelection(() => selectedTileId);
@@ -1008,12 +1019,14 @@ function HomeComponent() {
   }, [settings.layersEnabled]);
 
   const clearLayer = useCallback((layerId: string) => {
-    if (!projectState) return;
-    const layer = projectState.layers.find(l => l.id === layerId);
-    if (!layer) return;
-    const newGrid = createEmptyGrid(layer.grid[0]?.length || 0, layer.grid.length);
-    updateGridInLayer(layerId, newGrid);
-  }, [projectState, updateGridInLayer]);
+    modifyCurrentProject(project => {
+      const layer = project.layers.find(l => l.id === layerId);
+      if (!layer) return {};
+      const newGrid = createEmptyGrid(layer.grid[0]?.length || 0, layer.grid.length);
+      const newLayers = project.layers.map(l => l.id === layerId ? { ...l, grid: newGrid } : l);
+      return { layers: newLayers };
+    });
+  }, [modifyCurrentProject]);
   
   const handleClearMap = useCallback(() => {
     if (!activeLayer) return;

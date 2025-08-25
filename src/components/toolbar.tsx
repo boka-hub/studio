@@ -112,7 +112,7 @@ export function Toolbar<T extends Tool>({
                             variant={selectedAction === key ? 'secondary' : 'ghost'}
                             className={cn(
                                 'w-full flex h-auto gap-2 items-center',
-                                isCollapsed ? 'justify-center py-3' : 'justify-start py-2 pl-3'
+                                isCollapsed ? 'justify-center p-3' : 'justify-start py-2 pl-3'
                             )}
                             onClick={() => onActionSelect(key)}
                             disabled={action.disabled}

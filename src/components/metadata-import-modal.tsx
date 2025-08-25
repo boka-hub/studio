@@ -68,16 +68,24 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
     const existingTilesByName = new Map(tiles.map(t => [t.name, t]));
     const remappedTiles: Tile[] = [];
     const newTiles: Tile[] = [];
+    
+    // Make sure empty tile is always preserved
+    const emptyTile = tiles.find(t => t.id === 0);
+    if (emptyTile) {
+        remappedTiles.push(emptyTile);
+    }
 
     // Process tiles from metadata, remapping IDs
     for (const metaTile of fileContent.tiles) {
+      if (metaTile.id === 0) continue; // Skip empty tile from metadata
+
       const existing = existingTilesByName.get(metaTile.name);
       if (existing) {
-        // If tile with same name exists, update it but keep its ID
+        // If tile with same name exists, update it but keep its ID from metadata
         remappedTiles.push({
           ...existing,
           id: metaTile.id, // Use ID from metadata
-          solid: metaTile.solid || false,
+          solid: metaTile.solid === true,
           metadata: metaTile.metadata || {},
         });
       } else {
@@ -86,7 +94,7 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
           id: metaTile.id,
           name: metaTile.name,
           src: '', // No image source available from just metadata
-          solid: metaTile.solid || false,
+          solid: metaTile.solid === true,
           metadata: metaTile.metadata || {},
         });
       }
