@@ -7,7 +7,7 @@ import type { Tile, Tool, AutoTileMode } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search, Dices, Wand, ArchiveX, Check } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Dices, Wand, ArchiveX } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -224,6 +224,13 @@ export const TilePalette: FC<TilePaletteProps> = ({
     );
   };
 
+  const handleDeleteClick = (e: React.MouseEvent, tileId: number) => {
+    e.stopPropagation();
+    if (!deletingTileId) {
+      setDeletingTileId(tileId);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {!isCollapsed && (
@@ -337,10 +344,7 @@ export const TilePalette: FC<TilePaletteProps> = ({
                                     variant="destructive"
                                     size="icon"
                                     className="h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeletingTileId(tile.id);
-                                    }}
+                                    onClick={(e) => handleDeleteClick(e, tile.id)}
                                     aria-label={`Delete tile ${tile.name}`}
                                   >
                                     <X className="h-4 w-4" />
