@@ -239,7 +239,7 @@ export const SpritesheetSlicerModal: FC<SpritesheetSlicerModalProps> = ({
 
                         const index = y * cols + x;
                         const tileInfo = tilesFromMetadata?.find((t: any) => t.index === index);
-                        const tileName = tileInfo?.name || `${fileData.name}_x${x}_y${y}`;
+                        const tileName = tileInfo?.name || `${fileData.name}_${index}`;
                         const isSolid = tileInfo?.solid === true;
                         
                         allSlicedData.push({ name: tileName, src: dataUrl, isSolid });
