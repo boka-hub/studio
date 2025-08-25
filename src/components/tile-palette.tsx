@@ -7,7 +7,7 @@ import type { Tile, Tool, AutoTileMode } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { X, Shield, ShieldOff, Search, Dices, Wand, ArchiveX, ListPlus, Check, Trash } from 'lucide-react';
+import { X, Shield, ShieldOff, Search, Dices, Wand, ArchiveX, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -60,6 +60,8 @@ export const TilePalette: FC<TilePaletteProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [draggedTileId, setDraggedTileId] = useState<number | null>(null);
   const [isConfirmClearPaletteOpen, setConfirmClearPaletteOpen] = useState(false);
+  const [deletingTileId, setDeletingTileId] = useState<number | null>(null);
+
   
   const dragTargetRef = useRef<HTMLDivElement | null>(null);
 
@@ -329,39 +331,25 @@ export const TilePalette: FC<TilePaletteProps> = ({
                               </TooltipContent>
                             </Tooltip>
                             
-                            <AlertDialog>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <AlertDialogTrigger asChild>
-                                    <Button 
-                                      variant="destructive"
-                                      size="icon"
-                                      className="h-6 w-6"
-                                      onClick={(e) => e.stopPropagation()}
-                                      aria-label={`Delete tile ${tile.name}`}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                  <p>Delete Tile</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will remove the tile &quot;{tile?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => onDeleteTile(tile.id)}>Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="destructive"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingTileId(tile.id);
+                                    }}
+                                    aria-label={`Delete tile ${tile.name}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                <p>Delete Tile</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                        )}
                     </div>
@@ -425,6 +413,25 @@ export const TilePalette: FC<TilePaletteProps> = ({
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={() => { onClearPalette(); setConfirmClearPaletteOpen(false); }}>Clear Palette</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={deletingTileId !== null} onOpenChange={(isOpen) => !isOpen && setDeletingTileId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to delete this tile?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove the tile &quot;{tiles.find(t => t.id === deletingTileId)?.name}&quot; from the palette and replace all instances of it on the grid with an empty tile. This action can be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setDeletingTileId(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                if (deletingTileId !== null) {
+                  onDeleteTile(deletingTileId);
+                }
+                setDeletingTileId(null);
+              }}>Delete</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

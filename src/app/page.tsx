@@ -78,6 +78,7 @@ import { Button } from '@/components/ui/button';
 import { MapGrid } from '@/components/map-grid';
 import { useMounted } from '@/hooks/use-mounted';
 import { Separator } from '@/components/ui/separator';
+import { getAutoTileId } from '@/lib/auto-tiler';
 
 
 const INITIAL_GRID_SIZE = 32;
@@ -118,7 +119,7 @@ function HomeComponent() {
         resetHistory(activeProjectData);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProjectData, resetHistory]);
+  }, [activeProjectData]);
   
   const saveCurrentProject = useCallback((project: Project) => {
     saveProject(project);
@@ -129,7 +130,7 @@ function HomeComponent() {
         saveCurrentProject(projectState);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState, saveCurrentProject]);
+  }, [projectState]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -623,11 +624,46 @@ function HomeComponent() {
         setSelection({ minRow, minCol, maxRow, maxCol, selectedCells: selectedCellsGrid });
         toast({ title: 'Area Selected', description: 'Selected all connected tiles.' });
         return; 
-      }
+      } else if (tool === 'auto-tile') {
+            modifyCurrentProject(project => {
+                const currentLayer = project.layers.find(l => l.id === project.activeLayerId);
+                if (!currentLayer) return {};
+
+                let newGrid = currentLayer.grid.map(r => [...r]);
+                const autoTileSet_ = new Set(autoTileSet);
+                
+                const tileToPlace = getAutoTileId(newGrid, row, col, autoTileSet, autoTileMode);
+
+                if(newGrid[row]?.[col] !== undefined) {
+                     if (autoTileOverwrite || newGrid[row][col] === 0 || autoTileSet_.has(newGrid[row][col])) {
+                        newGrid[row][col] = tileToPlace;
+                    }
+                }
+                
+                // Update all its direct neighbors
+                for (let r_offset = -1; r_offset <= 1; r_offset++) {
+                  for (let c_offset = -1; c_offset <= 1; c_offset++) {
+                    const nr = row + r_offset;
+                    const nc = col + c_offset;
+                    
+                    if (nr >= 0 && nr < newGrid.length && nc >= 0 && nc < newGrid[0].length) {
+                        if (autoTileSet_.has(newGrid[nr][nc])) {
+                             const newTileId = getAutoTileId(newGrid, nr, nc, autoTileSet, autoTileMode);
+                             if (newGrid[nr]?.[nc] !== undefined) {
+                                newGrid[nr][nc] = newTileId;
+                             }
+                        }
+                    }
+                  }
+                }
+                return { layers: project.layers.map(l => l.id === project.activeLayerId ? { ...l, grid: newGrid } : l) };
+            });
+            return;
+        }
       
       setSelection(null);
     },
-    [grid, selectedTileId, tiles, toast, tool, activeLayer, modifyCurrentProject]
+    [grid, selectedTileId, tiles, toast, tool, activeLayer, modifyCurrentProject, autoTileSet, autoTileMode, autoTileOverwrite]
   );
   
   const handleDrawCommit = useCallback((newGridState: GridState) => {

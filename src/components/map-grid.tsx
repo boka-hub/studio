@@ -230,10 +230,10 @@ export const MapGrid: FC<MapGridProps> = ({
                             if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
                         } else { // outline
                             const isEdge = 
-                                (((c + 1 - centerX) / radiusX) ** 2 + ((r - centerY) / radiusY) ** 2 > 1) ||
-                                (((c - 1 - centerX) / radiusX) ** 2 + ((r - centerY) / radiusY) ** 2 > 1) ||
-                                (((c - centerX) / radiusX) ** 2 + ((r + 1 - centerY) / radiusY) ** 2 > 1) ||
-                                (((c - centerX) / radiusX) ** 2 + ((r - 1 - centerY) / radiusY) ** 2 > 1);
+                                ((c + 1 - centerX) / radiusX) ** 2 + (dy * dy) > 1 ||
+                                ((c - 1 - centerX) / radiusX) ** 2 + (dy * dy) > 1 ||
+                                (dx * dx) + ((r + 1 - centerY) / radiusY) ** 2 > 1 ||
+                                (dx * dx) + ((r - 1 - centerY) / radiusY) ** 2 > 1;
 
                             if (isEdge) {
                                 if (r >= 0 && r < newGrid.length && c >= 0 && c < newGrid[0].length) newGrid[r][c] = tileId;
@@ -324,7 +324,7 @@ export const MapGrid: FC<MapGridProps> = ({
     
     const isCtrlPressed = e.ctrlKey || e.metaKey;
 
-    if (isBrushLikeTool || isCtrlPressed) {
+    if (isBrushLikeTool && tool !== 'auto-tile' || isCtrlPressed) {
       setPreviewGrid(performDraw(activeLayer.grid, coords.row, coords.col, tool, isCtrlPressed, coords));
     }
   };
@@ -366,7 +366,7 @@ export const MapGrid: FC<MapGridProps> = ({
       const isClick = startCell && startCell.row === coords.row && startCell.col === coords.col;
       const isCtrlPressed = e.ctrlKey || e.metaKey;
 
-      if (!isCtrlPressed && (tool === 'picker' || tool === 'fill' || tool === 'magic-wand')) {
+      if (!isCtrlPressed && (tool === 'picker' || tool === 'fill' || tool === 'magic-wand' || tool === 'auto-tile')) {
         if(isClick) onCellAction(coords.row, coords.col);
       } else if (!isCtrlPressed && tool === 'select' && startCell) {
         onSelectionCommit(startCell, coords);
