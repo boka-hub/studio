@@ -32,6 +32,7 @@ interface MapGridProps {
   sprayDensity: number;
   scatterSet: number[];
   gridVisible: boolean;
+  isPanning: boolean;
 }
 
 const BASE_TILE_SIZE = 16;
@@ -92,9 +93,9 @@ export const MapGrid: FC<MapGridProps> = ({
   sprayDensity,
   scatterSet,
   gridVisible,
+  isPanning,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
   const [startCell, setStartCell] = useState<{ row: number; col: number } | null>(null);
   const [currentCell, setCurrentCell] = useState<{ row: number; col: number } | null>(null);
   const [previewGrid, setPreviewGrid] = useState<GridState | null>(null);
@@ -311,13 +312,8 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseDown = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (isPreviewMode || !activeLayer || !activeLayer.grid || e.button !== 0) return;
+    if (isPreviewMode || !activeLayer || !activeLayer.grid || e.button !== 0 || tool === 'pan') return;
     e.preventDefault();
-
-    if (tool === 'pan') {
-      setIsPanning(true);
-      return;
-    }
 
     const coords = getCoordsFromEvent(e);
     if (!coords) return;
@@ -341,13 +337,7 @@ export const MapGrid: FC<MapGridProps> = ({
       onCoordsChange(null);
     }
     
-    if (isPanning && containerRef.current) {
-      containerRef.current.scrollLeft -= e.movementX;
-      containerRef.current.scrollTop -= e.movementY;
-      return;
-    }
-
-    if (!isDrawing || !activeLayer || !activeLayer.grid) return;
+    if (tool === 'pan' || !isDrawing || !activeLayer || !activeLayer.grid) return;
     if (!coords) return;
 
     if (currentCell && currentCell.row === coords.row && currentCell.col === coords.col) return;
@@ -364,11 +354,10 @@ export const MapGrid: FC<MapGridProps> = ({
   };
 
   const handleMouseUp = (e: ReactMouseEvent<HTMLDivElement>) => {
-    if (isPanning) {
-      setIsPanning(false);
-      return;
-    }
-    if (!activeLayer || !activeLayer.grid || !isDrawing) return;
+    if (tool === 'pan' || !activeLayer || !activeLayer.grid || !isDrawing) {
+        setIsDrawing(false);
+        return;
+    };
     
     const coords = getCoordsFromEvent(e) || currentCell;
     setIsDrawing(false);
@@ -395,8 +384,6 @@ export const MapGrid: FC<MapGridProps> = ({
   
   const handleMouseLeave = () => {
     onCoordsChange(null);
-    if (isPanning) setIsPanning(false);
-
     if (isDrawing && activeLayer && activeLayer.grid) {
         if (previewGrid) {
            onDrawCommit(previewGrid);

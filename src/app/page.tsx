@@ -120,12 +120,16 @@ function HomeComponent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectData, resetHistory]);
   
+  const saveCurrentProject = useCallback((project: Project) => {
+    saveProject(project);
+  }, [saveProject]);
+  
   useEffect(() => {
     if (!isProjectsLoading && projectState) {
-      saveProject(projectState);
+        saveCurrentProject(projectState);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState, saveProject]);
+  }, [projectState, saveCurrentProject]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -163,6 +167,7 @@ function HomeComponent() {
   const [playerPos, setPlayerPos] = useState({ row: 0, col: 0 });
   const [settings, setSettings] = useState<AppSettings>({ layersEnabled: false, exportFormat: 'json', gridVisible: true });
   const [lastMouseCoords, setLastMouseCoords] = useState<{row: number, col: number} | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
   
   const [sprayRadius, setSprayRadius] = useState(3);
   const [sprayDensity, setSprayDensity] = useState(0.4);
@@ -174,7 +179,7 @@ function HomeComponent() {
   const mapImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
-  const mapContainerRef = useRef<HTMLElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
@@ -1255,6 +1260,24 @@ function HomeComponent() {
       </div>
     );
   }
+  
+    const handleMainMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+        if (tool === 'pan') {
+            setIsPanning(true);
+        }
+    };
+    
+    const handleMainMouseUp = () => {
+        setIsPanning(false);
+    };
+
+    const handleMainMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+        if (isPanning && mapContainerRef.current) {
+            mapContainerRef.current.scrollLeft -= e.movementX;
+            mapContainerRef.current.scrollTop -= e.movementY;
+        }
+    };
+
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -1350,6 +1373,9 @@ function HomeComponent() {
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
+                onMouseDown={handleMainMouseDown}
+                onMouseUp={handleMainMouseUp}
+                onMouseMove={handleMainMouseMove}
               >
                 {isDragging && renderDragOverlay()}
                 <MapGrid
@@ -1378,6 +1404,7 @@ function HomeComponent() {
                     sprayDensity={sprayDensity}
                     scatterSet={scatterSet}
                     gridVisible={settings.gridVisible}
+                    isPanning={isPanning}
                   />
               </main>
             </Panel>
