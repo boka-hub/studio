@@ -78,6 +78,7 @@ const shortcuts = [
     ]},
     { section: 'General UI & View', items: [
         { keys: ['F5'], description: 'Toggle Live Preview Mode' },
+        { keys: ['Ctrl', 'G'], description: 'Toggle Grid Visibility' },
         { keys: ['Ctrl', '='], description: 'Zoom In' },
         { keys: ['Ctrl', '-'], description: 'Zoom Out' },
         { keys: ['Ctrl', '0'], description: 'Reset Zoom to 100%' },

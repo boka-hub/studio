@@ -888,6 +888,10 @@ function HomeComponent() {
     setPreviewMode(newPreviewState);
   }, [grid, isPreviewMode, tiles, toast, selection]);
 
+  const handleToggleGridVisibility = useCallback(() => {
+    setSettings(s => ({ ...s, gridVisible: !s.gridVisible }));
+  }, []);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'F5'].includes(e.key)) {
@@ -919,7 +923,7 @@ function HomeComponent() {
     if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.getAttribute('role') === 'slider') return;
 
     if (e.ctrlKey || e.metaKey) {
-        if (['c', 'v', 'z', 'y', 's', 'o', 'u', 'p', 'm'].includes(e.key) || e.key.startsWith('Arrow')) {
+        if (['c', 'v', 'z', 'y', 's', 'o', 'u', 'p', 'm', 'g'].includes(e.key) || e.key.startsWith('Arrow')) {
             e.preventDefault();
         }
       if (e.key === 'c' && selection) handleCopySelection();
@@ -932,6 +936,7 @@ function HomeComponent() {
       else if (e.key === 'u') setMapImportOpen(true);
       else if (e.key === 'm') setMetaImportOpen(true);
       else if (e.key === 'p') setStorageOpen(true);
+      else if (e.key === 'g') handleToggleGridVisibility();
       else if (e.key === 'd' && e.shiftKey) {
         e.preventDefault();
         document.getElementById('clear-palette-button')?.click();
@@ -998,6 +1003,7 @@ function HomeComponent() {
     handleInvertSelection, 
     handleMirrorHorizontal, 
     handleMirrorVertical,
+    handleToggleGridVisibility,
   ]);
   
   useEffect(() => {
@@ -1140,10 +1146,6 @@ function HomeComponent() {
     setStorageOpen(true);
   }, []);
 
-  const handleToggleGridVisibility = useCallback(() => {
-    setSettings(s => ({ ...s, gridVisible: !s.gridVisible }));
-  }, []);
-
   const toolbarActions = {
     pan: { icon: Hand, label: 'Pan (H)' },
     brush: { icon: Brush, label: 'Brush (B)' },
@@ -1172,7 +1174,7 @@ function HomeComponent() {
       { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
       { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
       { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: handleOpenStorage },
-      { icon: Grid, label: 'Toggle Grid Visibility', onClick: handleToggleGridVisibility, isActive: settings.gridVisible },
+      { icon: Grid, label: 'Toggle Grid Visibility (Ctrl+G)', onClick: handleToggleGridVisibility, isActive: settings.gridVisible },
       { icon: ArchiveX, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
   ], [undo, redo, canUndo, canRedo, handleToggleGridVisibility, settings.gridVisible, handleOpenStorage]);
 
