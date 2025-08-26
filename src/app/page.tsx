@@ -76,7 +76,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { MapGrid } from '@/components/map-grid';
-import { useMounted } from '@/hooks/use-mounted';
 import { Separator } from '@/components/ui/separator';
 import { getAutoTileId } from '@/lib/auto-tiler';
 
@@ -119,7 +118,7 @@ function HomeComponent() {
         resetHistory(activeProjectData);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProjectData]);
+  }, [activeProjectData, projectState, resetHistory]);
   
   const saveCurrentProject = useCallback((project: Project) => {
     saveProject(project);
@@ -130,7 +129,7 @@ function HomeComponent() {
         saveCurrentProject(projectState);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState]);
+  }, [projectState, isProjectsLoading]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -257,7 +256,7 @@ function HomeComponent() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, layers, toast]);
+  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -1622,15 +1621,5 @@ function HomeComponent() {
 }
 
 export default function Page() {
-  const mounted = useMounted();
-
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <ToyBrick className="h-12 w-12 text-primary animate-pulse" />
-      </div>
-    );
-  }
-
   return <HomeComponent />;
 }

@@ -140,39 +140,6 @@ export function Toolbar<T extends Tool>({
                         {layersPanel}
                     </>
                 )}
-                {selectedAction === 'shape' && (
-                    <>
-                    <Separator />
-                    <div className="px-2 space-y-4">
-                        <h3 className="text-sm font-semibold text-muted-foreground">Shape Settings</h3>
-                         <div className="space-y-2">
-                            <Label>Shape Type</Label>
-                            <ToggleGroup type="single" value={shape} onValueChange={(value: Shape) => value && onShapeChange(value)} className="w-full grid grid-cols-3">
-                                <ToggleGroupItem value="rectangle" aria-label="Draw a rectangle">
-                                    <RectangleHorizontal className="h-4 w-4" />
-                                </ToggleGroupItem>
-                                <ToggleGroupItem value="circle" aria-label="Draw a circle">
-                                    <Circle className="h-4 w-4" />
-                                </ToggleGroupItem>
-                                    <ToggleGroupItem value="line" aria-label="Draw a line">
-                                    <Slash className="h-4 w-4" />
-                                </ToggleGroupItem>
-                            </ToggleGroup>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Shape Style</Label>
-                            <ToggleGroup type="single" value={shapeStyle} onValueChange={(value: ShapeStyle) => value && onShapeStyleChange(value)} className="w-full grid grid-cols-2">
-                                <ToggleGroupItem value="fill" aria-label="Fill shape">
-                                    <Paintbrush className="h-4 w-4" />
-                                </ToggleGroupItem>
-                                <ToggleGroupItem value="outline" aria-label="Outline shape">
-                                    <Square className="h-4 w-4" />
-                                </ToggleGroupItem>
-                            </ToggleGroup>
-                        </div>
-                    </div>
-                    </>
-                )}
                 {selectedAction === 'spray' && (
                     <>
                     <Separator />

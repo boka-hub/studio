@@ -45,7 +45,7 @@ export function useHistoryState<T>(initialPresent: T | undefined | null) {
         future: [], // Clear future on new action
       };
     });
-  }, []);
+  }, [setState]);
 
   const undo = useCallback(() => {
     setState(s => {
