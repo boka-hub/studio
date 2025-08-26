@@ -1267,13 +1267,15 @@ function HomeComponent() {
   }
   
     const handleMainMouseDown = (e: React.MouseEvent<HTMLElement>) => {
-        if (tool === 'pan') {
+        if (tool === 'pan' && e.button === 0) {
             setIsPanning(true);
         }
     };
     
-    const handleMainMouseUp = () => {
-        setIsPanning(false);
+    const handleMainMouseUp = (e: React.MouseEvent<HTMLElement>) => {
+        if (e.button === 0) {
+            setIsPanning(false);
+        }
     };
 
     const handleMainMouseMove = (e: React.MouseEvent<HTMLElement>) => {
@@ -1289,7 +1291,7 @@ function HomeComponent() {
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header 
             subtitle={projectState.name}
-            icon={ToyBrick} 
+            icon={SettingsIcon} 
             actionGroups={actionGroups}
             onTitleClick={() => setSettingsOpen(true)}
         />
