@@ -51,6 +51,7 @@ const shortcuts = [
         { keys: ['C'], description: 'Select Scatter Tool' },
         { keys: ['M'], 'description': 'Select/Lasso Tool' },
         { keys: ['W'], 'description': 'Select Magic Wand Tool' },
+        { keys: ['H'], 'description': 'Select Pan Tool' },
     ]},
     { section: 'Selection Actions', items: [
         { keys: ['Ctrl', 'Drag'], description: 'Draw rectangle with current tile (overrides tool)' },

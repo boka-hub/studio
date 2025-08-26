@@ -133,7 +133,7 @@ function HomeComponent() {
         saveCurrentProject(projectState);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState, isProjectsLoading]);
+  }, [projectState, isProjectsLoading, saveCurrentProject]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -919,7 +919,7 @@ function HomeComponent() {
     if (target.tagName.toLowerCase() === 'input' || target.tagName.toLowerCase() === 'textarea' || target.getAttribute('role') === 'slider') return;
 
     if (e.ctrlKey || e.metaKey) {
-        if (['c', 'v', 'z', 'y', 's', 'o', 'u', 'p'].includes(e.key) || e.key.startsWith('Arrow')) {
+        if (['c', 'v', 'z', 'y', 's', 'o', 'u', 'p', 'm'].includes(e.key) || e.key.startsWith('Arrow')) {
             e.preventDefault();
         }
       if (e.key === 'c' && selection) handleCopySelection();
@@ -930,6 +930,7 @@ function HomeComponent() {
       else if (e.key === 'i') setTileImportOpen(true);
       else if (e.key === 'o') openSlicer();
       else if (e.key === 'u') setMapImportOpen(true);
+      else if (e.key === 'm') setMetaImportOpen(true);
       else if (e.key === 'p') setStorageOpen(true);
       else if (e.key === 'd' && e.shiftKey) {
         e.preventDefault();
@@ -1163,7 +1164,7 @@ function HomeComponent() {
     { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => setTileImportOpen(true) },
     { icon: Scissors, label: 'Slice Sheet (Ctrl+O)', onClick: () => openSlicer() },
     { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => setMapImportOpen(true) },
-    { icon: ListPlus, label: 'Remap Palette from Metadata', onClick: () => setMetaImportOpen(true) },
+    { icon: ListPlus, label: 'Remap Palette from Metadata (Ctrl+M)', onClick: () => setMetaImportOpen(true) },
     { icon: Package, label: 'Export... (Ctrl+S)', onClick: () => setExportOpen(true) },
   ], [openSlicer]);
   
