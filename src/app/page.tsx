@@ -49,6 +49,7 @@ import {
   ArrowUpDown,
   ListPlus,
   Hand,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -1033,6 +1034,10 @@ function HomeComponent() {
     handleInvertSelection, 
     handleMirrorHorizontal, 
     handleMirrorVertical,
+    handlePasteSelection,
+    isProjectsLoading,
+    canRedo,
+    canUndo,
   ]);
   
   useEffect(() => {
@@ -1203,10 +1208,10 @@ function HomeComponent() {
   const projectActions = useMemo(() => [
       { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
       { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
-      { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: () => setStorageOpen(true) },
+      { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: handleOpenStorage },
       { icon: Grid, label: 'Toggle Grid Visibility', onClick: handleToggleGridVisibility, isActive: settings.gridVisible },
       { icon: ArchiveX, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
-  ], [undo, redo, canUndo, canRedo, handleToggleGridVisibility, settings.gridVisible]);
+  ], [undo, redo, canUndo, canRedo, handleToggleGridVisibility, settings.gridVisible, handleOpenStorage]);
 
   const transformActions = useMemo(() => [
     { icon: ArrowRightLeft, label: 'Flip Map Horizontally', onClick: handleFlipMapHorizontal },
@@ -1321,7 +1326,7 @@ function HomeComponent() {
             subtitle={projectState.name}
             icon={ToyBrick} 
             actionGroups={actionGroups}
-            onTitleClick={handleOpenStorage}
+            onTitleClick={() => setSettingsOpen(true)}
         />
         <div 
           className="flex flex-1 overflow-hidden"
