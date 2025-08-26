@@ -58,6 +58,8 @@ import { LayersPanel } from '@/components/layers-panel';
 import { TilePalette } from '@/components/tile-palette';
 import { SpritesheetSlicerModal } from '@/components/spritesheet-slicer-modal';
 import { MetadataImportModal } from '@/components/metadata-import-modal';
+import { TileImportModal } from '@/components/tile-import-modal';
+import { MapImportModal } from '@/components/map-import-modal';
 import { ExportTilesModal } from '@/components/export-tiles-modal';
 import { SettingsModal } from '@/components/settings-modal';
 import { StorageModal } from '@/components/storage-modal';
@@ -131,7 +133,7 @@ function HomeComponent() {
         saveCurrentProject(projectState);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState, isProjectsLoading, saveCurrentProject]);
+  }, [projectState, isProjectsLoading]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -151,6 +153,8 @@ function HomeComponent() {
   const [shapeStyle, setShapeStyle] = useState<ShapeStyle>('fill');
   const [selection, setSelection] = useState<Selection | null>(null);
   const [clipboard, setClipboard] = useState<GridState | null>(null);
+  const [isTileImportOpen, setTileImportOpen] = useState(false);
+  const [isMapImportOpen, setMapImportOpen] = useState(false);
   const [isSlicerOpen, setSlicerOpen] = useState(false);
   const [slicerInitialFiles, setSlicerInitialFiles] = useState<File[]>([]);
   const [isMetaImportOpen, setMetaImportOpen] = useState(false);
@@ -177,8 +181,6 @@ function HomeComponent() {
 
   const { toast } = useToast();
 
-  const tileImportRef = useRef<HTMLInputElement>(null);
-  const mapImportRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -418,41 +420,6 @@ function HomeComponent() {
       });
       toast({ title: 'Tiles Added', description: `${newTileData.length} new tile(s) have been added.` });
   }, [modifyCurrentProject, toast]);
-
-  const handleImportTiles = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files) return;
-
-    try {
-      const tileDataPromises: Promise<TileImportData>[] = Array.from(files).map(file => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            if (e.target?.result) {
-              resolve({
-                name: file.name.replace(/\.[^/.]+$/, ""),
-                src: e.target.result as string,
-                isSolid: false,
-              });
-            } else {
-              reject(new Error(`Failed to read file: ${file.name}`));
-            }
-          };
-          reader.onerror = (e) => reject(new Error(`Error reading file ${file.name}: ${e}`));
-          reader.readAsDataURL(file);
-        });
-      });
-
-      const newTileData = await Promise.all(tileDataPromises);
-      addTiles(newTileData);
-
-    } catch (error) {
-       console.error("Failed to import tiles", error);
-       toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not import one or more tiles.' });
-    }
-    
-    event.target.value = '';
-  }, [addTiles, toast]);
   
   const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
@@ -513,14 +480,6 @@ function HomeComponent() {
       };
       reader.readAsText(file);
   }, [toast, updateGridInLayer, activeLayer, tiles]);
-
-  const handleMapFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      handleImportMap(file);
-    }
-    event.target.value = '';
-  }, [handleImportMap]);
 
   const handlePasteSelection = useCallback((row: number, col: number) => {
     if (!clipboard || !activeLayer) return;
@@ -968,9 +927,9 @@ function HomeComponent() {
       else if (e.key === 'z') undo();
       else if (e.key === 'y') redo();
       else if (e.key === 's') setExportOpen(true);
-      else if (e.key === 'i') tileImportRef.current?.click();
+      else if (e.key === 'i') setTileImportOpen(true);
       else if (e.key === 'o') openSlicer();
-      else if (e.key === 'u') mapImportRef.current?.click();
+      else if (e.key === 'u') setMapImportOpen(true);
       else if (e.key === 'p') setStorageOpen(true);
       else if (e.key === 'd' && e.shiftKey) {
         e.preventDefault();
@@ -1201,9 +1160,9 @@ function HomeComponent() {
   };
 
   const fileActions = useMemo(() => [
-    { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => tileImportRef.current?.click() },
+    { icon: Upload, label: 'Import Tiles (Ctrl+I)', onClick: () => setTileImportOpen(true) },
     { icon: Scissors, label: 'Slice Sheet (Ctrl+O)', onClick: () => openSlicer() },
-    { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => mapImportRef.current?.click() },
+    { icon: FileUp, label: 'Import Map (Ctrl+U)', onClick: () => setMapImportOpen(true) },
     { icon: ListPlus, label: 'Remap Palette from Metadata', onClick: () => setMetaImportOpen(true) },
     { icon: Package, label: 'Export... (Ctrl+S)', onClick: () => setExportOpen(true) },
   ], [openSlicer]);
@@ -1535,32 +1494,26 @@ function HomeComponent() {
             )}
           </div>
         </footer>
-
-        <input
-          type="file"
-          ref={tileImportRef}
-          onChange={handleImportTiles}
-          accept="image/png,image/jpeg"
-          multiple
-          className="hidden"
-          aria-hidden="true"
-        />
-
-        <input
-          type="file"
-          ref={mapImportRef}
-          onChange={handleMapFileSelect}
-          accept=".txt,text/plain,.json"
-          className="hidden"
-          aria-hidden="true"
-        />
         
+        <TileImportModal
+          isOpen={isTileImportOpen}
+          onClose={() => setTileImportOpen(false)}
+          onImport={addTiles}
+        />
+
+        <MapImportModal
+          isOpen={isMapImportOpen}
+          onClose={() => setMapImportOpen(false)}
+          onImport={handleImportMap}
+        />
+
         <SpritesheetSlicerModal
           isOpen={isSlicerOpen}
           onClose={() => setSlicerOpen(false)}
           onSlice={addTiles}
           initialFiles={slicerInitialFiles}
         />
+
         <MetadataImportModal
           isOpen={isMetaImportOpen}
           onClose={() => setMetaImportOpen(false)}
