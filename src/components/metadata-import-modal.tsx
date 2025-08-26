@@ -21,6 +21,8 @@ interface MetadataImportModalProps {
   onRemap: (tiles: Tile[]) => void;
 }
 
+const TRANSPARENT_PLACEHOLDER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 export const MetadataImportModal: FC<MetadataImportModalProps> = ({
   isOpen,
   onClose,
@@ -89,11 +91,11 @@ export const MetadataImportModal: FC<MetadataImportModalProps> = ({
           metadata: metaTile.metadata || {},
         });
       } else {
-        // If it's a new tile, add it with the new ID
+        // If it's a new tile, add it with the new ID and a placeholder image
         newTiles.push({
           id: metaTile.id,
           name: metaTile.name,
-          src: '', // No image source available from just metadata
+          src: TRANSPARENT_PLACEHOLDER, // Add a placeholder so it's not a broken image
           solid: metaTile.solid === true,
           metadata: metaTile.metadata || {},
         });

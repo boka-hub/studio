@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
@@ -387,13 +386,23 @@ function HomeComponent() {
             ...layer,
             grid: layer.grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)))
         }));
-        if (selectedTileId === tileId) setSelectedTileId(0);
-        if (secondarySelectedTileId === tileId) setSecondarySelectedTileId(0);
+        
+        let newSelectedTileId = selectedTileId;
+        if (selectedTileId === tileId) {
+            newSelectedTileId = 0;
+        }
+
+        let newSecondarySelectedTileId = secondarySelectedTileId;
+        if (secondarySelectedTileId === tileId) {
+            newSecondarySelectedTileId = 0;
+        }
+
+        setSelectedTileId(newSelectedTileId);
+        setSecondarySelectedTileId(newSecondarySelectedTileId);
+
         return { tiles: newTiles, layers: newLayers };
     });
     
-    if (selectedTileId === tileId) setSelectedTileId(0);
-    if (secondarySelectedTileId === tileId) setSecondarySelectedTileId(0);
     setScatterSet(s => s.filter(id => id !== tileId));
     if (autoTileSet.includes(tileId)) {
       setAutoTileSet([]);
@@ -1145,6 +1154,10 @@ function HomeComponent() {
   const handleOpenStorage = useCallback(() => {
     setStorageOpen(true);
   }, []);
+  
+  const handleOpenSettings = useCallback(() => {
+    setSettingsOpen(true);
+  }, []);
 
   const toolbarActions = {
     pan: { icon: Hand, label: 'Pan (H)' },
@@ -1293,7 +1306,7 @@ function HomeComponent() {
             subtitle={projectState.name}
             icon={SettingsIcon} 
             actionGroups={actionGroups}
-            onTitleClick={() => setSettingsOpen(true)}
+            onTitleClick={handleOpenSettings}
         />
         <div 
           className="flex flex-1 overflow-hidden"
