@@ -21,30 +21,34 @@ interface HeaderProps {
   onTitleClick?: () => void;
 }
 
-export const Header: FC<HeaderProps> = ({ title = "TileForge", subtitle, icon: Icon, actionGroups, onTitleClick }) => {
-
-  return (
-    <header className="flex items-center justify-between p-2 border-b border-border shadow-sm z-10 flex-shrink-0">
-      <Tooltip>
+const MemoizedHeaderIcon: FC<{ icon: ElementType; onClick?: () => void; subtitle?: string }> = React.memo(({ icon: Icon, onClick, subtitle }) => (
+    <Tooltip>
         <TooltipTrigger asChild>
-           <div 
-            className="flex items-center gap-3 cursor-pointer"
-            onClick={onTitleClick}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onTitleClick?.()}
-          >
-            <Icon className="h-7 w-7 text-primary" />
-            <div className="flex flex-col">
-                <h1 className="text-xl font-bold text-foreground leading-tight">{title}</h1>
-                {subtitle && <p className="text-xs text-muted-foreground leading-tight">{subtitle}</p>}
+            <div
+                className="flex items-center gap-3 cursor-pointer"
+                onClick={onClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick?.()}
+            >
+                <Icon className="h-7 w-7 text-primary" />
+                <div className="flex flex-col">
+                    <h1 className="text-xl font-bold text-foreground leading-tight">TileForge</h1>
+                    {subtitle && <p className="text-xs text-muted-foreground leading-tight">{subtitle}</p>}
+                </div>
             </div>
-          </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>App Settings & Info</p>
+            <p>App Settings & Info</p>
         </TooltipContent>
-      </Tooltip>
+    </Tooltip>
+));
+MemoizedHeaderIcon.displayName = 'MemoizedHeaderIcon';
+
+export const Header: FC<HeaderProps> = ({ subtitle, icon: Icon, actionGroups, onTitleClick }) => {
+  return (
+    <header className="flex items-center justify-between p-2 border-b border-border shadow-sm z-10 flex-shrink-0">
+        <MemoizedHeaderIcon icon={Icon} onClick={onTitleClick} subtitle={subtitle} />
       <div className="flex items-center gap-1">
         {actionGroups.map((group, groupIndex) => (
             <React.Fragment key={groupIndex}>
@@ -80,5 +84,3 @@ export const Header: FC<HeaderProps> = ({ title = "TileForge", subtitle, icon: I
     </header>
   );
 };
-
-    

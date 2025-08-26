@@ -257,7 +257,8 @@ function HomeComponent() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       toast({ title: "Settings Updated", description: "Your changes have been applied."});
     }
-  }, [settings.layersEnabled, layers, toast, mergeAllLayers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.layersEnabled, layers, toast]);
 
   const confirmMergeLayers = useCallback(() => {
     if (pendingSettings) {
@@ -383,6 +384,8 @@ function HomeComponent() {
             ...layer,
             grid: layer.grid.map(row => row.map(cell => (cell === tileId ? 0 : cell)))
         }));
+        if (selectedTileId === tileId) setSelectedTileId(0);
+        if (secondarySelectedTileId === tileId) setSecondarySelectedTileId(0);
         return { tiles: newTiles, layers: newLayers };
     });
     
@@ -1034,10 +1037,6 @@ function HomeComponent() {
     handleInvertSelection, 
     handleMirrorHorizontal, 
     handleMirrorVertical,
-    handlePasteSelection,
-    isProjectsLoading,
-    canRedo,
-    canUndo,
   ]);
   
   useEffect(() => {
@@ -1047,7 +1046,6 @@ function HomeComponent() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('mousedown', handleMouseDownOnPage);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleKeyDown, handleMouseDownOnPage]);
 
   const handleToolSelect = useCallback((newTool: Tool) => {
@@ -1056,10 +1054,14 @@ function HomeComponent() {
       setSelection(null);
     }
     const toolsWithSettings: Tool[] = ['spray', 'shape', 'gradient', 'noise', 'scatter', 'auto-tile'];
-    if (toolsWithSettings.includes(newTool) || settings.layersEnabled) {
-      if (leftPanelRef.current?.isCollapsed()) {
-         leftPanelRef.current?.expand();
-      }
+    if (toolsWithSettings.includes(newTool) || (settings.layersEnabled && !leftPanelRef.current?.isCollapsed())) {
+        if (leftPanelRef.current?.isCollapsed()) {
+            leftPanelRef.current?.expand();
+        }
+    } else if (!toolsWithSettings.includes(newTool) && !settings.layersEnabled) {
+        if (leftPanelRef.current && !leftPanelRef.current.isCollapsed()) {
+            leftPanelRef.current.collapse();
+        }
     }
   }, [settings.layersEnabled]);
 
