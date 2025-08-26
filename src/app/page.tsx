@@ -1168,8 +1168,8 @@ function HomeComponent() {
     setStorageOpen(false);
   }, [setCurrentProjectById]);
 
-  const handleOpenSettings = useCallback(() => {
-    setSettingsOpen(true);
+  const handleOpenStorage = useCallback(() => {
+    setStorageOpen(true);
   }, []);
 
   const handleToggleGridVisibility = useCallback(() => {
@@ -1321,7 +1321,7 @@ function HomeComponent() {
             subtitle={projectState.name}
             icon={ToyBrick} 
             actionGroups={actionGroups}
-            onTitleClick={handleOpenSettings}
+            onTitleClick={handleOpenStorage}
         />
         <div 
           className="flex flex-1 overflow-hidden"

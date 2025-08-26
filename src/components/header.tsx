@@ -42,7 +42,7 @@ export const Header: FC<HeaderProps> = ({ title = "TileForge", subtitle, icon: I
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>App Settings & Info</p>
+          <p>Manage Projects (Ctrl+P)</p>
         </TooltipContent>
       </Tooltip>
       <div className="flex items-center gap-1">

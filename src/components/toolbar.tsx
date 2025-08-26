@@ -140,6 +140,29 @@ export function Toolbar<T extends Tool>({
                         {layersPanel}
                     </>
                 )}
+                {selectedAction === 'shape' && (
+                  <>
+                    <Separator />
+                    <div className="px-2 space-y-4">
+                      <h3 className="text-sm font-semibold text-muted-foreground">Shape Settings</h3>
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-medium text-muted-foreground">Shape Type</h4>
+                        <ToggleGroup type="single" value={shape} onValueChange={(v) => onShapeChange(v as Shape)} className="grid grid-cols-3">
+                            <ToggleGroupItem value="rectangle" aria-label="Rectangle"><RectangleHorizontal /></ToggleGroupItem>
+                            <ToggleGroupItem value="circle" aria-label="Circle"><Circle /></ToggleGroupItem>
+                            <ToggleGroupItem value="line" aria-label="Line"><Slash /></ToggleGroupItem>
+                        </ToggleGroup>
+                      </div>
+                       <div className="space-y-2">
+                        <h4 className="text-xs font-medium text-muted-foreground">Shape Style</h4>
+                        <ToggleGroup type="single" value={shapeStyle} onValueChange={(v) => onShapeStyleChange(v as ShapeStyle)} className="grid grid-cols-2">
+                            <ToggleGroupItem value="fill" aria-label="Fill"><Paintbrush /></ToggleGroupItem>
+                            <ToggleGroupItem value="outline" aria-label="Outline"><Square /></ToggleGroupItem>
+                        </ToggleGroup>
+                      </div>
+                    </div>
+                  </>
+                )}
                 {selectedAction === 'spray' && (
                     <>
                     <Separator />
