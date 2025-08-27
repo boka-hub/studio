@@ -156,7 +156,7 @@ export default function HomeComponent() {
         saveCurrentProject(projectState);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState, isProjectsLoading]);
+  }, [projectState, isProjectsLoading, saveCurrentProject]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -1074,17 +1074,13 @@ export default function HomeComponent() {
       setSelection(null);
     }
     const toolsWithSettings: Tool[] = ['spray', 'shape', 'gradient', 'noise', 'scatter', 'auto-tile'];
-    if (toolsWithSettings.includes(newTool) || (settings.layersEnabled && !leftPanelRef.current?.isCollapsed())) {
+    if (toolsWithSettings.includes(newTool)) {
         if (leftPanelRef.current?.isCollapsed()) {
             leftPanelRef.current?.expand();
         }
-    } else if (!toolsWithSettings.includes(newTool) && !settings.layersEnabled) {
-        if (leftPanelRef.current && !leftPanelRef.current.isCollapsed()) {
-            leftPanelRef.current.collapse();
-        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.layersEnabled, showMessage]);
+  }, [showMessage, settings.layersEnabled]);
 
   const clearLayer = useCallback((layerId: string) => {
     modifyCurrentProject(project => {
@@ -1238,8 +1234,7 @@ export default function HomeComponent() {
       { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: handleOpenStorage },
       { icon: Grid, label: 'Toggle Grid Visibility (Ctrl+G)', onClick: handleToggleGridVisibility, isActive: settings.gridVisible },
       { icon: ArchiveX, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [handleUndo, handleRedo, canUndo, canRedo, settings.gridVisible, handleOpenStorage]);
+  ], [handleUndo, handleRedo, canUndo, canRedo, settings.gridVisible, handleToggleGridVisibility, handleOpenStorage]);
 
   const transformActions = useMemo(() => [
     { icon: ArrowRightLeft, label: 'Flip Map Horizontally', onClick: handleFlipMapHorizontal },
@@ -1249,7 +1244,7 @@ export default function HomeComponent() {
   const gameplayActions = useMemo(() => [
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (F5)' : 'Live Preview (F5)', onClick: togglePreviewMode, isActive: isPreviewMode },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [isPreviewMode]);
+  ], [isPreviewMode, togglePreviewMode]);
 
   const actionGroups = useMemo(() => [fileActions, projectActions, transformActions, gameplayActions], [fileActions, projectActions, transformActions, gameplayActions]);
   
@@ -1663,5 +1658,3 @@ export default function HomeComponent() {
     </TooltipProvider>
   );
 }
-
-    
