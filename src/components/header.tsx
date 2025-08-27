@@ -20,14 +20,8 @@ interface HeaderProps {
   onTitleClick?: () => void;
 }
 
-const MemoizedHeaderIcon: FC<{ icon: ElementType; onClick?: () => void; subtitle?: string }> = React.memo(({ icon: Icon, onClick, subtitle }) => (
-    <div
-        className="flex items-center gap-3 cursor-pointer"
-        onClick={onClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick?.()}
-    >
+const MemoizedHeaderIcon: FC<{ icon: ElementType; subtitle?: string }> = React.memo(({ icon: Icon, subtitle }) => (
+    <div className="flex items-center gap-3">
         <Icon className="h-7 w-7 text-primary" />
         <div className="flex flex-col">
             <h1 className="text-xl font-bold text-foreground leading-tight">TileForge</h1>
@@ -37,12 +31,20 @@ const MemoizedHeaderIcon: FC<{ icon: ElementType; onClick?: () => void; subtitle
 ));
 MemoizedHeaderIcon.displayName = 'MemoizedHeaderIcon';
 
-export const Header: FC<HeaderProps> = ({ subtitle, icon: Icon, actionGroups, onTitleClick }) => {
+export const Header: FC<HeaderProps> = React.memo(({ subtitle, icon: Icon, actionGroups, onTitleClick }) => {
   return (
     <header className="flex items-center justify-between p-2 border-b border-border shadow-sm z-10 flex-shrink-0">
       <Tooltip>
           <TooltipTrigger asChild>
-            <MemoizedHeaderIcon icon={Icon} onClick={onTitleClick} subtitle={subtitle} />
+            <div
+                className="flex items-center gap-3 cursor-pointer"
+                onClick={onTitleClick}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onTitleClick?.()}
+            >
+                <MemoizedHeaderIcon icon={Icon} subtitle={subtitle} />
+            </div>
           </TooltipTrigger>
           <TooltipContent>
               <p>App Settings & Info</p>
@@ -82,4 +84,5 @@ export const Header: FC<HeaderProps> = ({ subtitle, icon: Icon, actionGroups, on
       </div>
     </header>
   );
-};
+});
+Header.displayName = 'Header';

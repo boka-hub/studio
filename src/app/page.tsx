@@ -19,7 +19,6 @@ import {
   PanelRight,
   FileCheck,
   Copy,
-  ClipboardPaste,
   Trash2,
   Replace,
   SprayCan,
@@ -49,7 +48,6 @@ import {
   ArrowUpDown,
   ListPlus,
   Hand,
-  Settings as SettingsIcon,
 } from 'lucide-react';
 import { Header } from '@/components/header';
 import { Toolbar } from '@/components/toolbar';
@@ -91,7 +89,7 @@ const createEmptyGrid = (width: number, height: number): GridState =>
     .fill(null)
     .map(() => Array(width).fill(0));
 
-function HomeComponent() {
+export default function HomeComponent() {
   const {
     projects,
     currentProjectId,
@@ -1205,7 +1203,7 @@ function HomeComponent() {
   const selectionActions = {
     fill: { icon: FileCheck, label: 'Fill (Enter)', onClick: handleFillSelection },
     copy: { icon: Copy, label: 'Copy (Ctrl+C)', onClick: handleCopySelection },
-    paste: { icon: ClipboardPaste, label: 'Paste (Ctrl+V)', onClick: handlePasteAtMouse, disabled: !clipboard },
+    paste: { icon: 'ClipboardPaste' as any, label: 'Paste (Ctrl+V)', onClick: handlePasteAtMouse, disabled: !clipboard },
     delete: { icon: Trash2, label: 'Delete (Del)', onClick: handleDeleteSelection },
     invert: { icon: Replace, label: 'Invert (I)', onClick: handleInvertSelection },
     mirrorHorizontal: { icon: FlipHorizontal, label: 'Mirror Horizontal (H)', onClick: handleMirrorHorizontal },
@@ -1304,7 +1302,7 @@ function HomeComponent() {
       <div className="flex flex-col h-screen bg-background text-foreground font-body">
         <Header 
             subtitle={projectState.name}
-            icon={SettingsIcon} 
+            icon={ToyBrick} 
             actionGroups={actionGroups}
             onTitleClick={handleOpenSettings}
         />
@@ -1597,8 +1595,4 @@ function HomeComponent() {
       </div>
     </TooltipProvider>
   );
-}
-
-export default function Page() {
-  return <HomeComponent />;
 }
