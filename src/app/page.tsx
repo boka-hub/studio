@@ -79,6 +79,8 @@ import { Button } from '@/components/ui/button';
 import { MapGrid } from '@/components/map-grid';
 import { Separator } from '@/components/ui/separator';
 import { getAutoTileId } from '@/lib/auto-tiler';
+import { getRandomMessage, getMessage } from '@/lib/messages';
+import { AnimatePresence, motion } from 'framer-motion';
 
 
 const INITIAL_GRID_SIZE = 32;
@@ -114,6 +116,29 @@ export default function HomeComponent() {
     reset: resetHistory,
   } = useHistoryState(activeProjectData);
   
+  const [footerMessage, setFooterMessage] = useState(getMessage('welcome'));
+  const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const showMessage = useCallback((key: string, duration: number = 5000) => {
+    if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current);
+    }
+    setFooterMessage(getMessage(key));
+    messageTimeoutRef.current = setTimeout(() => {
+        setFooterMessage(getRandomMessage());
+    }, duration);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+        setFooterMessage(getRandomMessage());
+    }, 15000); // Show a new random message every 15 seconds
+    return () => {
+      clearInterval(interval);
+      if (messageTimeoutRef.current) clearTimeout(messageTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (activeProjectData && (!projectState || activeProjectData.id !== projectState.id)) {
         resetHistory(activeProjectData);
@@ -123,14 +148,15 @@ export default function HomeComponent() {
   
   const saveCurrentProject = useCallback((project: Project) => {
     saveProject(project);
-  }, [saveProject]);
+    showMessage('save');
+  }, [saveProject, showMessage]);
   
   useEffect(() => {
     if (!isProjectsLoading && projectState) {
         saveCurrentProject(projectState);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectState, isProjectsLoading, saveCurrentProject]);
+  }, [projectState, isProjectsLoading]);
 
 
   const { tiles, layers, activeLayerId } = projectState || { tiles: [], layers: [], activeLayerId: null };
@@ -239,6 +265,7 @@ export default function HomeComponent() {
         });
 
         const mergedLayer = newLayer("Merged Layer", mergedGrid);
+        showMessage('merge');
 
         return {
             layers: [mergedLayer],
@@ -246,7 +273,7 @@ export default function HomeComponent() {
         };
     });
     toast({ title: "Layers Merged", description: "All visible layers have been flattened into one." });
-  }, [modifyCurrentProject, toast]);
+  }, [modifyCurrentProject, toast, showMessage]);
 
   const handleSettingsChange = useCallback((newSettings: AppSettings) => {
     if (settings.layersEnabled && !newSettings.layersEnabled && layers.length > 1) {
@@ -342,8 +369,9 @@ export default function HomeComponent() {
     });
     setGridSize({ width: newWidth, height: newHeight });
     setSelection(null);
+    showMessage('resize');
     toast({ title: 'Grid Resized', description: `Grid is now ${newWidth}x${newHeight} tiles.` });
-  }, [modifyCurrentProject, toast]);
+  }, [modifyCurrentProject, toast, showMessage]);
   
   const updateTiles = useCallback((newTiles: Tile[]) => {
     modifyCurrentProject(() => ({ tiles: newTiles }));
@@ -397,6 +425,7 @@ export default function HomeComponent() {
 
         setSelectedTileId(newSelectedTileId);
         setSecondarySelectedTileId(newSecondarySelectedTileId);
+        showMessage('deleteTile');
 
         return { tiles: newTiles, layers: newLayers };
     });
@@ -405,11 +434,12 @@ export default function HomeComponent() {
     if (autoTileSet.includes(tileId)) {
       setAutoTileSet([]);
     }
-  }, [selectedTileId, secondarySelectedTileId, autoTileSet, modifyCurrentProject]);
+  }, [selectedTileId, secondarySelectedTileId, autoTileSet, modifyCurrentProject, showMessage]);
   
   const handleReorderTiles = useCallback((reorderedTiles: Tile[]) => {
     modifyCurrentProject(() => ({ tiles: reorderedTiles }));
-  }, [modifyCurrentProject]);
+    showMessage('reorder');
+  }, [modifyCurrentProject, showMessage]);
   
   const addTiles = useCallback((newTileData: TileImportData[]) => {
     if (newTileData.length === 0) return;
@@ -425,8 +455,9 @@ export default function HomeComponent() {
         }));
         return { tiles: [...project.tiles, ...newTiles] };
       });
+      showMessage('import');
       toast({ title: 'Tiles Added', description: `${newTileData.length} new tile(s) have been added.` });
-  }, [modifyCurrentProject, toast]);
+  }, [modifyCurrentProject, toast, showMessage]);
   
   const openSlicer = useCallback((files: File[] = []) => {
     setSlicerInitialFiles(files);
@@ -465,6 +496,7 @@ export default function HomeComponent() {
               }
               
               updateGridInLayer(activeLayer.id, newGrid);
+              showMessage('import');
 
               const availableTileIds = new Set(tiles.map(t => t.id));
               const importedTileIds = new Set(newGrid.flat());
@@ -486,7 +518,7 @@ export default function HomeComponent() {
           }
       };
       reader.readAsText(file);
-  }, [toast, updateGridInLayer, activeLayer, tiles]);
+  }, [toast, updateGridInLayer, activeLayer, tiles, showMessage]);
 
   const handlePasteSelection = useCallback((row: number, col: number) => {
     if (!clipboard || !activeLayer) return;
@@ -507,8 +539,9 @@ export default function HomeComponent() {
         }
     }
     updateGridInLayer(activeLayer.id, newGrid);
+    showMessage('paste');
     toast({ title: 'Pasted', description: 'Clipboard content has been pasted.' });
-  }, [clipboard, toast, activeLayer, updateGridInLayer]);
+  }, [clipboard, toast, activeLayer, updateGridInLayer, showMessage]);
 
 
   const handleCellAction = useCallback((row: number, col: number) => {
@@ -556,6 +589,7 @@ export default function HomeComponent() {
             }
             return { layers: project.layers.map(l => l.id === project.activeLayerId ? { ...l, grid: newGrid } : l) };
         });
+        showMessage('fill');
       } else if (tool === 'magic-wand') {
         const targetId = grid[row][col];
         if (targetId === 0) {
@@ -633,7 +667,7 @@ export default function HomeComponent() {
       
       setSelection(null);
     },
-    [grid, selectedTileId, tiles, toast, tool, activeLayer, modifyCurrentProject, autoTileSet, autoTileMode, autoTileOverwrite]
+    [grid, selectedTileId, tiles, toast, tool, activeLayer, modifyCurrentProject, autoTileSet, autoTileMode, autoTileOverwrite, showMessage]
   );
   
   const handleDrawCommit = useCallback((newGridState: GridState) => {
@@ -776,8 +810,9 @@ export default function HomeComponent() {
       );
 
     setClipboard(copiedData);
+    showMessage('copy');
     toast({ title: 'Selection Copied', description: 'The selected area has been copied to the clipboard.' });
-  }, [grid, selection, toast]);
+  }, [grid, selection, toast, showMessage]);
 
   const handlePasteAtMouse = useCallback(() => {
     if (!clipboard) {
@@ -899,6 +934,16 @@ export default function HomeComponent() {
     setSettings(s => ({ ...s, gridVisible: !s.gridVisible }));
   }, []);
 
+  const handleUndo = useCallback(() => {
+    undo();
+    showMessage('undo');
+  }, [undo, showMessage]);
+
+  const handleRedo = useCallback(() => {
+      redo();
+      showMessage('redo');
+  }, [redo, showMessage]);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (isPreviewMode) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'F5'].includes(e.key)) {
@@ -935,8 +980,8 @@ export default function HomeComponent() {
         }
       if (e.key === 'c' && selection) handleCopySelection();
       else if (e.key === 'v') handlePasteAtMouse();
-      else if (e.key === 'z') undo();
-      else if (e.key === 'y') redo();
+      else if (e.key === 'z') handleUndo();
+      else if (e.key === 'y') handleRedo();
       else if (e.key === 's') setExportOpen(true);
       else if (e.key === 'i') setTileImportOpen(true);
       else if (e.key === 'o') openSlicer();
@@ -1002,8 +1047,8 @@ export default function HomeComponent() {
     selection, 
     handleCopySelection, 
     handlePasteAtMouse, 
-    undo, 
-    redo, 
+    handleUndo, 
+    handleRedo, 
     openSlicer, 
     handleDeleteSelection, 
     handleFillSelection, 
@@ -1024,6 +1069,7 @@ export default function HomeComponent() {
 
   const handleToolSelect = useCallback((newTool: Tool) => {
     setTool(newTool);
+    showMessage(`tool_${newTool}`);
     if (newTool !== 'select' && newTool !== 'magic-wand') {
       setSelection(null);
     }
@@ -1037,7 +1083,8 @@ export default function HomeComponent() {
             leftPanelRef.current.collapse();
         }
     }
-  }, [settings.layersEnabled]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.layersEnabled, showMessage]);
 
   const clearLayer = useCallback((layerId: string) => {
     modifyCurrentProject(project => {
@@ -1053,8 +1100,9 @@ export default function HomeComponent() {
     if (!activeLayer) return;
     clearLayer(activeLayer.id);
     setConfirmClearMapOpen(false);
+    showMessage('clear');
     toast({ title: "Current Layer Cleared", description: "The grid for the active layer has been reset."});
-  }, [activeLayer, clearLayer, toast]);
+  }, [activeLayer, clearLayer, toast, showMessage]);
   
   const handleClearPalette = useCallback(() => {
      modifyCurrentProject((project) => {
@@ -1071,8 +1119,9 @@ export default function HomeComponent() {
     setSecondarySelectedTileId(0);
     setScatterSet([]);
     setAutoTileSet([]);
+    showMessage('clearPalette');
     toast({ title: "Palette Cleared", description: "All tiles have been removed and all layers cleared."});
-  }, [modifyCurrentProject, toast]);
+  }, [modifyCurrentProject, toast, showMessage]);
   
   const onToggleScatterTile = useCallback((id: number) => {
     setScatterSet(s => s.includes(id) ? s.filter(i => i !== id) : [...s, id]);
@@ -1102,12 +1151,13 @@ export default function HomeComponent() {
             isVisible: true,
         });
         const newLayerData = newLayer(`Layer ${project.layers.length + 1}`, createEmptyGrid(width, height));
+        showMessage('layer');
         return { 
             layers: [...project.layers, newLayerData],
             activeLayerId: newLayerData.id,
         };
     });
-  }, [modifyCurrentProject]);
+  }, [modifyCurrentProject, showMessage]);
 
   const deleteLayer = useCallback((layerId: string) => {
     modifyCurrentProject(project => {
@@ -1142,7 +1192,8 @@ export default function HomeComponent() {
 
   const reorderLayers = useCallback((newLayers: Layer[]) => {
       modifyCurrentProject(() => ({ layers: newLayers }));
-  }, [modifyCurrentProject]);
+      showMessage('reorder');
+  }, [modifyCurrentProject, showMessage]);
   
   const handleLoadProject = useCallback((id: string) => {
     setCurrentProjectById(id);
@@ -1182,12 +1233,13 @@ export default function HomeComponent() {
   ], [openSlicer]);
   
   const projectActions = useMemo(() => [
-      { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: undo, disabled: !canUndo },
-      { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: redo, disabled: !canRedo },
+      { icon: Undo2, label: 'Undo (Ctrl+Z)', onClick: handleUndo, disabled: !canUndo },
+      { icon: Redo2, label: 'Redo (Ctrl+Y)', onClick: handleRedo, disabled: !canRedo },
       { icon: Database, label: 'Manage Projects (Ctrl+P)', onClick: handleOpenStorage },
       { icon: Grid, label: 'Toggle Grid Visibility (Ctrl+G)', onClick: handleToggleGridVisibility, isActive: settings.gridVisible },
       { icon: ArchiveX, label: 'Clear Layer (Ctrl+D)', onClick: () => setConfirmClearMapOpen(true) },
-  ], [undo, redo, canUndo, canRedo, handleToggleGridVisibility, settings.gridVisible, handleOpenStorage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [handleUndo, handleRedo, canUndo, canRedo, settings.gridVisible, handleOpenStorage]);
 
   const transformActions = useMemo(() => [
     { icon: ArrowRightLeft, label: 'Flip Map Horizontally', onClick: handleFlipMapHorizontal },
@@ -1196,7 +1248,8 @@ export default function HomeComponent() {
   
   const gameplayActions = useMemo(() => [
     { icon: isPreviewMode ? StopCircle : Play, label: isPreviewMode ? 'Stop Preview (F5)' : 'Live Preview (F5)', onClick: togglePreviewMode, isActive: isPreviewMode },
-  ], [isPreviewMode, togglePreviewMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [isPreviewMode]);
 
   const actionGroups = useMemo(() => [fileActions, projectActions, transformActions, gameplayActions], [fileActions, projectActions, transformActions, gameplayActions]);
   
@@ -1499,6 +1552,20 @@ export default function HomeComponent() {
                   </>
               )}
           </div>
+          <div className="flex-1 text-center px-4 overflow-hidden">
+             <AnimatePresence mode="wait">
+                <motion.p 
+                    key={footerMessage}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="truncate"
+                >
+                    {footerMessage}
+                </motion.p>
+             </AnimatePresence>
+          </div>
           <div className="flex items-center gap-2">
             <span>{`Tile: ${selectedTile?.name || 'None'}`}</span>
             {secondarySelectedTile && secondarySelectedTileId !== 0 && (
@@ -1596,3 +1663,5 @@ export default function HomeComponent() {
     </TooltipProvider>
   );
 }
+
+    
